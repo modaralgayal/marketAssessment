@@ -1,0 +1,68 @@
+# Render Blueprint — defines all three resources for the MVP.
+# Secrets (R2 keys, Firebase service account) are set in the Render dashboard,
+# not committed here. Update WEB_ORIGIN / VITE_API_BASE_URL to the real URLs
+# after the first deploy.
+
+databases:
+  - name: mea-postgres
+    plan: free
+    databaseName: market_entry
+    user: market_entry
+
+services:
+  # ── Backend API ─────────────────────────────────────────────
+  - type: web
+    name: mea-api
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm run db:generate -w @mea/api
+    preDeployCommand: npm run db:deploy -w @mea/api
+    startCommand: npm run start -w @mea/api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mea-postgres
+          property: connectionString
+      - key: WEB_ORIGIN
+        sync: false # set to the static site URL after first deploy
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_B64
+        sync: false
+
+  # ── Frontend static site ────────────────────────────────────
+  - type: web
+    name: mea-web
+    runtime: static
+    rootDir: .
+    buildCommand: npm install && npm run build -w @mea/web
+    staticPublishPath: apps/web/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false # set to the API service URL
+      - key: VITE_FIREBASE_API_KEY
+        sync: false
+      - key: VITE_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: VITE_FIREBASE_PROJECT_ID
+        sync: false
+      - key: VITE_FIREBASE_APP_ID
+        sync: false

@@ -1,0 +1,26 @@
+{
+  "name": "market-entry-assessment",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev -w @mea/api",
+    "dev:web": "npm run dev -w @mea/web",
+    "build": "npm run build -w @mea/web",
+    "db:migrate": "npm run db:migrate -w @mea/api",
+    "db:studio": "npm run db:studio -w @mea/api",
+    "db:generate": "npm run db:generate -w @mea/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
