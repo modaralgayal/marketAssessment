@@ -58,7 +58,7 @@ export interface ScoreResult {
 }
 
 export async function evaluateSubmission(
-  submission: unknown,
+  submissionId: string,
 ): Promise<ScoreResult> {
   console.log(`Fetching score from ${BASE}/api/score`)
   const res = await fetch(`${BASE}/api/score`, {
@@ -66,7 +66,7 @@ export async function evaluateSubmission(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(submission),
+    body: JSON.stringify({ submissionId }),
   });
   console.log(res)
 

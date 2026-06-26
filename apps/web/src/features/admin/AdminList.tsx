@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchSubmissions,
-  fetchSubmission,
   evaluateSubmission,
 } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 
 export default function AdminList() {
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["submissions"],
     queryFn: fetchSubmissions,
@@ -16,33 +16,17 @@ export default function AdminList() {
 
   const [search, setSearch] = useState("");
 
-  const [scores, setScores] = useState<
-    Record<
-      string,
-      {
-        score: number;
-        explanation: string;
-        decision?: string;
-      }
-    >
-  >({});
-
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const evaluateSubmissionForRow = async (id: string) => {
     try {
       setLoadingId(id);
 
-      // Load the complete submission
-      const submission = await fetchSubmission(id);
+      // Send just the submission ID to scoring API
+      await evaluateSubmission(id);
 
-      // Send to scoring API
-      const result = await evaluateSubmission(submission);
-
-      setScores((prev) => ({
-        ...prev,
-        [id]: result,
-      }));
+      // Refetch to get updated scores from database
+      await queryClient.invalidateQueries({ queryKey: ["submissions"] });
     } catch (err) {
       console.log(err);
       alert("Failed to evaluate submission.");
@@ -137,15 +121,15 @@ export default function AdminList() {
                   </td>
 
                   <td className="px-4 py-3">
-                    {scores[s.id] ? (
+                    {s.score !== undefined ? (
                       <div>
                         <div className="font-semibold text-dark-blue">
-                          {scores[s.id].score.toFixed(1)}
+                          {s.score.toFixed(1)}
                         </div>
 
-                        {scores[s.id].decision && (
+                        {s.decision && (
                           <div className="text-xs text-gray-500">
-                            {scores[s.id].decision}
+                            {s.decision}
                           </div>
                         )}
                       </div>
@@ -166,7 +150,7 @@ export default function AdminList() {
                     >
                       {loadingId === s.id
                         ? "Evaluating..."
-                        : scores[s.id]
+                        : s.score !== undefined
                         ? "Re-evaluate"
                         : "Evaluate"}
                     </button>

@@ -31,11 +31,12 @@ const submitLimiter = rateLimit({
 });
 
 function toDto(s: Awaited<ReturnType<typeof prisma.submission.findUniqueOrThrow>> & { files: any[] }): SubmissionDto {
-  const { createdAt, files, ...rest } = s as any;
+  const { createdAt, evaluatedAt, ...rest } = s as any;
   return {
     ...(rest as any),
     createdAt: createdAt.toISOString(),
-    files: files.map((f: any) => ({
+    evaluatedAt: evaluatedAt ? evaluatedAt.toISOString() : undefined,
+    files: s.files.map((f: any) => ({
       id: f.id,
       originalName: f.originalName,
       contentType: f.contentType,
@@ -117,6 +118,39 @@ submissionsRouter.get("/:id", requireAdmin, async (req, res, next) => {
       include: { files: true },
     });
     if (!submission) return res.status(404).json({ error: "Submission not found" });
+    return res.json(toDto(submission));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Admin: update submission evaluation results. */
+submissionsRouter.patch("/:id/evaluate", requireAdmin, async (req, res, next) => {
+  try {
+    const { score, explanation, decision } = req.body;
+
+    // Validate input
+    if (typeof score !== "number" || score < 0 || score > 100) {
+      return res.status(400).json({ error: "Invalid score. Must be a number between 0 and 100." });
+    }
+    if (typeof explanation !== "string" || explanation.trim() === "") {
+      return res.status(400).json({ error: "Explanation is required and must be a non-empty string." });
+    }
+    if (!["GO", "CONDITIONAL", "REVISIT", "NO-GO"].includes(decision)) {
+      return res.status(400).json({ error: "Invalid decision. Must be one of: GO, CONDITIONAL, REVISIT, NO-GO." });
+    }
+
+    const submission = await prisma.submission.update({
+      where: { id: req.params.id },
+      data: {
+        score,
+        explanation: explanation.trim(),
+        decision,
+        evaluatedAt: new Date(),
+      },
+      include: { files: true },
+    });
+
     return res.json(toDto(submission));
   } catch (err) {
     next(err);
