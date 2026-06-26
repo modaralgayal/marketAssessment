@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { fetchSubmissions } from "../../lib/api";
+import {
+  fetchSubmissions,
+  fetchSubmission,
+  evaluateSubmission,
+} from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 
 export default function AdminList() {
@@ -9,10 +13,47 @@ export default function AdminList() {
     queryKey: ["submissions"],
     queryFn: fetchSubmissions,
   });
+
   const [search, setSearch] = useState("");
+
+  const [scores, setScores] = useState<
+    Record<
+      string,
+      {
+        score: number;
+        explanation: string;
+        decision?: string;
+      }
+    >
+  >({});
+
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const evaluateSubmissionForRow = async (id: string) => {
+    try {
+      setLoadingId(id);
+
+      // Load the complete submission
+      const submission = await fetchSubmission(id);
+
+      // Send to scoring API
+      const result = await evaluateSubmission(submission);
+
+      setScores((prev) => ({
+        ...prev,
+        [id]: result,
+      }));
+    } catch (err) {
+      console.log(err);
+      alert("Failed to evaluate submission.");
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   const items = (data?.items ?? []).filter((s) => {
     const q = search.toLowerCase();
+
     return (
       !q ||
       s.companyName.toLowerCase().includes(q) ||
@@ -25,8 +66,12 @@ export default function AdminList() {
     <AdminLayout>
       <div className="mb-5 flex items-center justify-between">
         <h1 className="text-xl font-bold text-dark-blue">
-          Submissions {data ? <span className="text-gray-400">({data.total})</span> : null}
+          Submissions{" "}
+          {data ? (
+            <span className="text-gray-400">({data.total})</span>
+          ) : null}
         </h1>
+
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -35,8 +80,15 @@ export default function AdminList() {
         />
       </div>
 
-      {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
-      {error && <p className="text-sm text-red-600">Failed to load submissions.</p>}
+      {isLoading && (
+        <p className="text-sm text-gray-500">Loading…</p>
+      )}
+
+      {error && (
+        <p className="text-sm text-red-600">
+          Failed to load submissions.
+        </p>
+      )}
 
       {data && (
         <div className="overflow-hidden rounded-lg border border-border bg-white">
@@ -47,32 +99,87 @@ export default function AdminList() {
                 <th className="px-4 py-3">Country</th>
                 <th className="px-4 py-3">Contact</th>
                 <th className="px-4 py-3">Files</th>
+                <th className="px-4 py-3">Score</th>
                 <th className="px-4 py-3">Received</th>
+                <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
+
             <tbody>
               {items.map((s) => (
-                <tr key={s.id} className="border-t border-border hover:bg-pale-blue/40">
+                <tr
+                  key={s.id}
+                  className="border-t border-border hover:bg-pale-blue/40"
+                >
                   <td className="px-4 py-3">
-                    <Link to={`/admin/submissions/${s.id}`} className="font-semibold text-mid-blue hover:underline">
+                    <Link
+                      to={`/admin/submissions/${s.id}`}
+                      className="font-semibold text-mid-blue hover:underline"
+                    >
                       {s.companyName}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{s.country}</td>
+
+                  <td className="px-4 py-3 text-gray-600">
+                    {s.country}
+                  </td>
+
                   <td className="px-4 py-3 text-gray-600">
                     {s.contactFullName}
                     <br />
-                    <span className="text-xs text-gray-400">{s.contactEmail}</span>
+                    <span className="text-xs text-gray-400">
+                      {s.contactEmail}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{s.files.length}</td>
+
+                  <td className="px-4 py-3 text-gray-600">
+                    {s.files.length}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {scores[s.id] ? (
+                      <div>
+                        <div className="font-semibold text-dark-blue">
+                          {scores[s.id].score.toFixed(1)}
+                        </div>
+
+                        {scores[s.id].decision && (
+                          <div className="text-xs text-gray-500">
+                            {scores[s.id].decision}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+
                   <td className="px-4 py-3 text-gray-500">
                     {new Date(s.createdAt).toLocaleDateString()}
                   </td>
+
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => evaluateSubmissionForRow(s.id)}
+                      disabled={loadingId === s.id}
+                      className="text-sm text-mid-blue hover:underline disabled:opacity-50"
+                    >
+                      {loadingId === s.id
+                        ? "Evaluating..."
+                        : scores[s.id]
+                        ? "Re-evaluate"
+                        : "Evaluate"}
+                    </button>
+                  </td>
                 </tr>
               ))}
+
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                  <td
+                    colSpan={7}
+                    className="px-4 py-8 text-center text-gray-400"
+                  >
                     No submissions yet.
                   </td>
                 </tr>

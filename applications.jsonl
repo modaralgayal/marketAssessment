@@ -1,0 +1,84 @@
+{
+  "application_id": "APP-001",
+  "company_name": "EuroFoods Ltd",
+  "years_experience": 6,
+  "certifications": ["Halal certified by GCC-recognised body"],
+  "cover_letter": "We have strong market opportunity in GCC with growing demand for European premium products. Our product is Halal certified, has 12 months shelf life, and we can adapt labels to Arabic. We have a multi‑SKU portfolio and flexible MOQs. Our decision maker is the export director with full budget authority.",
+  "market_opportunity": {
+    "addressable_market_size_usd": 250000000,
+    "growth_rate_annual_percent": 10,
+    "sales_channels": ["modern trade", "foodservice", "online"],
+    "distribution_partners": 4,
+    "european_preference": true
+  },
+  "product_readiness": {
+    "halal_certification": true,
+    "sfda_registration": true,
+    "shelf_life_months": 12,
+    "sku_count": 8,
+    "label_compliance": true
+  },
+  "commercial_viability": {
+    "landed_cost_usd": 2.5,
+    "competitor_price_usd": 3.0,
+    "company_annual_revenue_usd": 50000000,
+    "moq_units": 1000,
+    "export_experience": true
+  },
+  "strategic_fit": {
+    "long_term_commitment": true,
+    "pmf_flexibility_product": true,
+    "pmf_flexibility_price": true,
+    "track_record_adaptation": true,
+    "budget_allocated": true
+  },
+  "decision_maker_quality": {
+    "authority": "export director",
+    "timeline_realistic": true,
+    "cost_understanding": true,
+    "operational_accessibility": true
+
+<tool_call>
+<function=Write>
+<parameter=content>
+{
+  "application_id": "APP-001",
+  "company_name": "EuroFoods Ltd",
+  "years_experience": 6,
+  "certifications": ["Halal certified by GCC-recognised body"],
+  "cover_letter": "We have strong market opportunity in GCC with growing demand for European premium products. Our product is Halal certified, has 12 months shelf life, and we can adapt labels to Arabic. We have a multi‑SKU portfolio and flexible MOQs. Our decision maker is the export director with full budget authority.",
+  "market_opportunity": {
+    "addressable_market_size_usd": 250000000,
+    "growth_rate_annual_percent": 10,
+    "sales_channels": ["modern trade", "foodservice", "online"],
+    "distribution_partners": 4,
+    "european_preference": true
+  },
+  "product_readiness": {
+    "halal_certification": true,
+    "sfda_registration": true,
+    "shelf_life_months": 12,
+    "sku_count": 8,
+    "label_compliance": true
+  },
+  "commercial_viability": {
+    "landed_cost_usd": 2.5,
+    "competitor_price_usd": 3.0,
+    "company_annual_revenue_usd": 50000000,
+    "moq_units": 1000,
+    "export_experience": true
+  },
+  "strategic_fit": {
+    "long_term_commitment": true,
+    "pmf_flexibility_product": true,
+    "pmf_flexibility_price": true,
+    "track_record_adaptation": true,
+    "budget_allocated": true
+  },
+  "decision_maker_quality": {
+    "authority": "export director",
+    "timeline_realistic": true,
+    "cost_understanding": true,
+    "operational_accessibility": true
+  }
+}

@@ -24,6 +24,9 @@ const schema = z.object({
 
   // Firebase Admin (optional at boot)
   FIREBASE_SERVICE_ACCOUNT_B64: z.string().optional(),
+
+  // Claude api key
+  CLAUDE_API_KEY: z.string().optional()
 });
 
 const parsed = schema.safeParse(process.env);

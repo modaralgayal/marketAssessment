@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   REVENUE_OPTIONS,
@@ -57,11 +58,26 @@ export default function AdminDetail() {
     enabled: !!id,
   });
 
+
+
   return (
     <AdminLayout>
-      <Link to="/admin" className="mb-4 inline-block text-sm text-mid-blue hover:underline">
-        ← Back to submissions
-      </Link>
+      <div className="flex items-center mb-4">
+        <Link to="/admin" className="mr-4 text-sm text-mid-blue hover:underline">
+          ← Back to submissions
+        </Link>
+        {data && (
+          <button
+            onClick={() => {
+              // TODO: implement evaluate functionality
+              alert('Evaluate functionality not implemented yet');
+            }}
+            className="ml-4 text-sm text-mid-blue hover:underline"
+          >
+            Evaluate
+          </button>
+        )}
+      </div>
 
       {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
       {error && <p className="text-sm text-red-600">Failed to load submission.</p>}

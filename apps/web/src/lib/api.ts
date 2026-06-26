@@ -49,3 +49,30 @@ export async function fetchFileUrl(fileId: string): Promise<{ url: string; origi
   if (!res.ok) throw new Error("Failed to get download link");
   return res.json();
 }
+
+
+export interface ScoreResult {
+  score: number;
+  explanation: string;
+  decision?: string;
+}
+
+export async function evaluateSubmission(
+  submission: unknown,
+): Promise<ScoreResult> {
+  console.log(`Fetching score from ${BASE}/api/score`)
+  const res = await fetch(`${BASE}/api/score`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(submission),
+  });
+  console.log(res)
+
+  if (!res.ok) {
+    throw new Error("Failed to evaluate submission");
+  }
+
+  return res.json();
+}
