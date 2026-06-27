@@ -121,7 +121,7 @@ export default function AdminList() {
                   </td>
 
                   <td className="px-4 py-3">
-                    {s.score !== undefined ? (
+                    {s.score != null ? (
                       <div>
                         <div className="font-semibold text-dark-blue">
                           {s.score.toFixed(1)}
@@ -150,7 +150,7 @@ export default function AdminList() {
                     >
                       {loadingId === s.id
                         ? "Evaluating..."
-                        : s.score !== undefined
+                        : s.score != null
                         ? "Re-evaluate"
                         : "Evaluate"}
                     </button>
