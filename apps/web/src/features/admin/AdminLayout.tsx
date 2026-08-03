@@ -13,6 +13,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             Integrate Us · Admin
           </span>
         </Link>
+        <nav className="flex items-center gap-6 text-xs text-white/70">
+          <Link to="/admin" className="hover:text-white">Submissions</Link>
+          <Link to="/admin/distributors" className="hover:text-white">Distributors</Link>
+        </nav>
         <div className="flex items-center gap-4 text-xs text-white/70">
           <span>{user?.email}</span>
           <button onClick={() => logout()} className="rounded bg-white/10 px-3 py-1.5 hover:bg-white/20">

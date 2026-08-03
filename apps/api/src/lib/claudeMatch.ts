@@ -1,0 +1,169 @@
+import { Anthropic } from "@anthropic-ai/sdk";
+import { prisma } from "../prisma.js";
+import type { MatchResultDto } from "@mea/shared";
+
+/**
+ * Finds compatible distributors for a given manufacturer submission.
+ *
+ * Cost-optimization strategies:
+ *  - Single batch call: sends ALL distributors in one prompt (not N calls)
+ *  - Compact JSON: no pretty-print whitespace (~30% overhead savings)
+ *  - Haiku model: cheapest Anthropic tier
+ *  - Temperature 0: deterministic output, no wasted tokens on alternatives
+ *  - Small max_tokens: 1000 is enough for ~20-30 match results
+ *  - Only returns compatible distributors (not all)
+ *  - Manual trigger: admin controls when calls happen
+ */
+export async function findMatches(submissionId: string): Promise<MatchResultDto> {
+  // Fetch the submission with key fields for matching
+  const submission = await prisma.submission.findUnique({
+    where: { id: submissionId },
+  });
+
+  if (!submission) {
+    throw new Error("Submission not found");
+  }
+
+  // Fetch all distributors
+  const distributors = await prisma.distributor.findMany();
+
+  if (distributors.length === 0) {
+    throw new Error("No distributors in database. Import distributors first.");
+  }
+
+  // Compact JSON — no pretty-print to save tokens (~30% smaller)
+  const manufacturerProfile = JSON.stringify({
+    companyName: submission.companyName,
+    country: submission.country,
+    industryCategory: submission.industryCategory,
+    productNames: submission.productNames,
+    annualRevenue: submission.annualRevenue,
+    currentExportMarkets: submission.currentExportMarkets,
+    halalCert: submission.halalCert,
+    otherCerts: submission.otherCerts,
+    labelLanguages: submission.labelLanguages,
+    targetMarkets: submission.targetMarkets,
+    salesChannels: submission.salesChannels,
+    timeline: submission.timeline,
+    productionCapacity: submission.productionCapacity,
+    sfdaStatus: submission.sfdaStatus,
+    productAdaptability: submission.productAdaptability,
+    budget: submission.budget,
+    partnershipHorizon: submission.partnershipHorizon,
+    brandActivation: submission.brandActivation,
+    numberOfSkus: submission.numberOfSkus,
+    shelfLife: submission.shelfLife,
+    yearsInBusiness: submission.yearsInBusiness,
+    moq: submission.moq,
+    exportContact: submission.exportContact,
+    gccContact: submission.gccContact,
+    distributionPartner: submission.distributionPartner,
+    revenueYear1Target: submission.revenueYear1Target,
+    revenueYear3Target: submission.revenueYear3Target,
+  });
+
+  const distributorsCompact = distributors.map((d) => ({
+    id: d.id,
+    companyName: d.companyName,
+    cityRegion: d.cityRegion,
+    channelType: d.channelType,
+    sizeScale: d.sizeScale,
+    description: d.description,
+  }));
+
+  const distributorsJson = JSON.stringify(distributorsCompact);
+
+  const prompt = buildMatchPrompt(manufacturerProfile, distributorsJson);
+
+  return callClaudeForMatches(prompt);
+}
+
+function buildMatchPrompt(manufacturerProfile: string, distributorsJson: string): string {
+  return `You are a manufacturer-distributor matchmaking expert. Given a manufacturer profile and a list of distributors, identify which distributors are compatible.
+
+MANUFACTURER PROFILE:
+${manufacturerProfile}
+
+DISTRIBUTORS:
+${distributorsJson}
+
+INSTRUCTIONS:
+- Evaluate each distributor against the manufacturer's product category, target markets, operational readiness, and GCC ambitions.
+- Consider: does the distributor's channel type match the manufacturer's sales channels? Does their region match the target market? Is the manufacturer's product category a fit for the distributor's description?
+- Return ONLY the distributors that are compatible — do NOT return incompatible ones.
+- Each match must have a score (0-100), a one-sentence rationale (under 15 words), and a match level.
+- The JSON key for the distributor ID MUST be exactly "distributorId" — do not abbreviate or shorten it.
+
+MATCH LEVELS:
+- STRONG (75-100): Excellent alignment — channel, region, and product category are a clear fit
+- MODERATE (40-74): Partial alignment — some overlap but not perfect
+- WEAK (1-39): Marginal alignment — possible but with significant gaps
+
+OUTPUT FORMAT — JSON only, no markdown, no code fences:
+{"matches":[{"distributorId":"...","compatibilityScore":85.3,"rationale":"Strong alignment with their dairy product line and existing modern trade channel in KSA.","matchLevel":"STRONG"}]}`;
+}
+
+async function callClaudeForMatches(prompt: string): Promise<MatchResultDto> {
+  const apiKey = process.env.CLAUDE_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("CLAUDE_API_KEY is not set in environment variables");
+  }
+
+  const anthropic = new Anthropic({ apiKey });
+
+  const msg = await anthropic.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 8192,
+    temperature: 0,
+    system: "You are a matchmaking API. Output exactly one JSON object. Never output markdown or code fences. The first character must be { and the last must be }.",
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
+
+  const text = msg.content[0]?.type === "text" ? msg.content[0].text : "";
+
+  // Clean up potential markdown fences
+  let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```json\s*/i, "");
+  cleaned = cleaned.replace(/^```\s*/i, "");
+  cleaned = cleaned.replace(/\s*```$/, "");
+
+  let result: any;
+  try {
+    result = JSON.parse(cleaned);
+  } catch (e) {
+    console.error("Failed to parse Claude match response:");
+    console.error(cleaned);
+    throw new Error(`Failed to parse Claude response as JSON: ${e}`);
+  }
+
+  if (!Array.isArray(result.matches)) {
+    throw new Error(
+      `Claude response missing matches array:\n${JSON.stringify(result, null, 2)}`,
+    );
+  }
+
+  // Validate each match has required fields
+  for (const m of result.matches) {
+    if (
+      typeof m.distributorId !== "string" ||
+      typeof m.compatibilityScore !== "number" ||
+      m.compatibilityScore < 0 ||
+      m.compatibilityScore > 100 ||
+      typeof m.rationale !== "string" ||
+      typeof m.matchLevel !== "string" ||
+      !["STRONG", "MODERATE", "WEAK"].includes(m.matchLevel)
+    ) {
+      throw new Error(
+        `Invalid match entry:\n${JSON.stringify(m, null, 2)}`,
+      );
+    }
+  }
+
+  return result as MatchResultDto;
+}

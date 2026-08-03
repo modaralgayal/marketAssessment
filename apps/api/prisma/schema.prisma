@@ -54,6 +54,7 @@ model Submission {
   score                   Float?
   updatedAt               DateTime         @default(now()) @updatedAt
   files                   SubmissionFile[]
+  matches                 ManufacturerMatch[]
 
   @@index([createdAt])
   @@index([contactEmail])
@@ -71,6 +72,39 @@ model SubmissionFile {
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@index([submissionId])
+}
+
+model Distributor {
+  id                String              @id @default(cuid())
+  companyName       String
+  cityRegion        String
+  channelType       String
+  sizeScale         String?
+  website           String?
+  phone             String?
+  email             String?
+  contactPerson     String?
+  doWeKnowThem      String?
+  statusLastContact String?
+  description       String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  matches           ManufacturerMatch[]
+}
+
+model ManufacturerMatch {
+  id                 String      @id @default(cuid())
+  submissionId       String
+  distributorId      String
+  compatibilityScore Float
+  rationale          String
+  matchLevel         String
+  createdAt          DateTime    @default(now())
+  submission         Submission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  distributor        Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([distributorId])
 }
 
 enum RevenueBracket {

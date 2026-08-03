@@ -1,5 +1,5 @@
 import { auth } from "./firebase";
-import type { SubmissionDto } from "@mea/shared";
+import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput } from "@mea/shared";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -60,19 +60,108 @@ export interface ScoreResult {
 export async function evaluateSubmission(
   submissionId: string,
 ): Promise<ScoreResult> {
-  console.log(`Fetching score from ${BASE}/api/score`)
   const res = await fetch(`${BASE}/api/score`, {
     method: "POST",
     headers: {
+      ...(await authHeader()),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ submissionId }),
   });
-  console.log(res)
 
   if (!res.ok) {
     throw new Error("Failed to evaluate submission");
   }
 
+  return res.json();
+}
+
+// ── Distributor CRUD ───────────────────────────────────────────────────
+
+export async function fetchDistributors(): Promise<DistributorDto[]> {
+  const res = await fetch(`${BASE}/api/distributors`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load distributors");
+  return res.json();
+}
+
+export async function fetchDistributor(id: string): Promise<DistributorDto> {
+  const res = await fetch(`${BASE}/api/distributors/${id}`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load distributor");
+  return res.json();
+}
+
+export async function createDistributor(data: DistributorInput): Promise<DistributorDto> {
+  const res = await fetch(`${BASE}/api/distributors`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create distributor");
+  return res.json();
+}
+
+export async function updateDistributor(id: string, data: DistributorInput): Promise<DistributorDto> {
+  const res = await fetch(`${BASE}/api/distributors/${id}`, {
+    method: "PUT",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update distributor");
+  return res.json();
+}
+
+export async function deleteDistributor(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/distributors/${id}`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to delete distributor");
+}
+
+export async function importDistributors(data: DistributorInput[]): Promise<{ imported: number }> {
+  const res = await fetch(`${BASE}/api/distributors/import`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to import distributors");
+  return res.json();
+}
+
+export interface SyncResult {
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
+
+export async function syncDistributorsFromSheet(accessToken: string): Promise<SyncResult> {
+  const res = await fetch(`${BASE}/api/distributors/sync`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ accessToken }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to sync from Google Sheets");
+  }
+  return res.json();
+}
+
+// ── Matching ───────────────────────────────────────────────────────────
+
+export async function findMatches(submissionId: string): Promise<ManufacturerMatchDto[]> {
+  const res = await fetch(`${BASE}/api/submissions/${submissionId}/match`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to find matches");
+  return res.json();
+}
+
+export async function fetchMatches(submissionId: string): Promise<ManufacturerMatchDto[]> {
+  const res = await fetch(`${BASE}/api/submissions/${submissionId}/matches`, {
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to fetch matches");
   return res.json();
 }

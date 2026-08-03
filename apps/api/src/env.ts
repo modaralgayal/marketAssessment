@@ -25,6 +25,9 @@ const schema = z.object({
   // Firebase Admin (optional at boot)
   FIREBASE_SERVICE_ACCOUNT_B64: z.string().optional(),
 
+  // Google Sheets (optional at boot)
+  GOOGLE_SHEET_ID: z.string().optional(),
+
   // Claude api key
   CLAUDE_API_KEY: z.string().optional()
 });

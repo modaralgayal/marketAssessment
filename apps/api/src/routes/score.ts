@@ -1,10 +1,25 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { scoreApplication } from "../lib/claudeScore";
 import { prisma } from "../prisma.js";
+import { requireAdmin } from "../middleware/requireAdmin.js";
+import { auditLog } from "../middleware/auditLog.js";
 
 export const scoreRouter = Router();
 
-scoreRouter.post("/", async (req, res, next) => {
+// All score routes require admin authentication
+scoreRouter.use(requireAdmin);
+scoreRouter.use(auditLog);
+
+const scoreLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many evaluation requests, please try again later." },
+});
+
+scoreRouter.post("/", scoreLimiter, async (req, res, next) => {
   try {
     const { submissionId } = req.body;
 

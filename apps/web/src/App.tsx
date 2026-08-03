@@ -3,6 +3,9 @@ import FormPage from "./features/form/FormPage";
 import AdminLogin from "./features/admin/AdminLogin";
 import AdminList from "./features/admin/AdminList";
 import AdminDetail from "./features/admin/AdminDetail";
+import DistributorList from "./features/admin/DistributorList";
+import DistributorProfile from "./features/admin/DistributorProfile";
+import DistributorForm from "./features/admin/DistributorForm";
 import ProtectedRoute from "./features/admin/ProtectedRoute";
 
 export default function App() {
@@ -23,6 +26,38 @@ export default function App() {
         element={
           <ProtectedRoute>
             <AdminDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/distributors"
+        element={
+          <ProtectedRoute>
+            <DistributorList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/distributors/new"
+        element={
+          <ProtectedRoute>
+            <DistributorForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/distributors/:id"
+        element={
+          <ProtectedRoute>
+            <DistributorProfile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/distributors/:id/edit"
+        element={
+          <ProtectedRoute>
+            <DistributorForm />
           </ProtectedRoute>
         }
       />

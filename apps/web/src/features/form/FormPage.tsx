@@ -318,6 +318,14 @@ export default function FormPage() {
           <p className="mt-3 text-[11.5px] italic text-gray-400">
             We'll review your submission and respond within 5 business days.
           </p>
+          <p className="mt-3 rounded border border-orange/30 bg-orange/5 px-3 py-2 text-[11px] text-gray-500">
+            <strong>Privacy notice:</strong> The information you provide will be used to assess your
+            suitability for market entry and may be processed by our AI-powered evaluation system
+            (Anthropic Claude) under strict data protection safeguards. Your data is never used for
+            model training and is retained only as long as necessary for the assessment process.
+            By submitting, you consent to this processing. See our{" "}
+            <a href="/privacy" className="text-mid-blue underline">Privacy Policy</a>.
+          </p>
         </div>
       </form>
     </div>

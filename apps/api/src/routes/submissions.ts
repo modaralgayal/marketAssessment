@@ -7,6 +7,7 @@ import { submissionSchema, FILE_CONSTRAINTS, type SubmissionDto } from "@mea/sha
 import { prisma } from "../prisma.js";
 import { storage } from "../storage/index.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
+import { auditLog } from "../middleware/auditLog.js";
 
 export const submissionsRouter = Router();
 
@@ -30,18 +31,46 @@ const submitLimiter = rateLimit({
   message: { error: "Too many submissions from this IP, please try again later." },
 });
 
-function toDto(s: Awaited<ReturnType<typeof prisma.submission.findUniqueOrThrow>> & { files: any[] }): SubmissionDto {
-  const { createdAt, evaluatedAt, ...rest } = s as any;
+function toDto(s: any): SubmissionDto {
+  const { createdAt, evaluatedAt, _count, ...rest } = s;
   return {
     ...(rest as any),
     createdAt: createdAt.toISOString(),
     evaluatedAt: evaluatedAt ? evaluatedAt.toISOString() : undefined,
-    files: s.files.map((f: any) => ({
+    matchCount: _count?.matches ?? undefined,
+    files: (s.files ?? []).map((f: any) => ({
       id: f.id,
       originalName: f.originalName,
       contentType: f.contentType,
       sizeBytes: f.sizeBytes,
       createdAt: f.createdAt.toISOString(),
+    })),
+    matches: (s.matches ?? []).map((m: any) => ({
+      id: m.id,
+      submissionId: m.submissionId,
+      distributorId: m.distributorId,
+      compatibilityScore: m.compatibilityScore,
+      rationale: m.rationale,
+      matchLevel: m.matchLevel,
+      createdAt: m.createdAt.toISOString(),
+      distributor: m.distributor
+        ? {
+            id: m.distributor.id,
+            companyName: m.distributor.companyName,
+            cityRegion: m.distributor.cityRegion,
+            channelType: m.distributor.channelType,
+            sizeScale: m.distributor.sizeScale ?? undefined,
+            website: m.distributor.website ?? undefined,
+            phone: m.distributor.phone ?? undefined,
+            email: m.distributor.email ?? undefined,
+            contactPerson: m.distributor.contactPerson ?? undefined,
+            doWeKnowThem: m.distributor.doWeKnowThem ?? undefined,
+            statusLastContact: m.distributor.statusLastContact ?? undefined,
+            description: m.distributor.description ?? undefined,
+            createdAt: m.distributor.createdAt.toISOString(),
+            updatedAt: m.distributor.updatedAt.toISOString(),
+          }
+        : undefined,
     })),
   };
 }
@@ -91,14 +120,17 @@ submissionsRouter.post("/", submitLimiter, upload.array("files"), async (req, re
 });
 
 /** Admin: list submissions (newest first, simple pagination). */
-submissionsRouter.get("/", requireAdmin, async (req, res, next) => {
+submissionsRouter.get("/", requireAdmin, auditLog, async (req, res, next) => {
   try {
     const take = Math.min(Number(req.query.limit) || 50, 100);
     const skip = Number(req.query.offset) || 0;
     const [items, total] = await Promise.all([
       prisma.submission.findMany({
         orderBy: { createdAt: "desc" },
-        include: { files: true },
+        include: {
+          files: true,
+          _count: { select: { matches: true } },
+        },
         take,
         skip,
       }),
@@ -110,12 +142,18 @@ submissionsRouter.get("/", requireAdmin, async (req, res, next) => {
   }
 });
 
-/** Admin: full submission detail. */
-submissionsRouter.get("/:id", requireAdmin, async (req, res, next) => {
+/** Admin: full submission detail with files and matches. */
+submissionsRouter.get("/:id", requireAdmin, auditLog, async (req, res, next) => {
   try {
     const submission = await prisma.submission.findUnique({
       where: { id: req.params.id },
-      include: { files: true },
+      include: {
+        files: true,
+        matches: {
+          include: { distributor: true },
+          orderBy: { compatibilityScore: "desc" },
+        },
+      },
     });
     if (!submission) return res.status(404).json({ error: "Submission not found" });
     return res.json(toDto(submission));
@@ -125,7 +163,7 @@ submissionsRouter.get("/:id", requireAdmin, async (req, res, next) => {
 });
 
 /** Admin: update submission evaluation results. */
-submissionsRouter.patch("/:id/evaluate", requireAdmin, async (req, res, next) => {
+submissionsRouter.patch("/:id/evaluate", requireAdmin, auditLog, async (req, res, next) => {
   try {
     const { score, explanation, decision } = req.body;
 

@@ -2,11 +2,16 @@ import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { storage } from "../storage/index.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
+import { auditLog } from "../middleware/auditLog.js";
 
 export const filesRouter = Router();
 
+// All file routes require admin authentication
+filesRouter.use(requireAdmin);
+filesRouter.use(auditLog);
+
 /** Admin: return a short-lived signed URL to download a catalogue file. */
-filesRouter.get("/:id/download", requireAdmin, async (req, res, next) => {
+filesRouter.get("/:id/download", async (req, res, next) => {
   try {
     const file = await prisma.submissionFile.findUnique({ where: { id: req.params.id } });
     if (!file) return res.status(404).json({ error: "File not found" });

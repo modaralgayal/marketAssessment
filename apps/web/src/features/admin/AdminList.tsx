@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchSubmissions,
   evaluateSubmission,
+  findMatches,
 } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 
@@ -17,6 +18,7 @@ export default function AdminList() {
   const [search, setSearch] = useState("");
 
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [matchingId, setMatchingId] = useState<string | null>(null);
 
   const evaluateSubmissionForRow = async (id: string) => {
     try {
@@ -32,6 +34,19 @@ export default function AdminList() {
       alert("Failed to evaluate submission.");
     } finally {
       setLoadingId(null);
+    }
+  };
+
+  const findMatchesForRow = async (id: string) => {
+    try {
+      setMatchingId(id);
+      await findMatches(id);
+      await queryClient.invalidateQueries({ queryKey: ["submissions"] });
+    } catch (err) {
+      console.log(err);
+      alert("Failed to find matches.");
+    } finally {
+      setMatchingId(null);
     }
   };
 
@@ -84,6 +99,7 @@ export default function AdminList() {
                 <th className="px-4 py-3">Contact</th>
                 <th className="px-4 py-3">Files</th>
                 <th className="px-4 py-3">Score</th>
+                <th className="px-4 py-3">Matches</th>
                 <th className="px-4 py-3">Received</th>
                 <th className="px-4 py-3">Action</th>
               </tr>
@@ -138,22 +154,47 @@ export default function AdminList() {
                     )}
                   </td>
 
+                  <td className="px-4 py-3">
+                    {s.matchCount != null && s.matchCount > 0 ? (
+                      <span className="font-semibold text-dark-blue">
+                        {s.matchCount} match{s.matchCount !== 1 ? "es" : ""}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+
                   <td className="px-4 py-3 text-gray-500">
                     {new Date(s.createdAt).toLocaleDateString()}
                   </td>
 
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => evaluateSubmissionForRow(s.id)}
-                      disabled={loadingId === s.id}
-                      className="text-sm text-mid-blue hover:underline disabled:opacity-50"
-                    >
-                      {loadingId === s.id
-                        ? "Evaluating..."
-                        : s.score != null
-                        ? "Re-evaluate"
-                        : "Evaluate"}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => evaluateSubmissionForRow(s.id)}
+                        disabled={loadingId === s.id}
+                        className="text-sm text-mid-blue hover:underline disabled:opacity-50"
+                      >
+                        {loadingId === s.id
+                          ? "Evaluating..."
+                          : s.score != null
+                          ? "Re-evaluate"
+                          : "Evaluate"}
+                      </button>
+                      <button
+                        onClick={() => findMatchesForRow(s.id)}
+                        disabled={matchingId === s.id}
+                        className="text-sm text-orange hover:underline disabled:opacity-50"
+                      >
+                        {matchingId === s.id ? "Matching…" : "Find Matches"}
+                      </button>
+                      <Link
+                        to={`/admin/submissions/${s.id}`}
+                        className="text-sm text-gray-500 hover:underline"
+                      >
+                        View
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -161,7 +202,7 @@ export default function AdminList() {
               {items.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-8 text-center text-gray-400"
                   >
                     No submissions yet.

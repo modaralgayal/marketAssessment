@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   REVENUE_OPTIONS,
   YES_NO_UNSURE_OPTIONS,
@@ -14,8 +15,9 @@ import {
   HORIZON_OPTIONS,
   ACTIVATION_OPTIONS,
   type SubmissionDto,
+  type ManufacturerMatchDto,
 } from "@mea/shared";
-import { fetchSubmission, fetchFileUrl } from "../../lib/api";
+import { fetchSubmission, fetchFileUrl, findMatches, fetchMatches } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 
 type Opt = ReadonlyArray<{ value: string; label: string }>;
@@ -51,13 +53,51 @@ async function downloadFile(fileId: string) {
 
 export default function AdminDetail() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+  const [matching, setMatching] = useState(false);
+  const [matchError, setMatchError] = useState<string | null>(null);
+
   const { data, isLoading, error } = useQuery<SubmissionDto>({
     queryKey: ["submission", id],
     queryFn: () => fetchSubmission(id!),
     enabled: !!id,
   });
 
+  const { data: matches = [] } = useQuery<ManufacturerMatchDto[]>({
+    queryKey: ["submission", id, "matches"],
+    queryFn: () => fetchMatches(id!),
+    enabled: !!id,
+  });
 
+  const handleFindMatches = async () => {
+    if (!id) return;
+    setMatching(true);
+    setMatchError(null);
+    try {
+      await findMatches(id);
+      await queryClient.invalidateQueries({ queryKey: ["submission", id] });
+      await queryClient.invalidateQueries({ queryKey: ["submission", id, "matches"] });
+    } catch (err) {
+      setMatchError(err instanceof Error ? err.message : "Failed to find matches");
+    } finally {
+      setMatching(false);
+    }
+  };
+
+  const scoreColor = (score: number) => {
+    if (score >= 75) return "text-green-700 bg-green-50";
+    if (score >= 40) return "text-amber-700 bg-amber-50";
+    return "text-red-700 bg-red-50";
+  };
+
+  const matchLevelBadge = (level: string) => {
+    switch (level) {
+      case "STRONG": return "bg-green-100 text-green-800";
+      case "MODERATE": return "bg-amber-100 text-amber-800";
+      case "WEAK": return "bg-red-100 text-red-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
 
   return (
     <AdminLayout>
@@ -65,17 +105,6 @@ export default function AdminDetail() {
         <Link to="/admin" className="mr-4 text-sm text-mid-blue hover:underline">
           ← Back to submissions
         </Link>
-        {data && (
-          <button
-            onClick={() => {
-              // TODO: implement evaluate functionality
-              alert('Evaluate functionality not implemented yet');
-            }}
-            className="ml-4 text-sm text-mid-blue hover:underline"
-          >
-            Evaluate
-          </button>
-        )}
       </div>
 
       {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
@@ -168,6 +197,62 @@ export default function AdminDetail() {
             <Row label="Has Signing Authority" value={yesNo(data.hasSigningAuthority)} />
             <Row label="Signing Authority Contact" value={text(data.signingAuthorityContact)} />
             <Row label="Anything Else" value={text(data.anythingElse)} />
+          </Section>
+
+          {/* ── Distributor Matches ── */}
+          <Section title="Distributor Matches">
+            <div className="mb-4">
+              <button
+                onClick={handleFindMatches}
+                disabled={matching}
+                className="rounded bg-mid-blue px-4 py-2 text-sm font-semibold text-white hover:bg-dark-blue disabled:opacity-50"
+              >
+                {matching ? "Finding matches…" : "Find Matches"}
+              </button>
+              {matchError && <p className="mt-2 text-sm text-red-600">{matchError}</p>}
+            </div>
+
+            {matches.length === 0 ? (
+              <p className="text-sm text-gray-400">No matches yet. Click "Find Matches" to run the matching engine.</p>
+            ) : (
+              <div className="space-y-3">
+                {matches.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex items-start gap-4 rounded-lg border border-border bg-gray-50 p-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/admin/distributors/${m.distributor.id}`}
+                          className="font-semibold text-dark-blue hover:text-mid-blue hover:underline"
+                        >
+                          {m.distributor.companyName}
+                        </Link>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${matchLevelBadge(m.matchLevel)}`}>
+                          {m.matchLevel}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {m.distributor.cityRegion} · {m.distributor.channelType}
+                        {m.distributor.sizeScale && ` · ${m.distributor.sizeScale}`}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-700">{m.rationale}</p>
+                      {m.distributor.contactPerson && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          Contact: {m.distributor.contactPerson}
+                          {m.distributor.email && ` · ${m.distributor.email}`}
+                        </p>
+                      )}
+                    </div>
+                    <div className={`rounded-lg px-3 py-2 text-center text-sm font-bold ${scoreColor(m.compatibilityScore)}`}>
+                      {m.compatibilityScore.toFixed(0)}
+                      <div className="text-[10px] font-normal">Match</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Section>
         </>
       )}
