@@ -90,6 +90,7 @@ export default function DistributorProfile() {
   const [deleting, setDeleting] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [tierTemplate, setTierTemplate] = useState<DataTierTemplate | null>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -174,27 +175,43 @@ export default function DistributorProfile() {
           >
             Edit
           </Link>
-          <button
-            onClick={handleSyncFromSheet}
-            disabled={syncing}
-            className="rounded border border-orange bg-white px-4 py-1.5 text-sm text-orange hover:bg-orange/10 disabled:opacity-50"
-          >
-            {syncing ? "Syncing…" : "Sync from Sheet"}
-          </button>
-          <button
-            onClick={handleRecalcTier}
-            disabled={recalculating}
-            className="rounded border border-gray-400 bg-white px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-          >
-            {recalculating ? "Recalculating…" : "Recalc Tier"}
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="rounded border border-red-500 px-4 py-1.5 text-sm text-red-500 hover:bg-red-50 disabled:opacity-50"
-          >
-            {deleting ? "Deleting…" : "Delete"}
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="rounded border border-border px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100"
+            >
+              ⋮
+            </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border border-border bg-white py-1 shadow-lg">
+                  <button
+                    onClick={() => { setShowMenu(false); handleSyncFromSheet(); }}
+                    disabled={syncing}
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {syncing ? "Syncing…" : "Sync from Sheet"}
+                  </button>
+                  <button
+                    onClick={() => { setShowMenu(false); handleRecalcTier(); }}
+                    disabled={recalculating}
+                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {recalculating ? "Recalculating…" : "Recalc Tier"}
+                  </button>
+                  <hr className="my-1 border-border" />
+                  <button
+                    onClick={() => { setShowMenu(false); handleDelete(); }}
+                    disabled={deleting}
+                    className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deleting ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
