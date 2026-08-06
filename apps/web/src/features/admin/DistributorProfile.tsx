@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchDistributor, deleteDistributor, fetchDataTierTemplate, recalcDistributorTier, syncSingleDistributorFromSheet } from "../../lib/api";
-import { getSheetsToken } from "../../lib/googleSheets";
+import { getSheetsToken, preloadGis } from "../../lib/googleSheets";
 import type { DataTierTemplate, DataTierField } from "@mea/shared";
 import AdminLayout from "./AdminLayout";
 
@@ -103,6 +103,7 @@ export default function DistributorProfile() {
     fetchDataTierTemplate()
       .then(setTierTemplate)
       .catch(() => {});
+    preloadGis();
   }, []);
 
   const handleRecalcTier = async () => {
@@ -122,7 +123,14 @@ export default function DistributorProfile() {
     if (!id || !data) return;
     setSyncing(true);
     try {
-      const token = await getSheetsToken();
+      // Race the OAuth token against a 30s timeout so the UI never hangs forever
+      const token = await Promise.race([
+        getSheetsToken(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("OAuth timed out. Check your popup blocker and try again.")), 30_000)
+        ),
+      ]);
+
       await syncSingleDistributorFromSheet(id, token);
       await queryClient.invalidateQueries({ queryKey: ["distributor", id] });
     } catch (err: any) {

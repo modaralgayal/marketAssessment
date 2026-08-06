@@ -100,11 +100,12 @@ export async function createDistributor(data: DistributorInput): Promise<Distrib
   return res.json();
 }
 
-export async function updateDistributor(id: string, data: DistributorInput): Promise<DistributorDto> {
+export async function updateDistributor(id: string, data: DistributorInput, googleAccessToken?: string): Promise<DistributorDto> {
+  const payload = googleAccessToken ? { ...data, googleAccessToken } : data;
   const res = await fetch(`${BASE}/api/distributors/${id}`, {
     method: "PUT",
     headers: { ...(await authHeader()), "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error("Failed to update distributor");
   return res.json();

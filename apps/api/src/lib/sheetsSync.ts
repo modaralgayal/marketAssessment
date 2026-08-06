@@ -155,9 +155,11 @@ async function processTab(sheets: any, tabName: string, result: SyncResult): Pro
         description: "description",
   };
 
-  const mappedHeaders = headers.map((h: string) => {
+  const mappedHeaders = headers.map((h: string, i: number) => {
     if (h.startsWith("attributes.") || h.startsWith("attributes_")) return h;
-    return fieldMap[h] ?? null;
+    // Known core fields map to their column name; everything else is an attribute
+    // Use the original (un-lowercased) header text so camelCase keys match the tier template
+    return fieldMap[h] ?? `attributes.${rawHeaders[i]!.trim()}`;
   });
 
   // Check required columns exist
@@ -258,6 +260,171 @@ async function processRow(row: any[], index: number, rowOffset: number, tabName:
   result.imported++;
 }
 
+// Convert a 1-based column number to a sheet column letter (A, B, …, Z, AA, AB, …)
+function columnToLetter(n: number): string {
+  let s = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+/**
+ * Write a distributor's data back to the Google Sheet.
+ * Finds the matching row by company name and updates the columns in place.
+ *
+ * @returns true if the row was found and updated, false if not found.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function writeDistributorToSheet(accessToken: string, distributor: DistributorDto): Promise<boolean> {
+  if (!SHEET_ID) {
+    throw new Error("GOOGLE_SHEET_ID is not configured.");
+  }
+
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+
+  const sheets = google.sheets({ version: "v4", auth });
+
+  const spreadsheet = await sheets.spreadsheets.get({
+    spreadsheetId: SHEET_ID,
+  });
+
+  const tabs = spreadsheet.data.sheets ?? [];
+  if (tabs.length === 0) return false;
+
+  const companyName = distributor.companyName;
+  const searchName = companyName.toLowerCase().trim();
+
+  for (const sheet of tabs) {
+    const tabName = sheet.properties?.title;
+    if (!tabName || tabName.toLowerCase() === "readme") continue;
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID!,
+      range: tabName,
+    });
+
+    const rows = response.data.values;
+    if (!rows || rows.length < 2) continue;
+
+    // Detect title row
+    let headerRowIndex = 0;
+    let dataStartIndex = 1;
+    if (rows.length > 1) {
+      const firstRow = rows[0]!.map((h: string) => String(h).trim()).filter(Boolean);
+      const secondRow = rows[1]!.map((h: string) => String(h).trim()).filter(Boolean);
+      if (firstRow.length <= 1 && secondRow.length >= 3) {
+        headerRowIndex = 1;
+        dataStartIndex = 2;
+      }
+    }
+
+    const rawHeaders = rows[headerRowIndex]!.map((h: string) => String(h));
+    const headers = rawHeaders.map((h: string) => h.trim().toLowerCase());
+
+    // Build field map (same as processTab)
+    const fieldMap: Record<string, string> = {
+      "company name": "companyName",
+      companyname: "companyName",
+      company: "companyName",
+      "city / region": "cityRegion",
+      "city/region": "cityRegion",
+      "city region": "cityRegion",
+      cityregion: "cityRegion",
+      region: "cityRegion",
+      city: "cityRegion",
+      "channel / type": "channelType",
+      "channel/type": "channelType",
+      "channel type": "channelType",
+      channeltype: "channelType",
+      channel: "channelType",
+      type: "channelType",
+      "size / scale": "sizeScale",
+      "size/scale": "sizeScale",
+      "size scale": "sizeScale",
+      sizescale: "sizeScale",
+      scale: "sizeScale",
+      size: "sizeScale",
+      website: "website",
+      phone: "phone",
+      email: "email",
+      "contact person": "contactPerson",
+      contactperson: "contactPerson",
+      contact: "contactPerson",
+      "do we know them?": "doWeKnowThem",
+      "do we know them": "doWeKnowThem",
+      "know them": "doWeKnowThem",
+      doweknowthem: "doWeKnowThem",
+      "status / last contact": "statusLastContact",
+      "status/last contact": "statusLastContact",
+      "status last contact": "statusLastContact",
+      statuslastcontact: "statusLastContact",
+      status: "statusLastContact",
+      "last contact": "statusLastContact",
+      description: "description",
+    };
+
+    const mappedHeaders = headers.map((h: string, i: number) => {
+      if (h.startsWith("attributes.") || h.startsWith("attributes_")) return h;
+      return fieldMap[h] ?? `attributes.${rawHeaders[i]!.trim()}`;
+    });
+
+    const nameColIndex = mappedHeaders.indexOf("companyName");
+    if (nameColIndex === -1) continue;
+
+    const dataRows = rows.slice(dataStartIndex);
+
+    // Find the row matching the company name
+    let matchRowIndex = -1;
+    for (const [i, row] of dataRows.entries()) {
+      const rowName = String(row[nameColIndex] ?? "").trim().toLowerCase();
+      if (rowName === searchName) {
+        matchRowIndex = i;
+        break;
+      }
+    }
+
+    if (matchRowIndex === -1) continue;
+
+    // Build the row values matching the column order
+    const sheetRowNum = dataStartIndex + matchRowIndex + 1; // 1-indexed for Sheets API
+    const values: string[] = [];
+
+    for (const [, field] of mappedHeaders.entries()) {
+      if (field === null) {
+        values.push(""); // no mapping for this column
+      } else if (field.startsWith("attributes.")) {
+        const attrKey = field.slice("attributes.".length);
+        const attrVal = (distributor.attributes as Record<string, any>)?.[attrKey];
+        values.push(attrVal != null ? String(attrVal) : "");
+      } else if (field.startsWith("attributes_")) {
+        const attrKey = field.slice("attributes_".length);
+        const attrVal = (distributor.attributes as Record<string, any>)?.[attrKey];
+        values.push(attrVal != null ? String(attrVal) : "");
+      } else {
+        const val = (distributor as any)[field];
+        values.push(val != null ? String(val) : "");
+      }
+    }
+
+    // Update the row in the sheet
+    const range = `${tabName}!A${sheetRowNum}:${columnToLetter(values.length)}${sheetRowNum}`;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID!,
+      range,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [values] },
+    });
+
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Sync a single distributor from the Google Sheet by matching its company name.
  * Searches all tabs and updates the first matching row.
@@ -353,9 +520,9 @@ export async function syncSingleDistributorFromSheet(accessToken: string, compan
       description: "description",
     };
 
-    const mappedHeaders = headers.map((h: string) => {
+    const mappedHeaders = headers.map((h: string, i: number) => {
       if (h.startsWith("attributes.") || h.startsWith("attributes_")) return h;
-      return fieldMap[h] ?? null;
+      return fieldMap[h] ?? `attributes.${rawHeaders[i]!.trim()}`;
     });
 
     const nameColIndex = mappedHeaders.indexOf("companyName");

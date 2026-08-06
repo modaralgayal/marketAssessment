@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchDistributors, syncDistributorsFromSheet, recalcDataTiers } from "../../lib/api";
-import { getSheetsToken } from "../../lib/googleSheets";
+import { getSheetsToken, preloadGis } from "../../lib/googleSheets";
 import AdminLayout from "./AdminLayout";
 
 export default function DistributorList() {
@@ -17,6 +17,9 @@ export default function DistributorList() {
   const [syncing, setSyncing] = useState(false);
   const [recalcTiers, setRecalcTiers] = useState(false);
   const [showActions, setShowActions] = useState(false);
+
+  // Pre-load GIS library so the OAuth popup opens immediately on user click
+  useEffect(() => { preloadGis(); }, []);
 
   const handleRecalcTiers = async () => {
     try {
@@ -34,7 +37,15 @@ export default function DistributorList() {
   const handleSync = async () => {
     try {
       setSyncing(true);
-      const token = await getSheetsToken();
+
+      // Race the OAuth token against a 30s timeout so the UI never hangs forever
+      const token = await Promise.race([
+        getSheetsToken(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("OAuth timed out. Check your popup blocker and try again.")), 30_000)
+        ),
+      ]);
+
       const result = await syncDistributorsFromSheet(token);
       alert(`Sync complete: ${result.imported} imported, ${result.updated} updated, ${result.skipped} skipped.${result.errors.length ? `\n\nErrors:\n${result.errors.slice(0, 5).join("\n")}${result.errors.length > 5 ? `\n…and ${result.errors.length - 5} more` : ""}` : ""}`);
       await queryClient.invalidateQueries({ queryKey: ["distributors"] });

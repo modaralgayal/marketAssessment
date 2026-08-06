@@ -4,7 +4,7 @@ import { distributorSchema, type DistributorDto } from "@mea/shared";
 import { prisma } from "../prisma.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { auditLog } from "../middleware/auditLog.js";
-import { syncFromSheet, syncSingleDistributorFromSheet } from "../lib/sheetsSync.js";
+import { syncFromSheet, syncSingleDistributorFromSheet, writeDistributorToSheet } from "../lib/sheetsSync.js";
 import { env } from "../env.js";
 import {
   computeDataTier,
@@ -120,7 +120,22 @@ distributorsRouter.put("/:id", async (req, res, next) => {
       },
       include: { _count: { select: { matches: true } } },
     });
-    return res.json(toDto(distributor));
+
+    // If a Google access token was provided, write the updated data back to the sheet
+    const { googleAccessToken } = req.body;
+    let sheetUpdated = false;
+    let sheetError: string | undefined;
+    if (googleAccessToken && typeof googleAccessToken === "string") {
+      const dto = toDto(distributor);
+      try {
+        sheetUpdated = await writeDistributorToSheet(googleAccessToken, dto);
+      } catch (err: any) {
+        sheetError = err.message;
+        console.error(`[distributors] Failed to write back to sheet for "${dto.companyName}":`, err.message);
+      }
+    }
+
+    return res.json({ ...toDto(distributor), sheetUpdated, sheetError });
   } catch (err) {
     next(err);
   }

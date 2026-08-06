@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { distributorSchema, type DistributorInput, type DataTierTemplate, type DataTierField } from "@mea/shared";
 import { fetchDistributor, createDistributor, updateDistributor, fetchDataTierTemplate } from "../../lib/api";
+import { getSheetsToken, preloadGis } from "../../lib/googleSheets";
 import AdminLayout from "./AdminLayout";
 
 export default function DistributorForm() {
@@ -15,6 +16,8 @@ export default function DistributorForm() {
   const [error, setError] = useState<string | null>(null);
   const [tierTemplate, setTierTemplate] = useState<DataTierTemplate | null>(null);
   const [customFields, setCustomFields] = useState<Array<{ key: string; value: string; tier: number }>>([]);
+  const googleTokenRef = useRef<string | undefined>(undefined);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const {
     register,
@@ -58,6 +61,7 @@ export default function DistributorForm() {
       })
       .catch(() => setError("Failed to load data"))
       .finally(() => setLoading(false));
+    preloadGis();
   }, [id, isEdit, reset]);
 
   // Watch attributes for dynamic rendering
@@ -84,7 +88,11 @@ export default function DistributorForm() {
       data.attributes = mergedAttrs;
 
       if (isEdit && id) {
-        await updateDistributor(id, data);
+        const result = await updateDistributor(id, data, googleTokenRef.current) as any;
+        if (result.sheetError) {
+          setError(`Saved to database, but Google Sheet update failed: ${result.sheetError}`);
+          return;
+        }
       } else {
         await createDistributor(data);
       }
@@ -98,8 +106,8 @@ export default function DistributorForm() {
 
   const handleAttrChange = (key: string, value: string) => {
     const current = { ...attributes };
-    if (value.trim()) {
-      current[key] = value.trim();
+    if (value) {
+      current[key] = value;
     } else {
       delete current[key];
     }
@@ -218,7 +226,7 @@ export default function DistributorForm() {
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border border-border bg-white p-6">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="rounded-lg border border-border bg-white p-6">
         {/* ── Core Fields ── */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
@@ -428,6 +436,23 @@ export default function DistributorForm() {
           <button
             type="submit"
             disabled={saving}
+            onClick={async (e) => {
+              if (!isEdit) return;
+              e.preventDefault();
+              try {
+                const token = await Promise.race([
+                  getSheetsToken(),
+                  new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error("OAuth timed out — check your popup blocker and try again.")), 30_000)
+                  ),
+                ]);
+                googleTokenRef.current = token;
+              } catch {
+                // Sheet write-back is optional — proceed with DB save only
+              }
+              // Submit the form programmatically now that we have the token
+              formRef.current?.requestSubmit();
+            }}
             className="rounded bg-mid-blue px-6 py-2 text-sm font-semibold text-white hover:bg-dark-blue disabled:opacity-50"
           >
             {saving ? "Saving…" : isEdit ? "Update Distributor" : "Add Distributor"}

@@ -9,11 +9,15 @@
  */
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID;
-const SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
+const SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 
 let gisLoaded = false;
 
 /** Load the Google Identity Services library dynamically. */
+export async function preloadGis(): Promise<void> {
+  await loadGis();
+}
+
 async function loadGis(): Promise<void> {
   if (gisLoaded) return;
   if (window.google?.accounts?.oauth2) {
