@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchDistributor, deleteDistributor, fetchDataTierTemplate, recalcDistributorTier } from "../../lib/api";
+import { fetchDistributor, deleteDistributor, fetchDataTierTemplate, recalcDistributorTier, syncSingleDistributorFromSheet } from "../../lib/api";
+import { getSheetsToken } from "../../lib/googleSheets";
 import type { DataTierTemplate, DataTierField } from "@mea/shared";
 import AdminLayout from "./AdminLayout";
 
@@ -50,8 +51,6 @@ function TierSection({ title, fields, attributes, tierNum }: { title: string; fi
     return v !== undefined && v !== null && v !== "";
   }).length;
 
-  if (filled === 0) return null;
-
   return (
     <div className="mb-4 rounded-lg border border-border bg-gray-50 p-4">
       <div className="mb-2 flex items-center justify-between">
@@ -67,11 +66,15 @@ function TierSection({ title, fields, attributes, tierNum }: { title: string; fi
       <div className="space-y-2">
         {fields.map((f) => {
           const v = attributes[f.key];
-          if (v === undefined || v === null || v === "") return null;
+          const hasValue = v !== undefined && v !== null && v !== "";
           return (
             <div key={f.key} className="text-sm">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{f.label}: </span>
-              <span className="text-gray-800">{v}</span>
+              {hasValue ? (
+                <span className="text-gray-800">{v}</span>
+              ) : (
+                <span className="italic text-gray-400">Not filled</span>
+              )}
             </div>
           );
         })}
@@ -86,6 +89,7 @@ export default function DistributorProfile() {
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [tierTemplate, setTierTemplate] = useState<DataTierTemplate | null>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -110,6 +114,20 @@ export default function DistributorProfile() {
       alert("Failed to recalculate tier.");
     } finally {
       setRecalculating(false);
+    }
+  };
+
+  const handleSyncFromSheet = async () => {
+    if (!id || !data) return;
+    setSyncing(true);
+    try {
+      const token = await getSheetsToken();
+      await syncSingleDistributorFromSheet(id, token);
+      await queryClient.invalidateQueries({ queryKey: ["distributor", id] });
+    } catch (err: any) {
+      alert(err.message ?? "Failed to sync distributor from Google Sheets.");
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -156,6 +174,13 @@ export default function DistributorProfile() {
           >
             Edit
           </Link>
+          <button
+            onClick={handleSyncFromSheet}
+            disabled={syncing}
+            className="rounded border border-orange bg-white px-4 py-1.5 text-sm text-orange hover:bg-orange/10 disabled:opacity-50"
+          >
+            {syncing ? "Syncing…" : "Sync from Sheet"}
+          </button>
           <button
             onClick={handleRecalcTier}
             disabled={recalculating}

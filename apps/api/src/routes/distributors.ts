@@ -4,7 +4,7 @@ import { distributorSchema, type DistributorDto } from "@mea/shared";
 import { prisma } from "../prisma.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { auditLog } from "../middleware/auditLog.js";
-import { syncFromSheet } from "../lib/sheetsSync.js";
+import { syncFromSheet, syncSingleDistributorFromSheet } from "../lib/sheetsSync.js";
 import { env } from "../env.js";
 import {
   computeDataTier,
@@ -190,6 +190,34 @@ distributorsRouter.post("/sync", syncLimiter, async (req, res, next) => {
     }
 
     const result = await syncFromSheet(accessToken);
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Sync a single distributor from Google Sheets by company name. */
+distributorsRouter.post("/:id/sync-from-sheet", async (req, res, next) => {
+  try {
+    const { accessToken } = req.body;
+    if (!accessToken || typeof accessToken !== "string") {
+      return res.status(400).json({ error: "accessToken is required." });
+    }
+
+    if (!env.GOOGLE_SHEET_ID) {
+      return res.status(400).json({ error: "Google Sheets sync is not configured." });
+    }
+
+    const distributor = await prisma.distributor.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!distributor) return res.status(404).json({ error: "Distributor not found" });
+
+    const result = await syncSingleDistributorFromSheet(accessToken, distributor.companyName);
+    if (!result) {
+      return res.status(404).json({ error: `Distributor "${distributor.companyName}" not found in the Google Sheet.` });
+    }
+
     return res.json(result);
   } catch (err) {
     next(err);

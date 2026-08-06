@@ -148,6 +148,19 @@ export async function syncDistributorsFromSheet(accessToken: string): Promise<Sy
   return res.json();
 }
 
+export async function syncSingleDistributorFromSheet(id: string, accessToken: string): Promise<DistributorDto> {
+  const res = await fetch(`${BASE}/api/distributors/${id}/sync-from-sheet`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ accessToken }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to sync distributor from Google Sheets");
+  }
+  return res.json();
+}
+
 // ── Data Tier ──────────────────────────────────────────────────────────
 
 export async function fetchDataTierTemplate(): Promise<DataTierTemplate> {
