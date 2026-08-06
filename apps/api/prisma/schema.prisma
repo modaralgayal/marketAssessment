@@ -87,9 +87,13 @@ model Distributor {
   doWeKnowThem      String?
   statusLastContact String?
   description       String?
+  dataTier          Int                 @default(3)
+  attributes        Json                @default("{}")
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   matches           ManufacturerMatch[]
+
+  @@index([dataTier])
 }
 
 model ManufacturerMatch {

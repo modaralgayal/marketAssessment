@@ -1,0 +1,43 @@
+{
+  "threshold": 0.7,
+  "tier1": {
+    "label": "Verified Relationship",
+    "description": "First-hand knowledge, verified data, deep relationship",
+    "threshold": 0.7,
+    "fields": [
+      { "key": "portfolioConflictCheck", "label": "Portfolio conflict check", "type": "textarea" },
+      { "key": "decisionMakingAuthority", "label": "Real decision-making authority", "type": "textarea" },
+      { "key": "paymentTerms", "label": "Payment terms & tolerance", "type": "textarea" },
+      { "key": "coldChainCapability", "label": "Logistics / cold-chain capability", "type": "textarea" },
+      { "key": "dealBreakers", "label": "Deal-breakers / red flags", "type": "textarea" },
+      { "key": "relationshipDynamics", "label": "Relationship dynamics", "type": "textarea" },
+      { "key": "historicalDealOutcomes", "label": "Historical deal outcomes", "type": "textarea" },
+      { "key": "activePortfolioGaps", "label": "Active portfolio gaps", "type": "textarea" },
+      { "key": "channelFocusConfirmed", "label": "Channel focus (confirmed)", "type": "text" },
+      { "key": "priceTierConfirmed", "label": "Price-tier positioning (confirmed)", "type": "text" }
+    ]
+  },
+  "tier2": {
+    "label": "Direct Contact",
+    "description": "We've spoken to them, have a named contact, basic info verified",
+    "threshold": 0.7,
+    "fields": [
+      { "key": "channelFocusStated", "label": "Channel focus (stated)", "type": "text" },
+      { "key": "priceTierStated", "label": "Price-tier positioning (stated)", "type": "text" },
+      { "key": "categoriesSourcing", "label": "Categories actively sourcing", "type": "text" },
+      { "key": "confirmedDecisionMaker", "label": "Confirmed decision-maker + role", "type": "text" },
+      { "key": "responsiveness", "label": "Responsiveness / interest level", "type": "select", "options": ["Warm", "Lukewarm", "Cold"] },
+      { "key": "languagePreference", "label": "Language / communication preference", "type": "text" }
+    ]
+  },
+  "tier3": {
+    "label": "Public Information",
+    "description": "Basic public data — website, LinkedIn, trade directories",
+    "threshold": 0.7,
+    "fields": [
+      { "key": "productCategories", "label": "Product categories (as advertised)", "type": "text" },
+      { "key": "certifications", "label": "Certifications visible", "type": "text" },
+      { "key": "yearsInBusiness", "label": "Years in business", "type": "text" }
+    ]
+  }
+}

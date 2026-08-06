@@ -60,7 +60,11 @@ export default function CsvImport({ onDone }: Props) {
       "description": "description",
     };
 
-    const mappedHeaders = headers.map((h) => fieldMap[h] ?? null);
+    const mappedHeaders = headers.map((h) => {
+    // attributes.* headers pass through as-is
+    if (h.startsWith("attributes.")) return h;
+    return fieldMap[h] ?? null;
+  });
 
     const missingRequired = ["companyName", "cityRegion", "channelType"].filter(
       (f) => !mappedHeaders.includes(f),
@@ -75,11 +79,21 @@ export default function CsvImport({ onDone }: Props) {
 
     const distributors = rows.map((row) => {
       const obj: Record<string, string> = {};
+      const attributes: Record<string, string> = {};
       mappedHeaders.forEach((field, i) => {
         if (field && row[i] !== undefined) {
-          obj[field] = row[i].trim();
+          const val = row[i].trim();
+          if (field.startsWith("attributes.")) {
+            const attrKey = field.slice("attributes.".length);
+            attributes[attrKey] = val;
+          } else {
+            obj[field] = val;
+          }
         }
       });
+      if (Object.keys(attributes).length > 0) {
+        (obj as any).attributes = attributes;
+      }
       return obj;
     });
 

@@ -229,6 +229,11 @@ export default function AdminDetail() {
                         >
                           {m.distributor.companyName}
                         </Link>
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          m.distributor.dataTier === 1 ? "bg-green-100 text-green-800" : m.distributor.dataTier === 2 ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"
+                        }`}>
+                          T{m.distributor.dataTier}
+                        </span>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${matchLevelBadge(m.matchLevel)}`}>
                           {m.matchLevel}
                         </span>

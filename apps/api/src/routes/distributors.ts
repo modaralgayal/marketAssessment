@@ -6,6 +6,11 @@ import { requireAdmin } from "../middleware/requireAdmin.js";
 import { auditLog } from "../middleware/auditLog.js";
 import { syncFromSheet } from "../lib/sheetsSync.js";
 import { env } from "../env.js";
+import {
+  computeDataTier,
+  loadTierTemplate,
+  invalidateTemplateCache,
+} from "../lib/dataTier.js";
 
 export const distributorsRouter = Router();
 
@@ -43,6 +48,8 @@ function toDto(d: any): DistributorDto {
     doWeKnowThem: d.doWeKnowThem ?? undefined,
     statusLastContact: d.statusLastContact ?? undefined,
     description: d.description ?? undefined,
+    dataTier: d.dataTier ?? 3,
+    attributes: (d.attributes as Record<string, any>) ?? {},
     createdAt: d.createdAt.toISOString(),
     updatedAt: d.updatedAt.toISOString(),
     matchCount: d._count?.matches ?? undefined,
@@ -80,7 +87,15 @@ distributorsRouter.get("/:id", async (req, res, next) => {
 distributorsRouter.post("/", async (req, res, next) => {
   try {
     const data = distributorSchema.parse(req.body);
-    const distributor = await prisma.distributor.create({ data });
+    const attributes = data.attributes ?? {};
+    const dataTier = computeDataTier(attributes);
+    const distributor = await prisma.distributor.create({
+      data: {
+        ...data,
+        dataTier,
+        attributes,
+      },
+    });
     return res.status(201).json(toDto(distributor));
   } catch (err) {
     next(err);
@@ -94,9 +109,15 @@ distributorsRouter.put("/:id", async (req, res, next) => {
     if (!existing) return res.status(404).json({ error: "Distributor not found" });
 
     const data = distributorSchema.parse(req.body);
+    const attributes = data.attributes ?? {};
+    const dataTier = computeDataTier(attributes);
     const distributor = await prisma.distributor.update({
       where: { id: req.params.id },
-      data,
+      data: {
+        ...data,
+        dataTier,
+        attributes,
+      },
       include: { _count: { select: { matches: true } } },
     });
     return res.json(toDto(distributor));
@@ -138,7 +159,17 @@ distributorsRouter.post("/import", bulkImportLimiter, async (req, res, next) => 
       }
     }
 
-    const result = await prisma.distributor.createMany({ data: validItems });
+    // Compute dataTier for each item and merge attributes
+    const enriched = validItems.map((item) => {
+      const attributes = (item as any).attributes ?? {};
+      return {
+        ...item,
+        attributes,
+        dataTier: computeDataTier(attributes),
+      };
+    });
+
+    const result = await prisma.distributor.createMany({ data: enriched });
     return res.status(201).json({ imported: result.count });
   } catch (err) {
     next(err);
@@ -160,6 +191,66 @@ distributorsRouter.post("/sync", syncLimiter, async (req, res, next) => {
 
     const result = await syncFromSheet(accessToken);
     return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Data Tier Endpoints ─────────────────────────────────────────────────
+
+/** Get the data tier template config. */
+distributorsRouter.get("/data-tier/template", async (_req, res, next) => {
+  try {
+    const template = loadTierTemplate();
+    return res.json(template);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Bulk-recalculate data tiers for all distributors. */
+distributorsRouter.post("/data-tier/recalc", async (_req, res, next) => {
+  try {
+    // Invalidate cache so we pick up any template changes
+    invalidateTemplateCache();
+
+    const distributors = await prisma.distributor.findMany({ select: { id: true, attributes: true } });
+    let updated = 0;
+
+    for (const d of distributors) {
+      const attrs = (d.attributes as Record<string, any>) ?? {};
+      const newTier = computeDataTier(attrs);
+      await prisma.distributor.update({
+        where: { id: d.id },
+        data: { dataTier: newTier },
+      });
+      updated++;
+    }
+
+    return res.json({ updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Recalculate data tier for a single distributor. */
+distributorsRouter.post("/:id/recalc-tier", async (req, res, next) => {
+  try {
+    const distributor = await prisma.distributor.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!distributor) return res.status(404).json({ error: "Distributor not found" });
+
+    invalidateTemplateCache();
+    const attrs = (distributor.attributes as Record<string, any>) ?? {};
+    const dataTier = computeDataTier(attrs);
+
+    await prisma.distributor.update({
+      where: { id: req.params.id },
+      data: { dataTier },
+    });
+
+    return res.json({ dataTier });
   } catch (err) {
     next(err);
   }

@@ -1,5 +1,5 @@
 import { auth } from "./firebase";
-import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput } from "@mea/shared";
+import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput, DataTierTemplate } from "@mea/shared";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -130,6 +130,7 @@ export async function importDistributors(data: DistributorInput[]): Promise<{ im
 
 export interface SyncResult {
   imported: number;
+  updated: number;
   skipped: number;
   errors: string[];
 }
@@ -144,6 +145,32 @@ export async function syncDistributorsFromSheet(accessToken: string): Promise<Sy
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to sync from Google Sheets");
   }
+  return res.json();
+}
+
+// ── Data Tier ──────────────────────────────────────────────────────────
+
+export async function fetchDataTierTemplate(): Promise<DataTierTemplate> {
+  const res = await fetch(`${BASE}/api/distributors/data-tier/template`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load data tier template");
+  return res.json();
+}
+
+export async function recalcDataTiers(): Promise<{ updated: number }> {
+  const res = await fetch(`${BASE}/api/distributors/data-tier/recalc`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to recalculate data tiers");
+  return res.json();
+}
+
+export async function recalcDistributorTier(id: string): Promise<{ dataTier: number }> {
+  const res = await fetch(`${BASE}/api/distributors/${id}/recalc-tier`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to recalculate tier");
   return res.json();
 }
 

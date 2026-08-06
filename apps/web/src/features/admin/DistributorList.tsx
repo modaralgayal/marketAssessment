@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchDistributors, deleteDistributor, syncDistributorsFromSheet } from "../../lib/api";
+import { fetchDistributors, deleteDistributor, syncDistributorsFromSheet, recalcDataTiers } from "../../lib/api";
 import { getSheetsToken } from "../../lib/googleSheets";
 import AdminLayout from "./AdminLayout";
-import CsvImport from "./CsvImport";
 
 export default function DistributorList() {
   const queryClient = useQueryClient();
@@ -14,16 +13,30 @@ export default function DistributorList() {
   });
 
   const [search, setSearch] = useState("");
-  const [showImport, setShowImport] = useState(false);
+  const [tierFilter, setTierFilter] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [recalcTiers, setRecalcTiers] = useState(false);
+
+  const handleRecalcTiers = async () => {
+    try {
+      setRecalcTiers(true);
+      const result = await recalcDataTiers();
+      alert(`Recalculated tiers for ${result.updated} distributors.`);
+      await queryClient.invalidateQueries({ queryKey: ["distributors"] });
+    } catch (err: any) {
+      alert(err.message ?? "Failed to recalculate tiers.");
+    } finally {
+      setRecalcTiers(false);
+    }
+  };
 
   const handleSync = async () => {
     try {
       setSyncing(true);
       const token = await getSheetsToken();
       const result = await syncDistributorsFromSheet(token);
-      alert(`Sync complete: ${result.imported} imported, ${result.skipped} skipped.${result.errors.length ? `\n\nErrors:\n${result.errors.slice(0, 5).join("\n")}${result.errors.length > 5 ? `\n…and ${result.errors.length - 5} more` : ""}` : ""}`);
+      alert(`Sync complete: ${result.imported} imported, ${result.updated} updated, ${result.skipped} skipped.${result.errors.length ? `\n\nErrors:\n${result.errors.slice(0, 5).join("\n")}${result.errors.length > 5 ? `\n…and ${result.errors.length - 5} more` : ""}` : ""}`);
       await queryClient.invalidateQueries({ queryKey: ["distributors"] });
     } catch (err: any) {
       alert(err.message ?? "Failed to sync from Google Sheets.");
@@ -47,12 +60,12 @@ export default function DistributorList() {
 
   const items = (data ?? []).filter((d) => {
     const q = search.toLowerCase();
-    return (
-      !q ||
+    const matchesSearch = !q ||
       d.companyName.toLowerCase().includes(q) ||
       d.cityRegion.toLowerCase().includes(q) ||
-      d.channelType.toLowerCase().includes(q)
-    );
+      d.channelType.toLowerCase().includes(q);
+    const matchesTier = tierFilter === null || d.dataTier === tierFilter;
+    return matchesSearch && matchesTier;
   });
 
   return (
@@ -70,18 +83,40 @@ export default function DistributorList() {
             placeholder="Search name, region, channel…"
             className="w-56 rounded border border-border bg-white px-3 py-2 text-sm outline-none focus:border-mid-blue"
           />
-          <button
-            onClick={() => setShowImport(!showImport)}
-            className="rounded border border-mid-blue bg-white px-3 py-2 text-sm text-mid-blue hover:bg-pale-blue"
-          >
-            {showImport ? "Cancel Import" : "Import CSV"}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setTierFilter(null)}
+              className={`rounded px-2 py-1 text-xs font-semibold ${tierFilter === null ? "bg-dark-blue text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            >
+              All
+            </button>
+            {[1, 2, 3].map((t) => (
+              <button
+                key={t}
+                onClick={() => setTierFilter(tierFilter === t ? null : t)}
+                className={`rounded px-2 py-1 text-xs font-semibold ${
+                  tierFilter === t
+                    ? t === 1 ? "bg-green-700 text-white" : t === 2 ? "bg-amber-600 text-white" : "bg-gray-400 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                T{t}
+              </button>
+            ))}
+          </div>
           <button
             onClick={handleSync}
             disabled={syncing}
             className="rounded border border-orange bg-white px-3 py-2 text-sm text-orange hover:bg-orange/10 disabled:opacity-50"
           >
             {syncing ? "Syncing…" : "Sync from Google Sheets"}
+          </button>
+          <button
+            onClick={handleRecalcTiers}
+            disabled={recalcTiers}
+            className="rounded border border-gray-400 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+          >
+            {recalcTiers ? "Recalculating…" : "Recalc Tiers"}
           </button>
           <Link
             to="/admin/distributors/new"
@@ -92,12 +127,6 @@ export default function DistributorList() {
         </div>
       </div>
 
-      {showImport && (
-        <div className="mb-6">
-          <CsvImport onDone={() => { setShowImport(false); queryClient.invalidateQueries({ queryKey: ["distributors"] }); }} />
-        </div>
-      )}
-
       {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
       {error && <p className="text-sm text-red-600">Failed to load distributors.</p>}
 
@@ -107,6 +136,7 @@ export default function DistributorList() {
             <thead className="bg-light-gray text-xs uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-4 py-3">Company</th>
+                <th className="px-4 py-3">Tier</th>
                 <th className="px-4 py-3">City / Region</th>
                 <th className="px-4 py-3">Channel / Type</th>
                 <th className="px-4 py-3">Size / Scale</th>
@@ -125,6 +155,13 @@ export default function DistributorList() {
                     >
                       {d.companyName}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      d.dataTier === 1 ? "bg-green-100 text-green-800" : d.dataTier === 2 ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"
+                    }`}>
+                      T{d.dataTier}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{d.cityRegion}</td>
                   <td className="px-4 py-3 text-gray-600">{d.channelType}</td>
@@ -157,7 +194,7 @@ export default function DistributorList() {
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                     {search ? "No distributors match your search." : "No distributors yet. Import or add one."}
                   </td>
                 </tr>

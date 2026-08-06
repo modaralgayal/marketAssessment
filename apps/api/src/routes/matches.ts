@@ -42,6 +42,8 @@ function toDto(m: any): ManufacturerMatchDto {
       doWeKnowThem: m.distributor.doWeKnowThem ?? undefined,
       statusLastContact: m.distributor.statusLastContact ?? undefined,
       description: m.distributor.description ?? undefined,
+      dataTier: m.distributor.dataTier ?? 3,
+      attributes: (m.distributor.attributes as Record<string, any>) ?? {},
       createdAt: m.distributor.createdAt.toISOString(),
       updatedAt: m.distributor.updatedAt.toISOString(),
     },

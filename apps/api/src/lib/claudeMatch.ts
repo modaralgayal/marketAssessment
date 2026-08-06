@@ -69,6 +69,8 @@ export async function findMatches(submissionId: string): Promise<MatchResultDto>
     channelType: d.channelType,
     sizeScale: d.sizeScale,
     description: d.description,
+    dataTier: d.dataTier,
+    attributes: d.attributes,
   }));
 
   const distributorsJson = JSON.stringify(distributorsCompact);

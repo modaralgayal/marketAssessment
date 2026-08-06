@@ -2,11 +2,13 @@ import { google } from "googleapis";
 import { prisma } from "../prisma.js";
 import { distributorSchema } from "@mea/shared";
 import { env } from "../env.js";
+import { computeDataTier } from "./dataTier.js";
 
 const SHEET_ID = env.GOOGLE_SHEET_ID;
 
 export interface SyncResult {
   imported: number;
+  updated: number;
   skipped: number;
   errors: string[];
 }
@@ -39,10 +41,10 @@ export async function syncFromSheet(accessToken: string): Promise<SyncResult> {
 
   const tabs = spreadsheet.data.sheets ?? [];
   if (tabs.length === 0) {
-    return { imported: 0, skipped: 0, errors: [] };
+    return { imported: 0, updated: 0, skipped: 0, errors: [] };
   }
 
-  const result: SyncResult = { imported: 0, skipped: 0, errors: [] };
+  const result: SyncResult = { imported: 0, updated: 0, skipped: 0, errors: [] };
 
   // Process each tab (same schema across all tabs)
   for (const sheet of tabs) {
@@ -55,7 +57,7 @@ export async function syncFromSheet(accessToken: string): Promise<SyncResult> {
       continue;
     }
 
-    const tabBefore = { imported: result.imported, skipped: result.skipped, errors: result.errors.length };
+    const tabBefore = { imported: result.imported, updated: result.updated, skipped: result.skipped, errors: result.errors.length };
 
     try {
       await processTab(sheets, tabName, result);
@@ -64,9 +66,10 @@ export async function syncFromSheet(accessToken: string): Promise<SyncResult> {
     }
 
     const tabImported = result.imported - tabBefore.imported;
+    const tabUpdated = result.updated - tabBefore.updated;
     const tabSkipped = result.skipped - tabBefore.skipped;
     const tabErrors = result.errors.length - tabBefore.errors;
-    console.log(`[sheetsSync] Tab "${tabName}": ${tabImported} imported, ${tabSkipped} skipped, ${tabErrors} errors`);
+    console.log(`[sheetsSync] Tab "${tabName}": ${tabImported} imported, ${tabUpdated} updated, ${tabSkipped} skipped, ${tabErrors} errors`);
   }
 
   return result;
@@ -149,7 +152,10 @@ async function processTab(sheets: any, tabName: string, result: SyncResult): Pro
         description: "description",
   };
 
-  const mappedHeaders = headers.map((h: string) => fieldMap[h] ?? null);
+  const mappedHeaders = headers.map((h: string) => {
+    if (h.startsWith("attributes.") || h.startsWith("attributes_")) return h;
+    return fieldMap[h] ?? null;
+  });
 
   // Check required columns exist
   const missingRequired = ["companyName", "cityRegion", "channelType"].filter(
@@ -165,12 +171,25 @@ async function processTab(sheets: any, tabName: string, result: SyncResult): Pro
   // Process each row
   const rowOffset = dataStartIndex + 1; // 1-indexed row number in the sheet
   for (const [i, row] of dataRows.entries()) {
-    const obj: Record<string, string> = {};
+    const obj: Record<string, any> = {};
+    const attributes: Record<string, string> = {};
     mappedHeaders.forEach((field: string | null, colIdx: number) => {
       if (field && row[colIdx] !== undefined && row[colIdx] !== null) {
-        obj[field] = String(row[colIdx]).trim();
+        const val = String(row[colIdx]).trim();
+        if (field.startsWith("attributes.")) {
+          attributes[field.slice("attributes.".length)] = val;
+        } else if (field.startsWith("attributes_")) {
+          attributes[field.slice("attributes_".length)] = val;
+        } else {
+          obj[field] = val;
+        }
       }
     });
+
+    // Merge attributes
+    if (Object.keys(attributes).length > 0) {
+      obj.attributes = attributes;
+    }
 
     // Skip rows without a company name
     if (!obj.companyName) {
@@ -197,13 +216,23 @@ async function processTab(sheets: any, tabName: string, result: SyncResult): Pro
       },
     });
 
+    // Compute data tier from attributes
+    const attrs = (parsed.data.attributes as Record<string, any>) ?? {};
+    const dataTier = computeDataTier(attrs);
+    const updateData = { ...parsed.data, dataTier, attributes: attrs } as any;
+
     if (existing) {
-      result.skipped++;
+      // Update existing distributor with latest sheet data
+      await prisma.distributor.update({
+        where: { id: existing.id },
+        data: updateData,
+      });
+      result.updated++;
       continue;
     }
 
     // Insert new distributor
-    await prisma.distributor.create({ data: parsed.data });
+    await prisma.distributor.create({ data: updateData });
     result.imported++;
   }
 }
