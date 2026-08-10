@@ -118,9 +118,9 @@ export default function CsvImport({ onDone }: Props) {
   };
 
   return (
-    <div className="rounded-lg border border-border bg-white p-4">
-      <h3 className="mb-2 text-sm font-bold text-dark-blue">Import Distributors from CSV</h3>
-      <p className="mb-3 text-xs text-gray-500">
+    <div className="rounded-lg border border-brand-line bg-white p-4">
+      <h3 className="mb-2 text-sm font-bold text-brand-ink">Import Distributors from CSV</h3>
+      <p className="mb-3 text-xs text-brand-muted">
         Paste your CSV data below. The first row must be headers. Required columns:{" "}
         <strong>Company Name</strong>, <strong>City / Region</strong>, <strong>Channel / Type</strong>.
       </p>
@@ -132,7 +132,7 @@ export default function CsvImport({ onDone }: Props) {
           'Company Name,City / Region,Channel / Type,Size / Scale,Website,Phone,Email,Contact Person,Do we know them?,Status / Last Contact,Description\n' +
           'ABC Trading,Riyadh,Modern Trade,Large,www.abc.com,+966 123 4567,info@abc.com,John Doe,Yes met at Gulfood,Active,Handles FMCG across KSA'
         }
-        className="w-full rounded border border-border px-3 py-2 text-xs font-mono outline-none focus:border-mid-blue"
+        className="w-full rounded border border-brand-line px-3 py-2 text-xs font-mono outline-none focus:border-brand-teal"
       />
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
       {result && (
@@ -144,13 +144,13 @@ export default function CsvImport({ onDone }: Props) {
         <button
           onClick={parseAndImport}
           disabled={importing || !raw.trim()}
-          className="rounded bg-mid-blue px-4 py-1.5 text-xs font-semibold text-white hover:bg-dark-blue disabled:opacity-50"
+          className="rounded-full bg-brand-teal px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:bg-brand-teal-dark hover:shadow-md hover:-translate-y-px active:scale-[0.98] disabled:opacity-50"
         >
           {importing ? "Importing…" : "Import"}
         </button>
         <button
           onClick={onDone}
-          className="text-xs text-gray-500 hover:underline"
+          className="text-xs text-brand-muted hover:underline"
         >
           Cancel
         </button>

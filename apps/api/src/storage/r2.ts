@@ -49,6 +49,13 @@ export const r2Storage: StorageProvider = {
     });
   },
 
+  async get(key) {
+    const { client, bucket } = getClient();
+    const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    const body = await response.Body?.transformToByteArray();
+    return Buffer.from(body ?? new Uint8Array(0));
+  },
+
   async delete(key) {
     const { client, bucket } = getClient();
     await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

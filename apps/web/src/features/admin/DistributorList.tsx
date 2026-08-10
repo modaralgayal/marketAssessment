@@ -69,9 +69,9 @@ export default function DistributorList() {
   return (
     <AdminLayout>
       <div className="mb-5 grid grid-cols-3 items-center">
-        <h1 className="text-xl font-bold text-dark-blue">
+        <h1 className="text-xl font-bold text-brand-ink">
           Distributors{" "}
-          {data ? <span className="text-gray-400">({data.length})</span> : null}
+          {data ? <span className="text-brand-muted">({data.length})</span> : null}
         </h1>
 
         <div className="flex items-center justify-center gap-3">
@@ -79,12 +79,12 @@ export default function DistributorList() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, region, channel…"
-            className="w-64 rounded border border-border bg-white px-3 py-2 text-sm outline-none focus:border-mid-blue"
+            className="w-64 rounded border border-brand-line bg-white px-3 py-2 text-sm outline-none focus:border-brand-teal"
           />
           <div className="flex items-center gap-1">
             <button
               onClick={() => setTierFilter(null)}
-              className={`rounded px-2 py-1 text-xs font-semibold ${tierFilter === null ? "bg-dark-blue text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              className={`rounded px-2 py-1 text-xs font-semibold ${tierFilter === null ? "bg-brand-teal text-white" : "bg-gray-100 text-brand-muted hover:bg-[#0F7B7F]/5"}`}
             >
               All
             </button>
@@ -95,7 +95,7 @@ export default function DistributorList() {
                 className={`rounded px-2 py-1 text-xs font-semibold ${
                   tierFilter === t
                     ? t === 1 ? "bg-green-700 text-white" : t === 2 ? "bg-amber-600 text-white" : "bg-gray-400 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : "bg-gray-100 text-brand-muted hover:bg-[#0F7B7F]/5"
                 }`}
               >
                 T{t}
@@ -107,32 +107,32 @@ export default function DistributorList() {
         <div className="flex items-center justify-end gap-2">
           <Link
             to="/admin/distributors/new"
-            className="rounded bg-mid-blue px-3 py-2 text-sm font-semibold text-white hover:bg-dark-blue"
+            className="rounded bg-brand-teal px-3 py-2 text-sm font-semibold text-white hover:bg-brand-teal-dark"
           >
             + Add
           </Link>
           <div className="relative">
             <button
               onClick={() => setShowActions(!showActions)}
-              className="rounded border border-border px-3 py-2 text-sm text-gray-500 hover:bg-gray-100"
+              className="rounded border border-brand-line px-3 py-2 text-sm text-brand-muted hover:bg-brand-bg-alt"
             >
               ⋮
             </button>
             {showActions && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowActions(false)} />
-                <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-lg border border-border bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-lg border border-brand-line bg-white py-1 shadow-lg">
                   <button
                     onClick={() => { setShowActions(false); handleSync(); }}
                     disabled={syncing}
-                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="flex w-full items-center px-4 py-2 text-sm text-brand-ink hover:bg-brand-bg-alt disabled:opacity-50"
                   >
                     {syncing ? "Syncing…" : "Sync from Google Sheets"}
                   </button>
                   <button
                     onClick={() => { setShowActions(false); handleRecalcTiers(); }}
                     disabled={recalcTiers}
-                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="flex w-full items-center px-4 py-2 text-sm text-brand-ink hover:bg-brand-bg-alt disabled:opacity-50"
                   >
                     {recalcTiers ? "Recalculating…" : "Recalc Tiers"}
                   </button>
@@ -143,13 +143,13 @@ export default function DistributorList() {
         </div>
       </div>
 
-      {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-brand-muted">Loading…</p>}
       {error && <p className="text-sm text-red-600">Failed to load distributors.</p>}
 
       {data && (
-        <div className="overflow-hidden rounded-lg border border-border bg-white">
+        <div className="overflow-hidden rounded-lg border border-brand-line bg-white">
           <table className="w-full text-left text-sm">
-            <thead className="bg-light-gray text-xs uppercase tracking-wide text-gray-500">
+            <thead className="bg-brand-bg-alt text-xs uppercase tracking-wide text-brand-muted">
               <tr>
                 <th className="px-4 py-3">Company</th>
                 <th className="px-4 py-3">Tier</th>
@@ -162,37 +162,37 @@ export default function DistributorList() {
             </thead>
             <tbody>
               {items.map((d) => (
-                <tr key={d.id} className="border-t border-border hover:bg-pale-blue/40">
+                <tr key={d.id} className="border-t border-brand-line hover:bg-[#0F7B7F]/5">
                   <td className="px-4 py-3 font-semibold">
                     <Link
                       to={`/admin/distributors/${d.id}`}
-                      className="text-dark-blue hover:text-mid-blue hover:underline"
+                      className="text-brand-ink hover:text-brand-teal hover:underline"
                     >
                       {d.companyName}
                     </Link>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      d.dataTier === 1 ? "bg-green-100 text-green-800" : d.dataTier === 2 ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"
+                      d.dataTier === 1 ? "bg-green-100 text-green-800" : d.dataTier === 2 ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-brand-muted"
                     }`}>
                       T{d.dataTier}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{d.cityRegion}</td>
-                  <td className="px-4 py-3 text-gray-600">{d.channelType}</td>
-                  <td className="px-4 py-3 text-gray-600">{d.sizeScale ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-brand-muted">{d.cityRegion}</td>
+                  <td className="px-4 py-3 text-brand-muted">{d.channelType}</td>
+                  <td className="px-4 py-3 text-brand-muted">{d.sizeScale ?? "—"}</td>
+                  <td className="px-4 py-3 text-brand-muted">
                     {d.contactPerson && <div className="text-xs">{d.contactPerson}</div>}
-                    {d.email && <div className="text-xs text-gray-400">{d.email}</div>}
+                    {d.email && <div className="text-xs text-brand-muted">{d.email}</div>}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-brand-muted">
                     {d.matchCount != null ? d.matchCount : "—"}
                   </td>
                 </tr>
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-brand-muted">
                     {search ? "No distributors match your search." : "No distributors yet. Import or add one."}
                   </td>
                 </tr>

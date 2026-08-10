@@ -10,12 +10,12 @@ import {
 /* ── Section header ───────────────────────────────────────────── */
 export function SectionHeader({ num, title, sub }: { num: number; title: string; sub?: string }) {
   return (
-    <div className="mt-11 flex items-center gap-3.5 border-b-2 border-mid-blue pb-3">
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-mid-blue text-sm font-bold text-white">
+    <div className="mt-11 flex items-center gap-3.5 border-b-2 border-brand-teal pb-3">
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-teal text-sm font-bold text-white">
         {num}
       </div>
-      <div className="text-base font-bold text-dark-blue">{title}</div>
-      {sub && <div className="ml-auto text-xs italic text-gray-400">{sub}</div>}
+      <div className="text-base font-bold text-brand-ink">{title}</div>
+      {sub && <div className="ml-auto text-xs italic text-brand-muted">{sub}</div>}
     </div>
   );
 }
@@ -34,10 +34,10 @@ export function Field({
 }) {
   return (
     <div className="mb-[18px]">
-      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-dark-blue">
+      <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-brand-ink">
         {label}
       </span>
-      {note && <span className="mb-1.5 block text-[11.5px] italic text-gray-400">{note}</span>}
+      {note && <span className="mb-1.5 block text-[11.5px] italic text-brand-muted">{note}</span>}
       {children}
       {error && <span className="mt-1 block text-[11.5px] text-red-600">{error}</span>}
     </div>
@@ -61,7 +61,7 @@ export function TextInput<T extends FieldValues>({
       type={type}
       placeholder={placeholder}
       {...register(name)}
-      className="block w-full border-0 border-b-[1.5px] border-border bg-transparent py-1.5 text-[13px] text-[#333] outline-none focus:border-mid-blue"
+      className="block w-full border-0 border-b-[1.5px] border-brand-line bg-transparent py-1.5 text-[13px] text-brand-ink outline-none focus:border-brand-teal"
     />
   );
 }
@@ -83,7 +83,7 @@ export function TextArea<T extends FieldValues>({
       rows={rows}
       placeholder={placeholder}
       {...register(name)}
-      className="block w-full resize-y rounded border border-border bg-light-gray p-2.5 text-[13px] text-[#333] outline-none focus:border-mid-blue"
+      className="block w-full resize-y rounded border border-brand-line bg-brand-bg-alt p-2.5 text-[13px] text-brand-ink outline-none focus:border-brand-teal"
     />
   );
 }
@@ -96,8 +96,8 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
       onClick={onClick}
       className={`flex items-center gap-1.5 rounded-full border-[1.5px] px-3 py-1.5 text-xs transition ${
         selected
-          ? "border-mid-blue bg-mid-blue text-white"
-          : "border-border text-[#333] hover:border-mid-blue hover:text-mid-blue"
+          ? "border-brand-teal bg-brand-teal text-white"
+          : "border-brand-line text-brand-ink hover:border-brand-teal hover:text-brand-teal"
       }`}
     >
       {children}

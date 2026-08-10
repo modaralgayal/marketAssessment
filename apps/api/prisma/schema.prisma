@@ -52,9 +52,12 @@ model Submission {
   evaluatedAt             DateTime?
   explanation             String?
   score                   Float?
+  catalogueData           Json?
+  catalogueExtractedAt    DateTime?
   updatedAt               DateTime         @default(now()) @updatedAt
   files                   SubmissionFile[]
   matches                 ManufacturerMatch[]
+  customer                Customer?
 
   @@index([createdAt])
   @@index([contactEmail])
@@ -109,6 +112,83 @@ model ManufacturerMatch {
 
   @@index([submissionId])
   @@index([distributorId])
+}
+
+// ── Customer ─────────────────────────────────────────────────────────────
+
+enum CustomerStatus {
+  QUALIFYING
+  ACTIVE
+  INACTIVE
+  WON
+  LOST
+}
+
+model Customer {
+  id                      String           @id @default(cuid())
+  submissionId            String           @unique
+  submission              Submission       @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  // Section 1 - Company Profile
+  companyName             String
+  country                 String
+  website                 String?
+  industryCategory        String
+  annualRevenue           RevenueBracket?
+  yearsInBusiness         String?
+  currentExportMarkets    String?
+
+  // Section 2 - Product
+  productNames            String
+  numberOfSkus            String?
+  shelfLife               String?
+  exWorksPriceRange       String?
+  halalCert               YesNoUnsure?
+  otherCerts              String[]
+  labelLanguages          String?
+
+  // Section 3 - GCC Ambitions
+  targetMarkets           String[]
+  salesChannels           String[]
+  timeline                Timeline?
+  revenueYear1Target      String?
+  revenueYear3Target      String?
+  gccContact              Boolean?
+  gccContactDetails       String?
+  distributionPartner     Boolean?
+  distributionDetails     String?
+
+  // Section 4 - Operational Readiness
+  moq                     String?
+  exportContact           Boolean?
+  productionCapacity      Capacity?
+  sfdaStatus              SfdaStatus?
+
+  // Section 5 - Flexibility & Commitment
+  productAdaptability     Adaptability?
+  budget                  BudgetBracket?
+  partnershipHorizon      Horizon?
+  brandActivation         Activation?
+
+  // Section 6 - Decision-Maker Contact
+  contactFullName         String
+  contactTitle            String?
+  contactEmail            String
+  contactPhone            String?
+  hasSigningAuthority     Boolean?
+  signingAuthorityContact String?
+  anythingElse            String?
+
+  // Additional fields
+  onboardingDate          DateTime         @default(now())
+  customerStatus          CustomerStatus   @default(QUALIFYING)
+  notes                   String?
+
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  @@index([createdAt])
+  @@index([customerStatus])
 }
 
 enum RevenueBracket {

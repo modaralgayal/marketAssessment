@@ -7,6 +7,8 @@ import { filesRouter } from "./routes/files.js";
 import { scoreRouter } from "./routes/score.js";
 import { distributorsRouter } from "./routes/distributors.js";
 import { matchesRouter } from "./routes/matches.js";
+import { catalogueRouter } from "./routes/catalogue.js";
+import { customersRouter } from "./routes/customers.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -30,6 +32,8 @@ app.use("/api/submissions", submissionsRouter);
 app.use("/api/submissions", matchesRouter);
 app.use("/api/files", filesRouter);
 app.use("/api/distributors", distributorsRouter);
+app.use("/api", catalogueRouter);
+app.use("/api/customers", customersRouter);
 
 app.use(errorHandler);
 

@@ -1,5 +1,5 @@
 import { auth } from "./firebase";
-import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput, DataTierTemplate } from "@mea/shared";
+import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput, DataTierTemplate, CatalogueExtractedData, CustomerDto, CustomerInput } from "@mea/shared";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -204,5 +204,98 @@ export async function fetchMatches(submissionId: string): Promise<ManufacturerMa
     headers: await authHeader(),
   });
   if (!res.ok) throw new Error("Failed to fetch matches");
+  return res.json();
+}
+
+// ── Catalogue Extraction ────────────────────────────────────────────────
+
+export interface ExtractCatalogueResponse {
+  catalogueData: CatalogueExtractedData;
+  catalogueExtractedAt: string;
+  fieldMapping: {
+    matched: Array<{ key: string; label: string; value: any; mapsTo: string[] }>;
+    additional: Array<{ key: string; label: string; value: string }>;
+  };
+}
+
+export async function extractCatalogue(submissionId: string): Promise<ExtractCatalogueResponse> {
+  const res = await fetch(`${BASE}/api/submissions/${submissionId}/extract-catalogue`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to extract catalogue data");
+  }
+  return res.json();
+}
+
+export async function applyCatalogueMapping(
+  submissionId: string,
+  additionalFields: Array<{ key: string; value: string; tier: number }>,
+): Promise<void> {
+  const res = await fetch(`${BASE}/api/submissions/${submissionId}/apply-catalogue-mapping`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ additionalFields }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to apply catalogue mapping");
+  }
+}
+
+// ── Customer CRUD ───────────────────────────────────────────────────────
+
+export async function fetchCustomers(): Promise<CustomerDto[]> {
+  const res = await fetch(`${BASE}/api/customers`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load customers");
+  return res.json();
+}
+
+export async function fetchCustomer(id: string): Promise<CustomerDto> {
+  const res = await fetch(`${BASE}/api/customers/${id}`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load customer");
+  return res.json();
+}
+
+export async function createCustomer(data: CustomerInput): Promise<CustomerDto> {
+  const res = await fetch(`${BASE}/api/customers`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create customer");
+  return res.json();
+}
+
+export async function updateCustomer(id: string, data: CustomerInput): Promise<CustomerDto> {
+  const res = await fetch(`${BASE}/api/customers/${id}`, {
+    method: "PUT",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update customer");
+  return res.json();
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/customers/${id}`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to delete customer");
+}
+
+/** Admin: convert a submission into a customer. */
+export async function convertSubmissionToCustomer(submissionId: string): Promise<CustomerDto> {
+  const res = await fetch(`${BASE}/api/customers/from-submission/${submissionId}`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to convert submission to customer");
+  }
   return res.json();
 }

@@ -13,6 +13,16 @@ export default {
         orange: "#E8A020",
         border: "#E0E6ED",
         "light-gray": "#F7F8FA",
+        // Teal palette for the marketing / landing site
+        brand: {
+          teal: "#0F7B7F",
+          "teal-dark": "#0A5D64",
+          ink: "#101828",
+          muted: "#5B6472",
+          line: "#E5E7EB",
+          "bg-alt": "#F9FAFB",
+          orange: "#E8734A",
+        },
       },
       fontFamily: {
         sans: ["Inter", "Arial", "sans-serif"],

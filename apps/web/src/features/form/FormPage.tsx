@@ -29,6 +29,7 @@ import {
   YesNoChips,
 } from "./fields";
 import { CoverHeader, PromiseRow, IntroBox, SuccessScreen } from "./Chrome";
+import SiteNav from "../landing/SiteNav";
 
 export default function FormPage() {
   const {
@@ -80,11 +81,19 @@ export default function FormPage() {
     }
   };
 
-  if (done) return <SuccessScreen />;
+  if (done)
+    return (
+      <>
+        <SiteNav />
+        <SuccessScreen />
+      </>
+    );
 
   return (
-    <div className="mx-auto my-0 max-w-[820px] bg-white">
-      <CoverHeader />
+    <>
+      <SiteNav />
+      <div className="w-full bg-white">
+        <CoverHeader />
       <PromiseRow />
       <IntroBox />
 
@@ -157,9 +166,9 @@ export default function FormPage() {
         </Field>
 
         {/* File upload */}
-        <div className="mt-1.5 rounded-md border-[1.5px] border-dashed border-gray-400 bg-light-gray p-4">
-          <p className="text-[12.5px] text-gray-600">
-            <strong className="text-dark-blue">Required:</strong> Attach your current product catalogue and
+        <div className="mt-1.5 rounded-md border-[1.5px] border-dashed border-brand-muted/40 bg-brand-bg-alt p-4">
+          <p className="text-[12.5px] text-brand-muted">
+            <strong className="text-brand-ink">Required:</strong> Attach your current product catalogue and
             price list. Each product should include SKU codes, specifications, certifications, shelf life,
             packaging format/dimensions, and ex-works prices. (PDF, Excel, Word, CSV — up to 15 MB each.)
           </p>
@@ -168,10 +177,10 @@ export default function FormPage() {
             multiple
             accept={FILE_CONSTRAINTS.allowedExtensions.join(",")}
             onChange={onFileChange}
-            className="mt-3 block w-full text-[12.5px] text-gray-700 file:mr-3 file:rounded file:border-0 file:bg-mid-blue file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-dark-blue"
+            className="mt-3 block w-full text-[12.5px] text-brand-ink file:mr-3 file:rounded file:border-0 file:bg-brand-teal file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-brand-teal-dark"
           />
           {files.length > 0 && (
-            <ul className="mt-2 text-[12px] text-gray-600">
+            <ul className="mt-2 text-[12px] text-brand-muted">
               {files.map((f) => (
                 <li key={f.name}>• {f.name} ({(f.size / 1024 / 1024).toFixed(2)} MB)</li>
               ))}
@@ -306,28 +315,29 @@ export default function FormPage() {
         </Field>
 
         {/* Submit */}
-        <div className="mt-8 border-t border-border pt-6">
+        <div className="mt-8 border-t border-brand-line pt-6">
           {submitError && <p className="mb-3 text-sm text-red-600">{submitError}</p>}
           <button
             type="submit"
             disabled={submitting}
-            className="rounded bg-orange px-6 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
+            className="rounded-full bg-brand-teal px-6 py-3 text-sm font-bold text-white shadow-sm transition-all duration-200 hover:bg-brand-teal-dark hover:shadow-md hover:-translate-y-px active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40 focus-visible:ring-offset-2 disabled:opacity-50"
           >
             {submitting ? "Submitting…" : "Submit Assessment"}
           </button>
-          <p className="mt-3 text-[11.5px] italic text-gray-400">
+          <p className="mt-3 text-[11.5px] italic text-brand-muted">
             We'll review your submission and respond within 5 business days.
           </p>
-          <p className="mt-3 rounded border border-orange/30 bg-orange/5 px-3 py-2 text-[11px] text-gray-500">
+          <p className="mt-3 rounded border border-brand-teal/30 bg-brand-teal/5 px-3 py-2 text-[11px] text-brand-muted">
             <strong>Privacy notice:</strong> The information you provide will be used to assess your
             suitability for market entry and may be processed by our AI-powered evaluation system
             (Anthropic Claude) under strict data protection safeguards. Your data is never used for
             model training and is retained only as long as necessary for the assessment process.
             By submitting, you consent to this processing. See our{" "}
-            <a href="/privacy" className="text-mid-blue underline">Privacy Policy</a>.
+            <a href="/privacy" className="text-brand-teal underline">Privacy Policy</a>.
           </p>
         </div>
       </form>
     </div>
+    </>
   );
 }

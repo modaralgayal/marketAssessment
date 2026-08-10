@@ -7,6 +7,8 @@ export interface StorageProvider {
   put(key: string, body: Buffer, contentType: string): Promise<void>;
   /** Return a short-lived URL the browser can use to download the object. */
   getSignedUrl(key: string, expiresInSec: number): Promise<string>;
+  /** Download an object as a Buffer. */
+  get(key: string): Promise<Buffer>;
   /** Remove an object. */
   delete(key: string): Promise<void>;
 }

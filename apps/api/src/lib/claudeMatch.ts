@@ -1,4 +1,5 @@
 import { Anthropic } from "@anthropic-ai/sdk";
+import { jsonrepair } from "jsonrepair";
 import { prisma } from "../prisma.js";
 import type { MatchResultDto } from "@mea/shared";
 
@@ -129,7 +130,7 @@ async function callClaudeForMatches(prompt: string): Promise<MatchResultDto> {
 
   const text = msg.content[0]?.type === "text" ? msg.content[0].text : "";
 
-  // Clean up potential markdown fences
+  // Clean up and repair with jsonrepair for robustness
   let cleaned = text.trim();
   cleaned = cleaned.replace(/^```json\s*/i, "");
   cleaned = cleaned.replace(/^```\s*/i, "");
@@ -138,16 +139,28 @@ async function callClaudeForMatches(prompt: string): Promise<MatchResultDto> {
   let result: any;
   try {
     result = JSON.parse(cleaned);
-  } catch (e) {
-    console.error("Failed to parse Claude match response:");
-    console.error(cleaned);
-    throw new Error(`Failed to parse Claude response as JSON: ${e}`);
+  } catch {
+    try {
+      result = JSON.parse(jsonrepair(cleaned));
+    } catch (e) {
+      console.error("Failed to parse Claude match response:");
+      console.error(cleaned.slice(0, 2000));
+      throw new Error(`Failed to parse Claude response as JSON: ${e}`);
+    }
   }
 
   if (!Array.isArray(result.matches)) {
     throw new Error(
       `Claude response missing matches array:\n${JSON.stringify(result, null, 2)}`,
     );
+  }
+
+  // Normalize common field aliases Claude sometimes returns
+  for (const m of result.matches) {
+    if (m.divisorId && !m.distributorId) m.distributorId = m.divisorId;
+    if (m.confidenceScore !== undefined && m.compatibilityScore === undefined) {
+      m.compatibilityScore = m.confidenceScore;
+    }
   }
 
   // Validate each match has required fields
@@ -161,11 +174,23 @@ async function callClaudeForMatches(prompt: string): Promise<MatchResultDto> {
       typeof m.matchLevel !== "string" ||
       !["STRONG", "MODERATE", "WEAK"].includes(m.matchLevel)
     ) {
-      throw new Error(
-        `Invalid match entry:\n${JSON.stringify(m, null, 2)}`,
-      );
+      // Skip invalid entries instead of failing the whole batch
+      console.warn(`[claudeMatch] Skipping invalid match entry:\n${JSON.stringify(m, null, 2)}`);
+      continue;
     }
   }
+
+  // Filter out any entries that failed validation (were skipped above)
+  result.matches = result.matches.filter(
+    (m: any) =>
+      typeof m.distributorId === "string" &&
+      typeof m.compatibilityScore === "number" &&
+      m.compatibilityScore >= 0 &&
+      m.compatibilityScore <= 100 &&
+      typeof m.rationale === "string" &&
+      typeof m.matchLevel === "string" &&
+      ["STRONG", "MODERATE", "WEAK"].includes(m.matchLevel),
+  );
 
   return result as MatchResultDto;
 }

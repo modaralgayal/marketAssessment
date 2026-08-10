@@ -64,10 +64,10 @@ export default function AdminList() {
   return (
     <AdminLayout>
       <div className="mb-5 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-dark-blue">
+        <h1 className="text-xl font-bold text-brand-ink">
           Submissions{" "}
           {data ? (
-            <span className="text-gray-400">({data.total})</span>
+            <span className="text-brand-muted">({data.total})</span>
           ) : null}
         </h1>
 
@@ -75,12 +75,12 @@ export default function AdminList() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search company, email, country…"
-          className="w-64 rounded border border-border bg-white px-3 py-2 text-sm outline-none focus:border-mid-blue"
+          className="w-64 rounded border border-brand-line bg-white px-3 py-2 text-sm outline-none focus:border-brand-teal"
         />
       </div>
 
       {isLoading && (
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-brand-muted">Loading…</p>
       )}
 
       {error && (
@@ -90,9 +90,9 @@ export default function AdminList() {
       )}
 
       {data && (
-        <div className="overflow-hidden rounded-lg border border-border bg-white">
+        <div className="overflow-hidden rounded-lg border border-brand-line bg-white">
           <table className="w-full text-left text-sm">
-            <thead className="bg-light-gray text-xs uppercase tracking-wide text-gray-500">
+            <thead className="bg-brand-bg-alt text-xs uppercase tracking-wide text-brand-muted">
               <tr>
                 <th className="px-4 py-3">Company</th>
                 <th className="px-4 py-3">Country</th>
@@ -109,62 +109,62 @@ export default function AdminList() {
               {items.map((s) => (
                 <tr
                   key={s.id}
-                  className="border-t border-border hover:bg-pale-blue/40"
+                  className="border-t border-brand-line hover:bg-[#0F7B7F]/5"
                 >
                   <td className="px-4 py-3">
                     <Link
                       to={`/admin/submissions/${s.id}`}
-                      className="font-semibold text-mid-blue hover:underline"
+                      className="font-semibold text-brand-teal hover:underline"
                     >
                       {s.companyName}
                     </Link>
                   </td>
 
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-brand-muted">
                     {s.country}
                   </td>
 
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-brand-muted">
                     {s.contactFullName}
                     <br />
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-brand-muted">
                       {s.contactEmail}
                     </span>
                   </td>
 
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-brand-muted">
                     {s.files.length}
                   </td>
 
                   <td className="px-4 py-3">
                     {s.score != null ? (
                       <div>
-                        <div className="font-semibold text-dark-blue">
+                        <div className="font-semibold text-brand-ink">
                           {s.score.toFixed(1)}
                         </div>
 
                         {s.decision && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-brand-muted">
                             {s.decision}
                           </div>
                         )}
                       </div>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-brand-muted">—</span>
                     )}
                   </td>
 
                   <td className="px-4 py-3">
                     {s.matchCount != null && s.matchCount > 0 ? (
-                      <span className="font-semibold text-dark-blue">
+                      <span className="font-semibold text-brand-ink">
                         {s.matchCount} match{s.matchCount !== 1 ? "es" : ""}
                       </span>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-brand-muted">—</span>
                     )}
                   </td>
 
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-brand-muted">
                     {new Date(s.createdAt).toLocaleDateString()}
                   </td>
 
@@ -173,7 +173,7 @@ export default function AdminList() {
                       <button
                         onClick={() => evaluateSubmissionForRow(s.id)}
                         disabled={loadingId === s.id}
-                        className="text-sm text-mid-blue hover:underline disabled:opacity-50"
+                        className="text-sm text-brand-teal hover:underline disabled:opacity-50"
                       >
                         {loadingId === s.id
                           ? "Evaluating..."
@@ -184,13 +184,13 @@ export default function AdminList() {
                       <button
                         onClick={() => findMatchesForRow(s.id)}
                         disabled={matchingId === s.id}
-                        className="text-sm text-orange hover:underline disabled:opacity-50"
+                        className="text-sm text-brand-teal hover:underline disabled:opacity-50"
                       >
                         {matchingId === s.id ? "Matching…" : "Find Matches"}
                       </button>
                       <Link
                         to={`/admin/submissions/${s.id}`}
-                        className="text-sm text-gray-500 hover:underline"
+                        className="text-sm text-brand-muted hover:underline"
                       >
                         View
                       </Link>
@@ -203,7 +203,7 @@ export default function AdminList() {
                 <tr>
                   <td
                     colSpan={8}
-                    className="px-4 py-8 text-center text-gray-400"
+                    className="px-4 py-8 text-center text-brand-muted"
                   >
                     No submissions yet.
                   </td>

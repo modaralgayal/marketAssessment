@@ -32,11 +32,12 @@ const submitLimiter = rateLimit({
 });
 
 function toDto(s: any): SubmissionDto {
-  const { createdAt, evaluatedAt, _count, ...rest } = s;
+  const { createdAt, evaluatedAt, catalogueExtractedAt, _count, ...rest } = s;
   return {
     ...(rest as any),
     createdAt: createdAt.toISOString(),
     evaluatedAt: evaluatedAt ? evaluatedAt.toISOString() : undefined,
+    catalogueExtractedAt: catalogueExtractedAt ? catalogueExtractedAt.toISOString() : undefined,
     matchCount: _count?.matches ?? undefined,
     files: (s.files ?? []).map((f: any) => ({
       id: f.id,

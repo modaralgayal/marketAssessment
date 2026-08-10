@@ -131,7 +131,7 @@ export default function DistributorForm() {
 
   const renderField = (field: DataTierField) => {
     const val = (attributes as any)[field.key] ?? "";
-    const common = "w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue";
+    const common = "w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal";
 
     switch (field.type) {
       case "textarea":
@@ -175,22 +175,22 @@ export default function DistributorForm() {
     }).length;
 
     return (
-      <div className="mt-6 rounded-lg border border-border bg-gray-50 p-4">
+      <div className="mt-6 rounded-lg border border-brand-line bg-brand-bg-alt p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-dark-blue">
+          <h3 className="text-sm font-bold text-brand-ink">
             Tier {tierNum} · {label}
           </h3>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-brand-muted">
             {filled}/{fields.length} fields filled
           </span>
         </div>
-        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-brand-line">
           <div
             className={`h-full rounded-full transition-all ${
               filled === fields.length
                 ? "bg-green-500"
                 : filled >= fields.length * 0.7
-                ? "bg-mid-blue"
+                ? "bg-brand-teal"
                 : "bg-amber-400"
             }`}
             style={{ width: `${fields.length > 0 ? (filled / fields.length) * 100 : 0}%` }}
@@ -199,7 +199,7 @@ export default function DistributorForm() {
         <div className="space-y-3">
           {fields.map((field) => (
             <div key={field.key}>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
                 {field.label}
               </label>
               {renderField(field)}
@@ -213,7 +213,7 @@ export default function DistributorForm() {
   if (loading) {
     return (
       <AdminLayout>
-        <p className="text-sm text-gray-500">Loading…</p>
+        <p className="text-sm text-brand-muted">Loading…</p>
       </AdminLayout>
     );
   }
@@ -221,149 +221,149 @@ export default function DistributorForm() {
   return (
     <AdminLayout>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-dark-blue">
+        <h1 className="text-xl font-bold text-brand-ink">
           {isEdit ? "Edit Distributor" : "Add Distributor"}
         </h1>
       </div>
 
-      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="rounded-lg border border-border bg-white p-6">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="rounded-lg border border-brand-line bg-white p-6">
         {/* ── Core Fields ── */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               Company Name *
             </label>
             <input
               {...register("companyName")}
-              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+              className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
             />
             {errors.companyName && <p className="mt-1 text-xs text-red-600">{errors.companyName.message}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               City / Region *
             </label>
             <input
               {...register("cityRegion")}
-              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+              className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
             />
             {errors.cityRegion && <p className="mt-1 text-xs text-red-600">{errors.cityRegion.message}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               Channel / Type *
             </label>
             <input
               {...register("channelType")}
               placeholder="e.g. Modern Trade, HORECA, Foodservice"
-              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+              className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
             />
             {errors.channelType && <p className="mt-1 text-xs text-red-600">{errors.channelType.message}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               Size / Scale
             </label>
             <input
               {...register("sizeScale")}
               placeholder="e.g. Large, Medium, Small"
-              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+              className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               Website
             </label>
             <input
               {...register("website")}
               placeholder="www.example.com"
-              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+              className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               Phone
             </label>
             <input
               {...register("phone")}
               placeholder="+971 XX XXX XXXX"
-              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+              className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               Email
             </label>
             <input
               {...register("email")}
               type="email"
               placeholder="contact@distributor.com"
-              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+              className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
             />
             {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               Contact Person
             </label>
             <input
               {...register("contactPerson")}
               placeholder="Full name of contact"
-              className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+              className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
             />
           </div>
         </div>
 
         <div className="mt-6">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
             Do we know them?
           </label>
           <textarea
             {...register("doWeKnowThem")}
             rows={2}
             placeholder="e.g. Yes, met at Gulfood 2024 — had a good introductory meeting"
-            className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+            className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
           />
         </div>
 
         <div className="mt-6">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
             Status / Last Contact
           </label>
           <textarea
             {...register("statusLastContact")}
             rows={2}
             placeholder="e.g. Active — last contacted Jan 2025"
-            className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+            className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
           />
         </div>
 
         <div className="mt-6">
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
             Description (size, channels, operations)
           </label>
           <textarea
             {...register("description")}
             rows={3}
             placeholder="Describe the distributor's size, channels, operations, and any other relevant details"
-            className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+            className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
           />
         </div>
 
         {/* ── Dynamic Tier Fields ── */}
         {tierTemplate && (
           <div className="mt-8">
-            <h2 className="mb-3 border-b-2 border-mid-blue pb-2 text-base font-bold text-dark-blue">
+            <h2 className="mb-3 border-b-2 border-brand-teal pb-2 text-base font-bold text-brand-ink">
               Data Quality Tiers
             </h2>
-            <p className="mb-4 text-xs text-gray-500">
+            <p className="mb-4 text-xs text-brand-muted">
               Fill in fields to improve the distributor's data tier. Higher tiers produce more accurate matches.
             </p>
 
@@ -375,10 +375,10 @@ export default function DistributorForm() {
 
         {/* ── Ad-hoc Custom Fields ── */}
         <div className="mt-8">
-          <h2 className="mb-3 border-b-2 border-mid-blue pb-2 text-base font-bold text-dark-blue">
+          <h2 className="mb-3 border-b-2 border-brand-teal pb-2 text-base font-bold text-brand-ink">
             Additional Data
           </h2>
-          <p className="mb-4 text-xs text-gray-500">
+          <p className="mb-4 text-xs text-brand-muted">
             Add any valuable information that doesn't fit in the predefined fields above.
           </p>
 
@@ -389,7 +389,7 @@ export default function DistributorForm() {
                   value={cf.key}
                   onChange={(e) => updateCustomField(i, "key", e.target.value)}
                   placeholder="Field name (e.g. 'Preferred warehouse location')"
-                  className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+                  className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
                 />
               </div>
               <div className="flex-[2]">
@@ -397,14 +397,14 @@ export default function DistributorForm() {
                   value={cf.value}
                   onChange={(e) => updateCustomField(i, "value", e.target.value)}
                   placeholder="Value"
-                  className="w-full rounded border border-border px-3 py-2 text-sm outline-none focus:border-mid-blue"
+                  className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
                 />
               </div>
               <div className="w-28">
                 <select
                   value={cf.tier}
                   onChange={(e) => updateCustomField(i, "tier", Number(e.target.value))}
-                  className="w-full rounded border border-border px-2 py-2 text-sm outline-none focus:border-mid-blue"
+                  className="w-full rounded border border-brand-line px-2 py-2 text-sm outline-none focus:border-brand-teal"
                 >
                   <option value={1}>Tier 1</option>
                   <option value={2}>Tier 2</option>
@@ -424,7 +424,7 @@ export default function DistributorForm() {
           <button
             type="button"
             onClick={addCustomField}
-            className="mt-2 rounded border border-dashed border-mid-blue px-4 py-1.5 text-xs font-semibold text-mid-blue hover:bg-pale-blue"
+            className="mt-2 rounded border border-dashed border-brand-teal px-4 py-1.5 text-xs font-semibold text-brand-teal hover:bg-[#0F7B7F]/5"
           >
             + Add custom field
           </button>
@@ -453,14 +453,14 @@ export default function DistributorForm() {
               // Submit the form programmatically now that we have the token
               formRef.current?.requestSubmit();
             }}
-            className="rounded bg-mid-blue px-6 py-2 text-sm font-semibold text-white hover:bg-dark-blue disabled:opacity-50"
+            className="rounded-full bg-brand-teal px-6 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-brand-teal-dark hover:shadow-md hover:-translate-y-px active:scale-[0.98] disabled:opacity-50"
           >
             {saving ? "Saving…" : isEdit ? "Update Distributor" : "Add Distributor"}
           </button>
           <button
             type="button"
             onClick={() => navigate("/admin/distributors")}
-            className="rounded border border-border px-6 py-2 text-sm text-gray-600 hover:bg-light-gray"
+            className="rounded border border-brand-line px-6 py-2 text-sm text-brand-muted hover:bg-brand-bg-alt"
           >
             Cancel
           </button>

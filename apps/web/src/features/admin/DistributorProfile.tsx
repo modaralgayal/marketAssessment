@@ -8,17 +8,17 @@ import AdminLayout from "./AdminLayout";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-1 gap-1 border-b border-border py-2.5 sm:grid-cols-[260px_1fr]">
-      <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</div>
-      <div className="text-sm text-gray-800">{value}</div>
+    <div className="grid grid-cols-1 gap-1 border-b border-brand-line py-2.5 sm:grid-cols-[260px_1fr]">
+      <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">{label}</div>
+      <div className="text-sm text-brand-ink">{value}</div>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-6 rounded-lg border border-border bg-white p-6">
-      <h2 className="mb-3 border-b-2 border-mid-blue pb-2 text-base font-bold text-dark-blue">{title}</h2>
+    <section className="mb-6 rounded-lg border border-brand-line bg-white p-6">
+      <h2 className="mb-3 border-b-2 border-brand-teal pb-2 text-base font-bold text-brand-ink">{title}</h2>
       {children}
     </section>
   );
@@ -52,14 +52,14 @@ function TierSection({ title, fields, attributes, tierNum }: { title: string; fi
   }).length;
 
   return (
-    <div className="mb-4 rounded-lg border border-border bg-gray-50 p-4">
+    <div className="mb-4 rounded-lg border border-brand-line bg-brand-bg-alt p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-dark-blue">Tier {tierNum} · {title}</h3>
-        <span className="text-xs text-gray-500">{filled}/{fields.length}</span>
+        <h3 className="text-sm font-bold text-brand-ink">Tier {tierNum} · {title}</h3>
+        <span className="text-xs text-brand-muted">{filled}/{fields.length}</span>
       </div>
       <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
         <div
-          className={`h-full rounded-full ${filled === fields.length ? "bg-green-500" : "bg-mid-blue"}`}
+          className={`h-full rounded-full ${filled === fields.length ? "bg-green-500" : "bg-brand-teal"}`}
           style={{ width: `${(filled / fields.length) * 100}%` }}
         />
       </div>
@@ -69,11 +69,11 @@ function TierSection({ title, fields, attributes, tierNum }: { title: string; fi
           const hasValue = v !== undefined && v !== null && v !== "";
           return (
             <div key={f.key} className="text-sm">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{f.label}: </span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">{f.label}: </span>
               {hasValue ? (
-                <span className="text-gray-800">{v}</span>
+                <span className="text-brand-ink">{v}</span>
               ) : (
-                <span className="italic text-gray-400">Not filled</span>
+                <span className="italic text-brand-muted">Not filled</span>
               )}
             </div>
           );
@@ -172,43 +172,43 @@ export default function DistributorProfile() {
     <AdminLayout>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/admin/distributors" className="text-sm text-mid-blue hover:underline">
+          <Link to="/admin/distributors" className="text-sm text-brand-teal hover:underline">
             ← Back to distributors
           </Link>
         </div>
         <div className="flex items-center gap-2">
           <Link
             to={`/admin/distributors/${id}/edit`}
-            className="rounded bg-mid-blue px-4 py-1.5 text-sm font-semibold text-white hover:bg-dark-blue"
+            className="rounded-full bg-brand-teal px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-brand-teal-dark hover:shadow-md hover:-translate-y-px active:scale-[0.98]"
           >
             Edit
           </Link>
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="rounded border border-border px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100"
+              className="rounded border border-brand-line px-3 py-1.5 text-sm text-brand-muted hover:bg-brand-bg-alt"
             >
               ⋮
             </button>
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border border-border bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border border-brand-line bg-white py-1 shadow-lg">
                   <button
                     onClick={() => { setShowMenu(false); handleSyncFromSheet(); }}
                     disabled={syncing}
-                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="flex w-full items-center px-4 py-2 text-sm text-brand-ink hover:bg-brand-bg-alt disabled:opacity-50"
                   >
                     {syncing ? "Syncing…" : "Sync from Sheet"}
                   </button>
                   <button
                     onClick={() => { setShowMenu(false); handleRecalcTier(); }}
                     disabled={recalculating}
-                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="flex w-full items-center px-4 py-2 text-sm text-brand-ink hover:bg-brand-bg-alt disabled:opacity-50"
                   >
                     {recalculating ? "Recalculating…" : "Recalc Tier"}
                   </button>
-                  <hr className="my-1 border-border" />
+                  <hr className="my-1 border-brand-line" />
                   <button
                     onClick={() => { setShowMenu(false); handleDelete(); }}
                     disabled={deleting}
@@ -223,15 +223,15 @@ export default function DistributorProfile() {
         </div>
       </div>
 
-      {isLoading && <p className="text-sm text-gray-500">Loading…</p>}
+      {isLoading && <p className="text-sm text-brand-muted">Loading…</p>}
       {error && <p className="text-sm text-red-600">Failed to load distributor.</p>}
 
       {data && (
         <>
           <div className="mb-6 flex items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-dark-blue">{data.companyName}</h1>
-              <p className="text-sm text-gray-500">
+              <h1 className="text-2xl font-bold text-brand-ink">{data.companyName}</h1>
+              <p className="text-sm text-brand-muted">
                 Added {new Date(data.createdAt).toLocaleDateString()}
               </p>
             </div>
@@ -256,7 +256,7 @@ export default function DistributorProfile() {
 
           {data.description && (
             <Section title="Description">
-              <p className="text-sm whitespace-pre-wrap text-gray-700">{data.description}</p>
+              <p className="text-sm whitespace-pre-wrap text-brand-ink">{data.description}</p>
             </Section>
           )}
 
