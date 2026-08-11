@@ -169,10 +169,24 @@ export default function DistributorForm() {
   };
 
   const renderTierSection = (tierNum: number, fields: DataTierField[], label: string) => {
-    const filled = fields.filter((f) => {
+    const templateKeys = new Set(fields.map((f) => f.key));
+    const templateFilled = fields.filter((f) => {
       const v = (attributes as any)[f.key];
       return v !== undefined && v !== null && v !== "";
     }).length;
+
+    // "Additional Data" fields assigned to this tier also count toward it.
+    const customInTier = customFields.filter(
+      (cf) =>
+        cf.tier === tierNum &&
+        cf.key.trim() !== "" &&
+        cf.value.trim() !== "" &&
+        !templateKeys.has(cf.key.trim()),
+    );
+
+    const total = fields.length;
+    const filled = templateFilled + customInTier.length;
+    const pct = total > 0 ? filled / total : 0;
 
     return (
       <div className="mt-6 rounded-lg border border-brand-line bg-brand-bg-alt p-4">
@@ -181,19 +195,15 @@ export default function DistributorForm() {
             Tier {tierNum} · {label}
           </h3>
           <span className="text-xs text-brand-muted">
-            {filled}/{fields.length} fields filled
+            {filled}/{total} fields filled
           </span>
         </div>
         <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-brand-line">
           <div
             className={`h-full rounded-full transition-all ${
-              filled === fields.length
-                ? "bg-green-500"
-                : filled >= fields.length * 0.7
-                ? "bg-brand-teal"
-                : "bg-amber-400"
+              pct >= 0.7 ? "bg-green-500" : "bg-amber-400"
             }`}
-            style={{ width: `${fields.length > 0 ? (filled / fields.length) * 100 : 0}%` }}
+            style={{ width: `${pct * 100}%` }}
           />
         </div>
         <div className="space-y-3">

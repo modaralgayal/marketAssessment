@@ -9,6 +9,7 @@ import { distributorsRouter } from "./routes/distributors.js";
 import { matchesRouter } from "./routes/matches.js";
 import { catalogueRouter } from "./routes/catalogue.js";
 import { customersRouter } from "./routes/customers.js";
+import { requireAdmin } from "./middleware/requireAdmin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -25,6 +26,11 @@ app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+// Lightweight admin check used by the SPA to bounce non-admins after sign-in.
+app.get("/api/admin/me", requireAdmin, (req, res) => {
+  res.json({ email: req.admin!.email });
 });
 
 app.use("/api/score", scoreRouter);

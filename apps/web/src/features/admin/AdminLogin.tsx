@@ -1,20 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 
 export default function AdminLogin() {
-  const { user, loading, signIn } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading && user) navigate("/admin", { replace: true });
-  }, [user, loading, navigate]);
 
   const handleSignIn = async () => {
     setError(null);
     try {
       await signIn();
+      navigate("/admin", { replace: true });
     } catch {
       setError("Sign-in failed. Please try again.");
     }

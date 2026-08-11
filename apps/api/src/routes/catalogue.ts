@@ -35,7 +35,7 @@ const KNOWN_FIELD_MAP: Record<string, string[]> = {
 const KNOWN_KEYS = new Set(Object.keys(KNOWN_FIELD_MAP));
 
 /** Extract structured data from a submission's catalogue files. */
-catalogueRouter.post("/submissions/:id/extract-catalogue", extractLimiter, async (req, res, next) => {
+catalogueRouter.post("/submissions/:id/extract-catalogue", extractLimiter, async (req, res) => {
   try {
     const submission = await prisma.submission.findUnique({
       where: { id: req.params.id },
@@ -68,7 +68,6 @@ catalogueRouter.post("/submissions/:id/extract-catalogue", extractLimiter, async
       additionalFields: fieldMapping.additional.map((f) => ({
         key: f.key,
         value: f.value,
-        tier: 3, // default tier for unknown fields
       })),
     };
 
@@ -92,10 +91,10 @@ catalogueRouter.post("/submissions/:id/extract-catalogue", extractLimiter, async
 });
 
 /**
- * Apply tier assignments for additional data fields.
- * Body: { additionalFields: [{ key, value, tier }] }
+ * Persist additional data fields extracted from the catalogue.
+ * Body: { additionalFields: [{ key, value }] }
  */
-catalogueRouter.post("/submissions/:id/apply-catalogue-mapping", async (req, res, next) => {
+catalogueRouter.post("/submissions/:id/apply-catalogue-mapping", async (req, res) => {
   try {
     const { additionalFields } = req.body;
     if (!Array.isArray(additionalFields)) {
@@ -112,11 +111,11 @@ catalogueRouter.post("/submissions/:id/apply-catalogue-mapping", async (req, res
 
     const currentData = (submission.catalogueData as any) ?? {};
 
-    // Validate tiers
+    // Validate entries
     for (const f of additionalFields) {
-      if (typeof f.key !== "string" || typeof f.value !== "string" || ![1, 2, 3].includes(f.tier)) {
+      if (typeof f.key !== "string" || typeof f.value !== "string") {
         return res.status(400).json({
-          error: `Invalid field entry: ${JSON.stringify(f)}. Each field must have key, value, and tier (1-3).`,
+          error: `Invalid field entry: ${JSON.stringify(f)}. Each field must have key and value.`,
         });
       }
     }

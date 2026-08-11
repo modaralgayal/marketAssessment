@@ -71,7 +71,6 @@ export default function AdminDetail() {
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [extracted, setExtracted] = useState<ExtractCatalogueResponse | null>(null);
-  const [additionalTiers, setAdditionalTiers] = useState<Record<string, number>>({});
   const [applyingMapping, setApplyingMapping] = useState(false);
   const [converting, setConverting] = useState(false);
   const [showCustomerActions, setShowCustomerActions] = useState(false);
@@ -120,12 +119,6 @@ export default function AdminDetail() {
     try {
       const result = await extractCatalogue(id);
       setExtracted(result);
-      // Init tier defaults for additional fields
-      const tiers: Record<string, number> = {};
-      for (const f of result.fieldMapping.additional) {
-        tiers[f.key] = 3;
-      }
-      setAdditionalTiers(tiers);
     } catch (err) {
       setExtractError(err instanceof Error ? err.message : "Failed to extract catalogue data");
     } finally {
@@ -140,7 +133,6 @@ export default function AdminDetail() {
       const additionalFields = extracted.fieldMapping.additional.map((f) => ({
         key: f.key,
         value: f.value,
-        tier: additionalTiers[f.key] ?? 3,
       }));
       await applyCatalogueMapping(id, additionalFields);
       await queryClient.invalidateQueries({ queryKey: ["submission", id] });
@@ -322,7 +314,7 @@ export default function AdminDetail() {
           {extracted && (
             <Section title="Extracted Catalogue Data — Review">
               <p className="mb-4 text-xs text-brand-muted">
-                Review the data extracted from your catalogue files. Fields matching the assessment form are auto-mapped below. Assign tiers to additional data fields before applying.
+                Review the data extracted from your catalogue files. Fields matching the assessment form are auto-mapped below.
               </p>
 
               {/* Auto-mapped fields */}
@@ -342,26 +334,17 @@ export default function AdminDetail() {
                 </div>
               )}
 
-              {/* Additional data fields with tier assignment */}
+              {/* Additional data fields */}
               {extracted.fieldMapping.additional.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="mb-2 text-sm font-bold text-amber-700">Additional Data — Assign Tiers</h3>
-                  <div className="space-y-3">
+                  <h3 className="mb-2 text-sm font-bold text-amber-700">Additional Data</h3>
+                  <div className="space-y-2">
                     {extracted.fieldMapping.additional.map((f) => (
                       <div key={f.key} className="flex items-center gap-3 rounded border border-brand-line bg-amber-50/30 px-3 py-2">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-brand-ink">{f.label}</div>
                           <div className="text-xs text-brand-muted">{f.value}</div>
                         </div>
-                        <select
-                          value={additionalTiers[f.key] ?? 3}
-                          onChange={(e) => setAdditionalTiers({ ...additionalTiers, [f.key]: Number(e.target.value) })}
-                          className="rounded border border-brand-line px-2 py-1 text-xs outline-none focus:border-brand-teal"
-                        >
-                          <option value={1}>Tier 1</option>
-                          <option value={2}>Tier 2</option>
-                          <option value={3}>Tier 3</option>
-                        </select>
                       </div>
                     ))}
                   </div>
@@ -393,26 +376,19 @@ export default function AdminDetail() {
                 Last extracted: {new Date(data.catalogueExtractedAt).toLocaleString()}
               </p>
 
-              {/* Show additional data with their assigned tiers */}
+              {/* Show additional data */}
               {data.catalogueData.additionalFields && data.catalogueData.additionalFields.length > 0 && (
                 <div className="mb-4">
                   <h3 className="mb-2 text-sm font-bold text-brand-ink">Additional Data</h3>
                   <div className="space-y-2">
-                    {data.catalogueData.additionalFields.map((f) => {
-                      const tierLabel = `Tier ${f.tier}`;
-                      const tierColor = f.tier === 1 ? "bg-green-100 text-green-800" : f.tier === 2 ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-brand-muted";
-                      return (
-                        <div key={f.key} className="flex items-center gap-3 rounded border border-brand-line px-3 py-2">
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-brand-ink">{f.key}</div>
-                            <div className="text-xs text-brand-muted">{f.value}</div>
-                          </div>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${tierColor}`}>
-                            {tierLabel}
-                          </span>
+                    {data.catalogueData.additionalFields.map((f) => (
+                      <div key={f.key} className="flex items-center gap-3 rounded border border-brand-line px-3 py-2">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-brand-ink">{f.key}</div>
+                          <div className="text-xs text-brand-muted">{f.value}</div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

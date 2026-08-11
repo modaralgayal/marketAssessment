@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { customerSchema, type CustomerDto, type CustomerInput } from "@mea/shared";
+import { customerSchema, type CustomerDto } from "@mea/shared";
 import { prisma } from "../prisma.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 
 export const customersRouter = Router();
 
 /** Admin: list all customers. */
-customersRouter.get("/", requireAdmin, async (req, res, next) => {
+customersRouter.get("/", requireAdmin, async (_req, res, next) => {
   try {
     const customers = await prisma.customer.findMany({
       orderBy: { createdAt: "desc" },
@@ -34,7 +34,10 @@ customersRouter.get("/:id", requireAdmin, async (req, res, next) => {
 customersRouter.post("/", requireAdmin, async (req, res, next) => {
   try {
     const data = customerSchema.parse(req.body);
-    const customer = await prisma.customer.create({ data });
+    const onboardingDate = data.onboardingDate ? new Date(data.onboardingDate) : undefined;
+    const customer = await prisma.customer.create({
+      data: { ...data, onboardingDate },
+    });
     return res.status(201).json(toDto(customer));
   } catch (err) {
     next(err);
@@ -45,9 +48,10 @@ customersRouter.post("/", requireAdmin, async (req, res, next) => {
 customersRouter.put("/:id", requireAdmin, async (req, res, next) => {
   try {
     const data = customerSchema.parse(req.body);
+    const onboardingDate = data.onboardingDate ? new Date(data.onboardingDate) : undefined;
     const customer = await prisma.customer.update({
       where: { id: req.params.id },
-      data,
+      data: { ...data, onboardingDate },
     });
     return res.json(toDto(customer));
   } catch (err) {

@@ -45,22 +45,27 @@ function TierBadge({ tier }: { tier: number }) {
   );
 }
 
-function TierSection({ title, fields, attributes, tierNum }: { title: string; fields: DataTierField[]; attributes: Record<string, any>; tierNum: number }) {
-  const filled = fields.filter((f) => {
+function TierSection({ title, fields, attributes, tierNum, customFields }: { title: string; fields: DataTierField[]; attributes: Record<string, any>; tierNum: number; customFields?: Array<{ key: string; value: string }> }) {
+  const templateFilled = fields.filter((f) => {
     const v = attributes[f.key];
     return v !== undefined && v !== null && v !== "";
   }).length;
+
+  const custom = customFields ?? [];
+  const total = fields.length;
+  const filled = templateFilled + custom.length;
+  const pct = total > 0 ? filled / total : 0;
 
   return (
     <div className="mb-4 rounded-lg border border-brand-line bg-brand-bg-alt p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-bold text-brand-ink">Tier {tierNum} · {title}</h3>
-        <span className="text-xs text-brand-muted">{filled}/{fields.length}</span>
+        <span className="text-xs text-brand-muted">{filled}/{total}</span>
       </div>
       <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
         <div
-          className={`h-full rounded-full ${filled === fields.length ? "bg-green-500" : "bg-brand-teal"}`}
-          style={{ width: `${(filled / fields.length) * 100}%` }}
+          className={`h-full rounded-full ${pct >= 0.7 ? "bg-green-500" : "bg-brand-teal"}`}
+          style={{ width: `${pct * 100}%` }}
         />
       </div>
       <div className="space-y-2">
@@ -78,6 +83,12 @@ function TierSection({ title, fields, attributes, tierNum }: { title: string; fi
             </div>
           );
         })}
+        {custom.map((cf) => (
+          <div key={cf.key} className="text-sm">
+            <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">{cf.key}: </span>
+            <span className="text-brand-ink">{cf.value}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -166,7 +177,33 @@ export default function DistributorProfile() {
       ])
     : new Set<string>();
 
-  const extraFields = Object.entries(attrs).filter(([k]) => !templateKeys.has(k) && typeof attrs[k] === "string" && attrs[k]?.toString().trim());
+  // Custom "Additional Data" fields carry their tier in the _customFieldTiers map.
+  const customTierMap: Record<string, number> =
+    attrs["_customFieldTiers"] &&
+    typeof attrs["_customFieldTiers"] === "object" &&
+    !Array.isArray(attrs["_customFieldTiers"])
+      ? (attrs["_customFieldTiers"] as Record<string, number>)
+      : {};
+
+  const extraFields = Object.entries(attrs).filter(
+    ([k]) => !templateKeys.has(k) && typeof attrs[k] === "string" && attrs[k]?.toString().trim(),
+  );
+
+  // Extra fields not assigned to any tier (rendered in the bottom section).
+  const untieredExtra = extraFields.filter(([key]) => !(key in customTierMap));
+
+  // Extra fields assigned to a given tier (rendered inside that tier section).
+  const getCustomFields = (tierNum: number) =>
+    Object.entries(attrs)
+      .filter(
+        ([k, v]) =>
+          k !== "_customFieldTiers" &&
+          !templateKeys.has(k) &&
+          typeof v === "string" &&
+          v.trim() !== "" &&
+          customTierMap[k] === tierNum,
+      )
+      .map(([k, v]) => ({ key: k, value: String(v) }));
 
   return (
     <AdminLayout>
@@ -273,26 +310,29 @@ export default function DistributorProfile() {
                 fields={tierTemplate.tier1.fields}
                 attributes={attrs}
                 tierNum={1}
+                customFields={getCustomFields(1)}
               />
               <TierSection
                 title={tierTemplate.tier2.label}
                 fields={tierTemplate.tier2.fields}
                 attributes={attrs}
                 tierNum={2}
+                customFields={getCustomFields(2)}
               />
               <TierSection
                 title={tierTemplate.tier3.label}
                 fields={tierTemplate.tier3.fields}
                 attributes={attrs}
                 tierNum={3}
+                customFields={getCustomFields(3)}
               />
             </Section>
           )}
 
-          {/* ── Ad-hoc Data ── */}
-          {extraFields.length > 0 && (
+          {/* ── Ad-hoc Data (no tier assigned) ── */}
+          {untieredExtra.length > 0 && (
             <Section title="Additional Data">
-              {extraFields.map(([key, value]) => (
+              {untieredExtra.map(([key, value]) => (
                 <Row key={key} label={key} value={value} />
               ))}
             </Section>

@@ -232,7 +232,7 @@ export async function extractCatalogue(submissionId: string): Promise<ExtractCat
 
 export async function applyCatalogueMapping(
   submissionId: string,
-  additionalFields: Array<{ key: string; value: string; tier: number }>,
+  additionalFields: Array<{ key: string; value: string }>,
 ): Promise<void> {
   const res = await fetch(`${BASE}/api/submissions/${submissionId}/apply-catalogue-mapping`, {
     method: "POST",

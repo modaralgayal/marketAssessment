@@ -25,6 +25,9 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
 
   try {
     const decoded = await verifyIdToken(match[1]!);
+    if (!decoded.email_verified) {
+      return res.status(403).json({ error: "Email address is not verified." });
+    }
     const email = decoded.email?.toLowerCase();
     if (!email || !adminEmails.has(email)) {
       return res.status(403).json({ error: "Not authorized" });

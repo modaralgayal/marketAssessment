@@ -94,6 +94,7 @@ export default function CustomerForm() {
             anythingElse: customer.anythingElse ?? undefined,
             customerStatus: customer.customerStatus,
             notes: customer.notes ?? undefined,
+            onboardingDate: customer.onboardingDate ? customer.onboardingDate.slice(0, 10) : undefined,
           });
         })
         .catch(() => setError("Failed to load customer"))

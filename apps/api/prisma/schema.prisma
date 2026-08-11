@@ -126,8 +126,8 @@ enum CustomerStatus {
 
 model Customer {
   id                      String           @id @default(cuid())
-  submissionId            String           @unique
-  submission              Submission       @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId            String?          @unique
+  submission              Submission?      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   // Section 1 - Company Profile
   companyName             String
