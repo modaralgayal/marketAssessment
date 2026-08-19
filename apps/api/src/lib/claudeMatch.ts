@@ -37,30 +37,30 @@ export async function findMatches(submissionId: string): Promise<MatchResultDto>
     companyName: submission.companyName,
     country: submission.country,
     industryCategory: submission.industryCategory,
-    productNames: submission.productNames,
     annualRevenue: submission.annualRevenue,
+    annualRevenueCustom: submission.annualRevenueCustom,
     currentExportMarkets: submission.currentExportMarkets,
-    halalCert: submission.halalCert,
-    otherCerts: submission.otherCerts,
-    labelLanguages: submission.labelLanguages,
-    targetMarkets: submission.targetMarkets,
-    salesChannels: submission.salesChannels,
-    timeline: submission.timeline,
-    productionCapacity: submission.productionCapacity,
-    sfdaStatus: submission.sfdaStatus,
-    productAdaptability: submission.productAdaptability,
-    budget: submission.budget,
-    partnershipHorizon: submission.partnershipHorizon,
-    brandActivation: submission.brandActivation,
-    numberOfSkus: submission.numberOfSkus,
-    shelfLife: submission.shelfLife,
     yearsInBusiness: submission.yearsInBusiness,
+    halalCert: submission.halalCert,
+    sfdaStatus: submission.sfdaStatus,
+    frozenStorage: submission.frozenStorage,
+    shelfLife: submission.shelfLife,
+    otherCerts: submission.otherCerts,
+    otherCertsCustom: submission.otherCertsCustom,
+    labelLanguages: submission.labelLanguages,
+    productAdaptability: submission.productAdaptability,
+    brandApproach: submission.brandApproach,
+    leadTimes: submission.leadTimes,
+    gccCurrentlyActive: submission.gccCurrentlyActive,
+    currentGccMarkets: submission.currentGccMarkets,
+    gccSituation: submission.gccSituation,
+    targetMarketPotential: submission.targetMarketPotential,
+    targetMarketPotentialOther: submission.targetMarketPotentialOther,
+    salesChannels: submission.salesChannels,
+    channelStrategy: submission.channelStrategy,
     moq: submission.moq,
     exportContact: submission.exportContact,
-    gccContact: submission.gccContact,
-    distributionPartner: submission.distributionPartner,
-    revenueYear1Target: submission.revenueYear1Target,
-    revenueYear3Target: submission.revenueYear3Target,
+    productionCapacity: submission.productionCapacity,
   });
 
   const distributorsCompact = distributors.map((d) => ({
@@ -91,7 +91,7 @@ DISTRIBUTORS:
 ${distributorsJson}
 
 INSTRUCTIONS:
-- Evaluate each distributor against the manufacturer's product category, target markets, operational readiness, and GCC ambitions.
+- Evaluate each distributor against the manufacturer's product category, current/intended GCC markets, operational readiness, and GCC ambitions.
 - Consider: does the distributor's channel type match the manufacturer's sales channels? Does their region match the target market? Is the manufacturer's product category a fit for the distributor's description?
 - Return ONLY the distributors that are compatible — do NOT return incompatible ones.
 - Each match must have a score (0-100), a one-sentence rationale (under 15 words), and a match level.

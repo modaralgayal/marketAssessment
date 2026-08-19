@@ -9,15 +9,15 @@ import {
   REVENUE_OPTIONS,
   YES_NO_UNSURE_OPTIONS,
   OTHER_CERT_OPTIONS,
-  TARGET_MARKET_OPTIONS,
+  GCC_MARKET_OPTIONS,
   SALES_CHANNEL_OPTIONS,
-  TIMELINE_OPTIONS,
+  FROZEN_STORAGE_OPTIONS,
+  SHELF_LIFE_OPTIONS,
+  BRAND_APPROACH_OPTIONS,
+  TARGET_POTENTIAL_OPTIONS,
   CAPACITY_OPTIONS,
   SFDA_OPTIONS,
   ADAPTABILITY_OPTIONS,
-  BUDGET_OPTIONS,
-  HORIZON_OPTIONS,
-  ACTIVATION_OPTIONS,
 } from "@mea/shared";
 import { fetchCustomer, createCustomer, updateCustomer } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
@@ -30,6 +30,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </section>
   );
 }
+
+const boolSelect = {
+  setValueAs: (v: unknown) => (v === "true" ? true : v === "false" ? false : undefined),
+};
 
 export default function CustomerForm() {
   const { id } = useParams<{ id: string }>();
@@ -59,38 +63,33 @@ export default function CustomerForm() {
             website: customer.website ?? undefined,
             industryCategory: customer.industryCategory,
             annualRevenue: customer.annualRevenue ?? undefined,
+            annualRevenueCustom: customer.annualRevenueCustom ?? undefined,
             yearsInBusiness: customer.yearsInBusiness ?? undefined,
             currentExportMarkets: customer.currentExportMarkets ?? undefined,
-            productNames: customer.productNames,
-            numberOfSkus: customer.numberOfSkus ?? undefined,
-            shelfLife: customer.shelfLife ?? undefined,
-            exWorksPriceRange: customer.exWorksPriceRange ?? undefined,
             halalCert: customer.halalCert ?? undefined,
+            sfdaStatus: customer.sfdaStatus ?? undefined,
+            frozenStorage: customer.frozenStorage ?? undefined,
+            shelfLife: customer.shelfLife ?? undefined,
             otherCerts: customer.otherCerts ?? [],
+            otherCertsCustom: customer.otherCertsCustom ?? undefined,
             labelLanguages: customer.labelLanguages ?? undefined,
-            targetMarkets: customer.targetMarkets ?? [],
+            productAdaptability: customer.productAdaptability ?? undefined,
+            brandApproach: customer.brandApproach ?? undefined,
+            leadTimes: customer.leadTimes ?? undefined,
+            gccCurrentlyActive: customer.gccCurrentlyActive ?? undefined,
+            currentGccMarkets: customer.currentGccMarkets ?? [],
+            gccSituation: customer.gccSituation ?? undefined,
+            targetMarketPotential: customer.targetMarketPotential ?? undefined,
+            targetMarketPotentialOther: customer.targetMarketPotentialOther ?? undefined,
             salesChannels: customer.salesChannels ?? [],
-            timeline: customer.timeline ?? undefined,
-            revenueYear1Target: customer.revenueYear1Target ?? undefined,
-            revenueYear3Target: customer.revenueYear3Target ?? undefined,
-            gccContact: customer.gccContact ?? undefined,
-            gccContactDetails: customer.gccContactDetails ?? undefined,
-            distributionPartner: customer.distributionPartner ?? undefined,
-            distributionDetails: customer.distributionDetails ?? undefined,
+            channelStrategy: customer.channelStrategy ?? undefined,
             moq: customer.moq ?? undefined,
             exportContact: customer.exportContact ?? undefined,
             productionCapacity: customer.productionCapacity ?? undefined,
-            sfdaStatus: customer.sfdaStatus ?? undefined,
-            productAdaptability: customer.productAdaptability ?? undefined,
-            budget: customer.budget ?? undefined,
-            partnershipHorizon: customer.partnershipHorizon ?? undefined,
-            brandActivation: customer.brandActivation ?? undefined,
             contactFullName: customer.contactFullName,
             contactTitle: customer.contactTitle ?? undefined,
             contactEmail: customer.contactEmail,
             contactPhone: customer.contactPhone ?? undefined,
-            hasSigningAuthority: customer.hasSigningAuthority ?? undefined,
-            signingAuthorityContact: customer.signingAuthorityContact ?? undefined,
             anythingElse: customer.anythingElse ?? undefined,
             customerStatus: customer.customerStatus,
             notes: customer.notes ?? undefined,
@@ -190,7 +189,7 @@ export default function CustomerForm() {
 
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Annual Revenue
+                Annual Revenue *
               </label>
               <select
                 {...register("annualRevenue")}
@@ -203,6 +202,19 @@ export default function CustomerForm() {
                   </option>
                 ))}
               </select>
+              {errors.annualRevenue && (
+                <p className="mt-1 text-xs text-red-600">{errors.annualRevenue.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Annual Revenue (Custom)
+              </label>
+              <input
+                {...register("annualRevenueCustom")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              />
             </div>
 
             <div>
@@ -227,55 +239,12 @@ export default function CustomerForm() {
           </div>
         </Section>
 
-        {/* ── Section 2 - Product ── */}
-        <Section title="2 · Product">
+        {/* ── Section 2 - Products and Operations ── */}
+        <Section title="2 · Products and Operations">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Product Name(s) *
-              </label>
-              <input
-                {...register("productNames")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-              {errors.productNames && (
-                <p className="mt-1 text-xs text-red-600">{errors.productNames.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Number of SKUs
-              </label>
-              <input
-                {...register("numberOfSkus")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Shelf Life
-              </label>
-              <input
-                {...register("shelfLife")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Ex-Works Price Range
-              </label>
-              <input
-                {...register("exWorksPriceRange")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Halal Certification
+                Halal Certification *
               </label>
               <select
                 {...register("halalCert")}
@@ -292,7 +261,92 @@ export default function CustomerForm() {
 
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Other Certifications
+                SFDA / ADAFSA Registration
+              </label>
+              <select
+                {...register("sfdaStatus")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              >
+                <option value="">—</option>
+                {SFDA_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Frozen Storage Required *
+              </label>
+              <select
+                {...register("frozenStorage")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              >
+                <option value="">—</option>
+                {FROZEN_STORAGE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Shelf Life *
+              </label>
+              <select
+                {...register("shelfLife")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              >
+                <option value="">—</option>
+                {SHELF_LIFE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Product Adaptability *
+              </label>
+              <select
+                {...register("productAdaptability")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              >
+                <option value="">—</option>
+                {ADAPTABILITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Branding & Promotional Approach *
+              </label>
+              <select
+                {...register("brandApproach")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              >
+                <option value="">—</option>
+                {BRAND_APPROACH_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Valid Certifications
               </label>
               <select
                 {...register("otherCerts")}
@@ -309,6 +363,16 @@ export default function CustomerForm() {
 
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Other Certifications (Custom)
+              </label>
+              <input
+                {...register("otherCertsCustom")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
                 Label Languages
               </label>
               <input
@@ -316,22 +380,46 @@ export default function CustomerForm() {
                 className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
               />
             </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Lead Times
+              </label>
+              <input
+                {...register("leadTimes")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              />
+            </div>
           </div>
         </Section>
 
-        {/* ── Section 3 - GCC Ambitions ── */}
-        <Section title="3 · GCC Ambitions">
+        {/* ── Section 3 - Target Market ── */}
+        <Section title="3 · Target Market">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Target Markets
+                Currently Active in GCC *
               </label>
               <select
-                {...register("targetMarkets")}
-                multiple
+                {...register("gccCurrentlyActive", boolSelect)}
                 className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
               >
-                {TARGET_MARKET_OPTIONS.map((opt) => (
+                <option value="">—</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Target Market Potential
+              </label>
+              <select
+                {...register("targetMarketPotential")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              >
+                <option value="">—</option>
+                {TARGET_POTENTIAL_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -340,6 +428,44 @@ export default function CustomerForm() {
             </div>
 
             <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Target Market Potential (Other)
+              </label>
+              <input
+                {...register("targetMarketPotentialOther")}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Current GCC Markets
+              </label>
+              <select
+                {...register("currentGccMarkets")}
+                multiple
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              >
+                {GCC_MARKET_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Current GCC Situation
+              </label>
+              <textarea
+                {...register("gccSituation")}
+                rows={3}
+                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
                 Sales Channels
               </label>
@@ -356,87 +482,13 @@ export default function CustomerForm() {
               </select>
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Timeline for First Sale
-              </label>
-              <select
-                {...register("timeline")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {TIMELINE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Revenue Target - Year 1
-              </label>
-              <input
-                {...register("revenueYear1Target")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Revenue Target - Year 3
-              </label>
-              <input
-                {...register("revenueYear3Target")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                GCC Contact
+                Channel Strategy
               </label>
-              <select
-                {...register("gccContact")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                GCC Contact Details
-              </label>
-              <input
-                {...register("gccContactDetails")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Distribution Partner
-              </label>
-              <select
-                {...register("distributionPartner")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Distribution Details
-              </label>
-              <input
-                {...register("distributionDetails")}
+              <textarea
+                {...register("channelStrategy")}
+                rows={3}
                 className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
               />
             </div>
@@ -461,7 +513,7 @@ export default function CustomerForm() {
                 Dedicated Export Contact
               </label>
               <select
-                {...register("exportContact")}
+                {...register("exportContact", boolSelect)}
                 className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
               >
                 <option value="">—</option>
@@ -472,7 +524,7 @@ export default function CustomerForm() {
 
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Production Capacity
+                Production Capacity *
               </label>
               <select
                 {...register("productionCapacity")}
@@ -486,101 +538,11 @@ export default function CustomerForm() {
                 ))}
               </select>
             </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                SFDA / ADAFSA Registration
-              </label>
-              <select
-                {...register("sfdaStatus")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {SFDA_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
         </Section>
 
-        {/* ── Section 5 - Flexibility & Commitment ── */}
-        <Section title="5 · Flexibility & Commitment">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Product Adaptability
-              </label>
-              <select
-                {...register("productAdaptability")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {ADAPTABILITY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Budget Allocated
-              </label>
-              <select
-                {...register("budget")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {BUDGET_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Partnership Horizon
-              </label>
-              <select
-                {...register("partnershipHorizon")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {HORIZON_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Brand Activation Support
-              </label>
-              <select
-                {...register("brandActivation")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {ACTIVATION_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </Section>
-
-        {/* ── Section 6 - Decision-Maker Contact ── */}
-        <Section title="6 · Decision-Maker Contact">
+        {/* ── Section 5 - Decision-Maker Contact ── */}
+        <Section title="5 · Decision-Maker Contact">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
@@ -597,12 +559,15 @@ export default function CustomerForm() {
 
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Title / Position
+                Title / Position *
               </label>
               <input
                 {...register("contactTitle")}
                 className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
               />
+              {errors.contactTitle && (
+                <p className="mt-1 text-xs text-red-600">{errors.contactTitle.message}</p>
+              )}
             </div>
 
             <div>
@@ -625,30 +590,6 @@ export default function CustomerForm() {
               </label>
               <input
                 {...register("contactPhone")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Has Signing Authority
-              </label>
-              <select
-                {...register("hasSigningAuthority")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Signing Authority Contact
-              </label>
-              <input
-                {...register("signingAuthorityContact")}
                 className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
               />
             </div>

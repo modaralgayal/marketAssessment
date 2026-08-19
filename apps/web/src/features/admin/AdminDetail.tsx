@@ -5,15 +5,15 @@ import {
   REVENUE_OPTIONS,
   YES_NO_UNSURE_OPTIONS,
   OTHER_CERT_OPTIONS,
-  TARGET_MARKET_OPTIONS,
+  GCC_MARKET_OPTIONS,
   SALES_CHANNEL_OPTIONS,
-  TIMELINE_OPTIONS,
+  FROZEN_STORAGE_OPTIONS,
+  SHELF_LIFE_OPTIONS,
+  BRAND_APPROACH_OPTIONS,
+  TARGET_POTENTIAL_OPTIONS,
   CAPACITY_OPTIONS,
   SFDA_OPTIONS,
   ADAPTABILITY_OPTIONS,
-  BUDGET_OPTIONS,
-  HORIZON_OPTIONS,
-  ACTIVATION_OPTIONS,
   type SubmissionDto,
   type ManufacturerMatchDto,
   type CustomerDto,
@@ -260,18 +260,26 @@ export default function AdminDetail() {
             <Row label="Website" value={text(data.website)} />
             <Row label="Industry / Category" value={text(data.industryCategory)} />
             <Row label="Annual Revenue" value={label(REVENUE_OPTIONS, data.annualRevenue)} />
+            {data.annualRevenue === "CUSTOM" && (
+              <Row label="— Revenue (specified)" value={text(data.annualRevenueCustom)} />
+            )}
             <Row label="Years in Business" value={text(data.yearsInBusiness)} />
             <Row label="Current Export Markets" value={text(data.currentExportMarkets)} />
           </Section>
 
           <Section title="2 · Product">
-            <Row label="Product Name(s)" value={text(data.productNames)} />
-            <Row label="Number of SKUs" value={text(data.numberOfSkus)} />
-            <Row label="Shelf Life" value={text(data.shelfLife)} />
-            <Row label="Ex-Works Price Range" value={text(data.exWorksPriceRange)} />
+            <Row label="Frozen Storage Required" value={label(FROZEN_STORAGE_OPTIONS, data.frozenStorage)} />
+            <Row label="Shelf Life" value={label(SHELF_LIFE_OPTIONS, data.shelfLife)} />
             <Row label="Halal Certification" value={label(YES_NO_UNSURE_OPTIONS, data.halalCert)} />
+            <Row label="SFDA / ADAFSA Status" value={label(SFDA_OPTIONS, data.sfdaStatus)} />
             <Row label="Other Certifications" value={labels(OTHER_CERT_OPTIONS, data.otherCerts)} />
+            {data.otherCerts?.includes("CUSTOM") && (
+              <Row label="— Other Certifications (specified)" value={text(data.otherCertsCustom)} />
+            )}
             <Row label="Label Languages" value={text(data.labelLanguages)} />
+            <Row label="Product Adaptability" value={label(ADAPTABILITY_OPTIONS, data.productAdaptability)} />
+            <Row label="Branding & Promotional Approach" value={label(BRAND_APPROACH_OPTIONS, data.brandApproach)} />
+            <Row label="Lead Times" value={text(data.leadTimes)} />
             <Row
               label="Catalogue / Price List"
               value={
@@ -405,30 +413,35 @@ export default function AdminDetail() {
             </Section>
           )}
 
-          <Section title="3 · GCC Ambitions">
-            <Row label="Target Markets" value={labels(TARGET_MARKET_OPTIONS, data.targetMarkets)} />
+          <Section title="3 · Target Market">
+            <Row label="Currently Active in GCC" value={yesNo(data.gccCurrentlyActive)} />
+            {data.gccCurrentlyActive === true && (
+              <>
+                <Row label="Current GCC Markets" value={labels(GCC_MARKET_OPTIONS, data.currentGccMarkets)} />
+                <Row label="Current GCC Situation" value={text(data.gccSituation)} />
+              </>
+            )}
+            {data.gccCurrentlyActive === false && (
+              <>
+                <Row label="Target Market Potential" value={label(TARGET_POTENTIAL_OPTIONS, data.targetMarketPotential)} />
+                {data.targetMarketPotential === "OTHER" && (
+                  <Row label="— Other markets (specified)" value={text(data.targetMarketPotentialOther)} />
+                )}
+              </>
+            )}
             <Row label="Sales Channels" value={labels(SALES_CHANNEL_OPTIONS, data.salesChannels)} />
-            <Row label="Timeline for First Sale" value={label(TIMELINE_OPTIONS, data.timeline)} />
-            <Row label="Revenue Target — Year 1" value={text(data.revenueYear1Target)} />
-            <Row label="Revenue Target — Year 3" value={text(data.revenueYear3Target)} />
-            <Row label="Prior GCC Buyer Contact" value={yesNo(data.gccContact)} />
-            <Row label="— Details" value={text(data.gccContactDetails)} />
-            <Row label="Distribution Partner" value={yesNo(data.distributionPartner)} />
-            <Row label="— Details" value={text(data.distributionDetails)} />
+            <Row label="Channel Strategy" value={text(data.channelStrategy)} />
           </Section>
 
           <Section title="4 · Operational Readiness">
             <Row label="Minimum Order Quantity" value={text(data.moq)} />
             <Row label="Dedicated Export Contact" value={yesNo(data.exportContact)} />
             <Row label="Production Capacity" value={label(CAPACITY_OPTIONS, data.productionCapacity)} />
-            <Row label="SFDA / ADAFSA Registration" value={label(SFDA_OPTIONS, data.sfdaStatus)} />
           </Section>
 
-          <Section title="5 · Flexibility & Commitment">
+          <Section title="5 · Flexibility & Branding">
             <Row label="Product Adaptability" value={label(ADAPTABILITY_OPTIONS, data.productAdaptability)} />
-            <Row label="Budget Allocated" value={label(BUDGET_OPTIONS, data.budget)} />
-            <Row label="Partnership Horizon" value={label(HORIZON_OPTIONS, data.partnershipHorizon)} />
-            <Row label="Brand Activation Support" value={label(ACTIVATION_OPTIONS, data.brandActivation)} />
+            <Row label="Branding & Promotional Approach" value={label(BRAND_APPROACH_OPTIONS, data.brandApproach)} />
           </Section>
 
           <Section title="6 · Decision-Maker Contact">
@@ -436,8 +449,6 @@ export default function AdminDetail() {
             <Row label="Title / Position" value={text(data.contactTitle)} />
             <Row label="Email" value={text(data.contactEmail)} />
             <Row label="Phone" value={text(data.contactPhone)} />
-            <Row label="Has Signing Authority" value={yesNo(data.hasSigningAuthority)} />
-            <Row label="Signing Authority Contact" value={text(data.signingAuthorityContact)} />
             <Row label="Anything Else" value={text(data.anythingElse)} />
           </Section>
 

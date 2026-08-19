@@ -24,11 +24,8 @@ const extractLimiter = rateLimit({
  * Keys are the extracted data keys, values are the form field(s) they map to.
  */
 const KNOWN_FIELD_MAP: Record<string, string[]> = {
-  productNames: ["productNames"],
   productCategories: ["industryCategory"],
   certifications: ["halalCert", "otherCerts"],
-  exWorksPriceRange: ["exWorksPriceRange"],
-  shelfLife: ["shelfLife"],
   contactInfo: ["contactEmail", "contactPhone", "website"],
 };
 

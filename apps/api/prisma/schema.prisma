@@ -15,38 +15,33 @@ model Submission {
   website                 String?
   industryCategory        String
   annualRevenue           RevenueBracket?
+  annualRevenueCustom     String?
   yearsInBusiness         String?
   currentExportMarkets    String?
-  productNames            String
-  numberOfSkus            String?
-  shelfLife               String?
-  exWorksPriceRange       String?
   halalCert               YesNoUnsure?
+  sfdaStatus              SfdaStatus?
+  frozenStorage           FrozenStorage?
+  shelfLife               ShelfLife?
   otherCerts              String[]
+  otherCertsCustom        String?
   labelLanguages          String?
-  targetMarkets           String[]
+  productAdaptability     Adaptability?
+  brandApproach           BrandApproach?
+  leadTimes               String?
+  gccCurrentlyActive      Boolean?
+  currentGccMarkets       String[]
+  gccSituation            String?
+  targetMarketPotential   TargetPotential?
+  targetMarketPotentialOther String?
   salesChannels           String[]
-  timeline                Timeline?
-  revenueYear1Target      String?
-  revenueYear3Target      String?
-  gccContact              Boolean?
-  gccContactDetails       String?
-  distributionPartner     Boolean?
-  distributionDetails     String?
+  channelStrategy         String?
   moq                     String?
   exportContact           Boolean?
   productionCapacity      Capacity?
-  sfdaStatus              SfdaStatus?
-  productAdaptability     Adaptability?
-  budget                  BudgetBracket?
-  partnershipHorizon      Horizon?
-  brandActivation         Activation?
   contactFullName         String
-  contactTitle            String?
+  contactTitle            String
   contactEmail            String
   contactPhone            String?
-  hasSigningAuthority     Boolean?
-  signingAuthorityContact String?
   anythingElse            String?
   decision                String?
   evaluatedAt             DateTime?
@@ -135,48 +130,41 @@ model Customer {
   website                 String?
   industryCategory        String
   annualRevenue           RevenueBracket?
+  annualRevenueCustom     String?
   yearsInBusiness         String?
   currentExportMarkets    String?
 
-  // Section 2 - Product
-  productNames            String
-  numberOfSkus            String?
-  shelfLife               String?
-  exWorksPriceRange       String?
+  // Section 2 - Products and Operations
   halalCert               YesNoUnsure?
+  sfdaStatus              SfdaStatus?
+  frozenStorage           FrozenStorage?
+  shelfLife               ShelfLife?
   otherCerts              String[]
+  otherCertsCustom        String?
   labelLanguages          String?
+  productAdaptability     Adaptability?
+  brandApproach           BrandApproach?
+  leadTimes               String?
 
-  // Section 3 - GCC Ambitions
-  targetMarkets           String[]
+  // Section 3 - Target Market
+  gccCurrentlyActive      Boolean?
+  currentGccMarkets       String[]
+  gccSituation            String?
+  targetMarketPotential   TargetPotential?
+  targetMarketPotentialOther String?
   salesChannels           String[]
-  timeline                Timeline?
-  revenueYear1Target      String?
-  revenueYear3Target      String?
-  gccContact              Boolean?
-  gccContactDetails       String?
-  distributionPartner     Boolean?
-  distributionDetails     String?
+  channelStrategy         String?
 
   // Section 4 - Operational Readiness
   moq                     String?
   exportContact           Boolean?
   productionCapacity      Capacity?
-  sfdaStatus              SfdaStatus?
 
-  // Section 5 - Flexibility & Commitment
-  productAdaptability     Adaptability?
-  budget                  BudgetBracket?
-  partnershipHorizon      Horizon?
-  brandActivation         Activation?
-
-  // Section 6 - Decision-Maker Contact
+  // Section 5 - Decision-Maker Contact
   contactFullName         String
-  contactTitle            String?
+  contactTitle            String
   contactEmail            String
   contactPhone            String?
-  hasSigningAuthority     Boolean?
-  signingAuthorityContact String?
   anythingElse            String?
 
   // Additional fields
@@ -192,12 +180,17 @@ model Customer {
 }
 
 enum RevenueBracket {
-  UNDER_1M
   R1_5M
   R5_20M
   R20_50M
   R50_100M
-  OVER_100M
+  R100_200M
+  R200M_PLUS
+  R300M_PLUS
+  R400M_PLUS
+  R500M_1B
+  R1B_PLUS
+  CUSTOM
 }
 
 enum YesNoUnsure {
@@ -207,11 +200,30 @@ enum YesNoUnsure {
   UNSURE
 }
 
-enum Timeline {
-  ASAP
-  WITHIN_6M
-  WITHIN_12M
-  OVER_12M
+enum FrozenStorage {
+  YES
+  NO
+}
+
+enum ShelfLife {
+  SHORT
+  MEDIUM
+  LONG
+}
+
+enum BrandApproach {
+  BRAND_LED
+  SHARED
+  TRADE_SUPPORT
+  PRICE_LED
+}
+
+enum TargetPotential {
+  KSA
+  UAE
+  BOTH
+  UNSURE
+  OTHER
 }
 
 enum Capacity {
@@ -223,25 +235,6 @@ enum Capacity {
 enum Adaptability {
   YES
   PARTIAL
-  NO
-}
-
-enum BudgetBracket {
-  NONE
-  UNDER_10K
-  B10_30K
-  B30_60K
-  OVER_60K
-}
-
-enum Horizon {
-  LONG_TERM
-  TRANSACTIONAL
-}
-
-enum Activation {
-  YES
-  DISCUSS
   NO
 }
 

@@ -39,7 +39,11 @@ export function Field({
       </span>
       {note && <span className="mb-1.5 block text-[11.5px] italic text-brand-muted">{note}</span>}
       {children}
-      {error && <span className="mt-1 block text-[11.5px] text-red-600">{error}</span>}
+      {error && (
+        <span data-error="true" className="mt-1 block text-[11.5px] font-medium text-red-600">
+          {error}
+        </span>
+      )}
     </div>
   );
 }
