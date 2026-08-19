@@ -4,9 +4,9 @@ import SiteFooter from "./SiteFooter";
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen bg-white font-sans text-brand-ink">
+    <div className="flex min-h-screen flex-col bg-white font-sans text-brand-ink">
       <SiteNav />
-      <main className="mx-auto max-w-[820px] px-6 py-12 sm:px-8">
+      <main className="mx-auto flex-1 max-w-[820px] px-6 py-12 sm:px-8">
         <div className="mb-2 flex items-center gap-2.5">
           <div className="h-2.5 w-2.5 rounded-full bg-brand-teal" />
           <div className="text-xs font-bold uppercase tracking-[3px] text-brand-teal">
