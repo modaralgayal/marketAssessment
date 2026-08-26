@@ -13,7 +13,7 @@ import CtaBand from "./sections/CtaBand";
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-white font-sans text-brand-ink">
+    <div className="landing-bg flex min-h-screen flex-col font-sans text-brand-ink">
       <SiteNav />
       <main className="flex-1">
         <Hero />

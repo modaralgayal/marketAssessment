@@ -87,13 +87,14 @@ export default function ProcessDiagram() {
         ))}
       </div>
 
-      {/* Right — visual depiction of the flow */}
+      {/* Right — visual depiction of the flow, framed as a product mock */}
       <div className="h-fit lg:sticky lg:top-24">
-        <div className="rounded-3xl border border-brand-line bg-brand-bg-alt p-7">
-          <div className="mb-6 text-xs font-bold uppercase tracking-[1px] text-brand-muted">
-            The journey at a glance
+        <div className="product-mock">
+          <div className="mock-topline">
+            <span className="mock-label">The journey at a glance</span>
+            <span className="mock-status">Live</span>
           </div>
-          <div className="flex flex-col">
+          <div className="mock-body flex flex-col" style={{ paddingTop: 22 }}>
             {STEPS.map((step, i) => (
               <div key={step.t}>
                 <div className="flex items-center gap-4">
