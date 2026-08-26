@@ -17,13 +17,13 @@ export default function LandingPage() {
       <SiteNav />
       <main className="flex-1">
         <Hero />
-        <LogoStrip />
         <PlatformFeatures />
         <Stats />
         <WhyGrid />
-        <Programs />
         <HowItWorks />
+        <Programs />
         <Quotes />
+        <LogoStrip />
         <Faq />
         <CtaBand />
       </main>
