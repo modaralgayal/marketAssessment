@@ -71,9 +71,9 @@ export default function ProcessDiagram() {
       <div className="flex flex-col">
         {STEPS.map((step, i) => (
           <div key={step.t}>
-            <div className="rounded-2xl border border-brand-line bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <h4 className="text-[17px] font-bold text-brand-ink">{step.t}</h4>
-              <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-orange">
+              <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
                 {step.s}
               </div>
               <p className="mt-2 text-[13.5px] leading-snug text-brand-muted">{step.d}</p>
@@ -89,7 +89,7 @@ export default function ProcessDiagram() {
 
       {/* Right — visual depiction of the flow */}
       <div className="h-fit lg:sticky lg:top-24">
-        <div className="rounded-2xl border border-brand-line bg-brand-bg-alt p-7">
+        <div className="rounded-3xl border border-brand-line bg-brand-bg-alt p-7">
           <div className="mb-6 text-xs font-bold uppercase tracking-[1px] text-brand-muted">
             The journey at a glance
           </div>
@@ -102,7 +102,7 @@ export default function ProcessDiagram() {
                   </div>
                   <div>
                     <div className="text-[14.5px] font-bold text-brand-ink">{step.t}</div>
-                    <div className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-orange">
+                    <div className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-muted">
                       {step.s}
                     </div>
                   </div>

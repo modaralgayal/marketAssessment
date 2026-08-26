@@ -17,7 +17,7 @@ const PROGRAMS = [
 
 export default function Programs() {
   return (
-    <section id="programs" className="scroll-mt-24 bg-brand-bg-alt px-8 py-[72px]">
+    <section id="programs" className="scroll-mt-24 bg-brand-bg-alt px-8 py-24">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
           eyebrow="Programs"
@@ -28,7 +28,7 @@ export default function Programs() {
           {PROGRAMS.map((p) => (
             <div
               key={p.title}
-              className="flex flex-col rounded-2xl border border-brand-line bg-white p-8 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="flex flex-col rounded-3xl border border-brand-line bg-white p-8 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <span className="mb-3.5 w-fit rounded bg-brand-teal/10 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[1px] text-brand-teal-dark">
                 {p.tag}

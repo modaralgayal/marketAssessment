@@ -29,7 +29,7 @@ const FAQS = [
 
 export default function Faq() {
   return (
-    <section id="faq" className="scroll-mt-24 bg-white px-8 py-[72px]">
+    <section id="faq" className="scroll-mt-24 bg-white px-8 py-24">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead eyebrow="FAQ" title="Frequently asked questions" />
         <div>

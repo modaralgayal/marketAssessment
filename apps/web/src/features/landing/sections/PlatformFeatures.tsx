@@ -12,7 +12,7 @@ function DealPipelineMock() {
     { name: "Signed", deals: ["BioFoods AB"] },
   ];
   return (
-    <div className="rounded-2xl border border-brand-line bg-brand-bg-alt p-4 shadow-sm">
+    <div className="rounded-3xl border border-brand-line bg-brand-bg-alt p-4 shadow-sm">
       <span className="mb-3 block text-[12px] font-bold uppercase tracking-wide text-brand-muted">
         Deal Pipeline
       </span>
@@ -47,7 +47,7 @@ function AccountHealthMock() {
     { k: "Open tickets", v: "2" },
   ];
   return (
-    <div className="rounded-2xl border border-brand-line bg-brand-bg-alt p-4 shadow-sm">
+    <div className="rounded-3xl border border-brand-line bg-brand-bg-alt p-4 shadow-sm">
       <span className="mb-3 block text-[12px] font-bold uppercase tracking-wide text-brand-muted">
         Account Health
       </span>
@@ -99,7 +99,7 @@ const FEATURES = [
 
 export default function PlatformFeatures() {
   return (
-    <section id="platform" className="scroll-mt-24 bg-white px-8 py-[72px]">
+    <section id="platform" className="scroll-mt-24 bg-white px-8 py-24">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
           eyebrow="How does Tradelomacy work?"

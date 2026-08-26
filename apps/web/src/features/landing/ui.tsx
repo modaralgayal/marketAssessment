@@ -58,9 +58,9 @@ export function SectionHead({
   sub?: string;
 }) {
   return (
-    <div className="mb-11 max-w-[640px]">
+    <div className="mb-12 max-w-[720px]">
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-      <h2 className="text-[30px] font-bold leading-tight text-brand-ink">{title}</h2>
+      <h2 className="text-[34px] font-bold leading-[1.1] text-brand-ink md:text-[40px]">{title}</h2>
       {sub && <p className="mt-3 text-base text-brand-muted">{sub}</p>}
     </div>
   );

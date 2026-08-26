@@ -29,7 +29,7 @@ const CARDS = [
 
 export default function WhyGrid() {
   return (
-    <section className="bg-white px-8 py-[72px]">
+    <section className="bg-white px-8 py-24">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
           eyebrow="Why Tradelomacy"
@@ -37,7 +37,7 @@ export default function WhyGrid() {
         />
         <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
           {CARDS.map((c) => (
-            <div key={c.h} className="rounded-2xl border border-brand-line bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <div key={c.h} className="rounded-3xl border border-brand-line bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <h4 className="text-base font-bold text-brand-ink">{c.h}</h4>
               <p className="mt-2 text-sm text-brand-muted">{c.p}</p>
             </div>

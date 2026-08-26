@@ -3,7 +3,7 @@ import HeroArt from "./HeroArt";
 
 export default function Hero() {
   return (
-    <header className="relative overflow-hidden bg-gradient-to-b from-brand-teal/5 via-white to-white px-8 pb-14 pt-20">
+    <header className="relative overflow-hidden bg-gradient-to-b from-brand-teal/5 via-white to-white px-8 pb-20 pt-24">
       <div
         aria-hidden="true"
         className="theme-glow pointer-events-none absolute inset-x-0 top-0 h-64"
@@ -17,10 +17,10 @@ export default function Hero() {
           <div className="mb-4 text-xs font-extrabold uppercase tracking-[1.5px] text-brand-teal">
             GCC Distributor Intelligence
           </div>
-          <h1 className="max-w-[780px] text-[34px] font-bold leading-[1.15] text-brand-ink sm:text-[44px]">
+          <h1 className="max-w-[820px] text-[40px] font-bold leading-[1.08] text-brand-ink sm:text-[52px] lg:text-[60px]">
             Market Entry and Growth Engine Platform
           </h1>
-          <p className="mt-4 max-w-[600px] text-[17px] text-brand-muted">
+          <p className="mt-5 max-w-[620px] text-[18px] leading-relaxed text-brand-muted">
             Tradelomacy connects European F&amp;B brands with a verified distributor network across
             Saudi Arabia and the UAE, providing an integrated pathway from initial engagement to
             commercial agreement and beyond.

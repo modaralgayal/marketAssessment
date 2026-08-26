@@ -8,7 +8,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 export default function MatchCard() {
   return (
-    <div className="rounded-2xl border border-brand-line bg-white p-5 shadow-sm">
+    <div className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-[1px] text-brand-muted">
           Live match
