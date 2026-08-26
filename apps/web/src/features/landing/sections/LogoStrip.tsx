@@ -1,9 +1,8 @@
 const LOGOS = [
-  "Rosten — Finland",
-  "Business Finland",
-  "SIPPO Switzerland",
-  "Sequa GmbH",
-  "UFMA — Ukraine",
+  "Confectionery",
+  "Poultry",
+  "Frozen foods",
+  "Innovative solution",
 ];
 
 export default function LogoStrip() {
@@ -11,7 +10,7 @@ export default function LogoStrip() {
     <div className="border-y border-brand-line bg-brand-bg-alt px-8 py-8">
       <div className="mx-auto max-w-[1160px]">
         <div className="mb-4 text-xs font-bold uppercase tracking-[1px] text-brand-muted">
-          Trusted by exporters and trade organizations
+          Categories
         </div>
         <div className="flex flex-wrap gap-3.5">
           {LOGOS.map((l) => (

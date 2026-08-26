@@ -3,6 +3,8 @@ import helmet from "helmet";
 import cors from "cors";
 import { env } from "./env.js";
 import { submissionsRouter } from "./routes/submissions.js";
+import { invitesRouter } from "./routes/invites.js";
+import { reportRequestsRouter } from "./routes/reportRequests.js";
 import { filesRouter } from "./routes/files.js";
 import { scoreRouter } from "./routes/score.js";
 import { distributorsRouter } from "./routes/distributors.js";
@@ -36,6 +38,8 @@ app.get("/api/admin/me", requireAdmin, (req, res) => {
 app.use("/api/score", scoreRouter);
 app.use("/api/submissions", submissionsRouter);
 app.use("/api/submissions", matchesRouter);
+app.use("/api/invites", invitesRouter);
+app.use("/api/report-requests", reportRequestsRouter);
 app.use("/api/files", filesRouter);
 app.use("/api/distributors", distributorsRouter);
 app.use("/api", catalogueRouter);

@@ -13,19 +13,22 @@ export default {
         orange: "#E8A020",
         border: "#E0E6ED",
         "light-gray": "#F7F8FA",
-        // Teal palette for the marketing / landing site
+        // Lake & Birch palette for the marketing / landing site.
+        // Values come from CSS variables (see src/index.css) so opacity
+        // modifiers (bg-brand-teal/10) keep working.
         brand: {
-          teal: "#0F7B7F",
-          "teal-dark": "#0A5D64",
-          ink: "#101828",
-          muted: "#5B6472",
-          line: "#E5E7EB",
-          "bg-alt": "#F9FAFB",
-          orange: "#E8734A",
+          teal: "rgb(var(--brand-teal) / <alpha-value>)",
+          "teal-dark": "rgb(var(--brand-teal-dark) / <alpha-value>)",
+          ink: "rgb(var(--brand-ink) / <alpha-value>)",
+          muted: "rgb(var(--brand-muted) / <alpha-value>)",
+          line: "rgb(var(--brand-line) / <alpha-value>)",
+          "bg-alt": "rgb(var(--brand-bg-alt) / <alpha-value>)",
+          orange: "rgb(var(--brand-orange) / <alpha-value>)",
         },
       },
       fontFamily: {
         sans: ["Inter", "Arial", "sans-serif"],
+        display: ["Hanken Grotesk", "Inter", "Arial", "sans-serif"],
       },
     },
   },

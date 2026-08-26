@@ -29,7 +29,17 @@ const schema = z.object({
   GOOGLE_SHEET_ID: z.string().optional(),
 
   // Claude api key
-  CLAUDE_API_KEY: z.string().optional()
+  CLAUDE_API_KEY: z.string().optional(),
+
+  // Email (SMTP) — optional at boot; report-request notifications need it.
+  // For Gmail: SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, and SMTP_PASS is a
+  // 16-char App Password (not your normal Google password).
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().optional(),
+  REPORT_RECIPIENT_EMAIL: z.string().default("mudar.algayal@gmail.com")
 });
 
 const parsed = schema.safeParse(process.env);

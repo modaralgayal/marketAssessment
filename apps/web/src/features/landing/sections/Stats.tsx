@@ -1,7 +1,7 @@
 const STATS = [
-  { num: "3+ yrs", label: "Longest-running client retainer" },
-  { num: "Hundreds", label: "Distributors mapped across Saudi Arabia & UAE" },
-  { num: "5", label: "Trade promotion organizations served" },
+  { num: "55+", label: "FMCG Brands supported" },
+  { num: "150+", label: "Distributors & retailers, verified and classified, across Saudi Arabia & UAE" },
+  { num: "5", label: "Trade Promotion Missions Organized" },
 ];
 
 export default function Stats() {

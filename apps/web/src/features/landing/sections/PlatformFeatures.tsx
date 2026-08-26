@@ -1,58 +1,10 @@
 import type { ReactNode } from "react";
 import { SectionHead } from "../ui";
+import MatchCard from "./MatchCard";
 
 /* ── Lightweight mock "product screenshots" ──────────────────────────────
    These stand in for the real dashboard screenshots called for in the
    design. Swap each <MockX/> for an <img> once real captures exist. */
-
-const TONE: Record<string, string> = {
-  teal: "bg-brand-teal/10 text-brand-teal-dark",
-  orange: "bg-brand-orange/10 text-brand-orange",
-  gray: "bg-gray-100 text-gray-500",
-};
-
-function Badge({ label, tone }: { label: string; tone: keyof typeof TONE }) {
-  return (
-    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${TONE[tone]}`}>
-      {label}
-    </span>
-  );
-}
-
-function DistributorMatchMock() {
-  const rows = [
-    { name: "Al Faisaliah Group", cat: "F&B / Dairy", score: "Verified", tone: "teal" as const },
-    { name: "Ali Brothers LLC", cat: "Beverages", score: "Verified", tone: "teal" as const },
-    { name: "Emirates Retail DMCC", cat: "Cosmetics", score: "Contacted", tone: "orange" as const },
-    { name: "Nadec Trading", cat: "Meat & Poultry", score: "Listed", tone: "gray" as const },
-  ];
-  return (
-    <div className="rounded-xl border border-brand-line bg-brand-bg-alt p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[12px] font-bold uppercase tracking-wide text-brand-muted">
-          Distributor Matches
-        </span>
-        <span className="rounded-full bg-brand-teal/10 px-2.5 py-1 text-[10px] font-bold text-brand-teal-dark">
-          Saudi Arabia · UAE
-        </span>
-      </div>
-      <div className="space-y-2">
-        {rows.map((r) => (
-          <div
-            key={r.name}
-            className="flex items-center justify-between rounded-lg border border-brand-line bg-white px-3 py-2.5"
-          >
-            <div>
-              <div className="text-[13px] font-semibold text-brand-ink">{r.name}</div>
-              <div className="text-[11px] text-brand-muted">{r.cat}</div>
-            </div>
-            <Badge label={r.score} tone={r.tone} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function DealPipelineMock() {
   const stages = [
@@ -61,7 +13,7 @@ function DealPipelineMock() {
     { name: "Signed", deals: ["BioFoods AB"] },
   ];
   return (
-    <div className="rounded-xl border border-brand-line bg-brand-bg-alt p-4">
+    <div className="rounded-2xl border border-brand-line bg-brand-bg-alt p-4 shadow-sm">
       <span className="mb-3 block text-[12px] font-bold uppercase tracking-wide text-brand-muted">
         Deal Pipeline
       </span>
@@ -96,7 +48,7 @@ function AccountHealthMock() {
     { k: "Open tickets", v: "2" },
   ];
   return (
-    <div className="rounded-xl border border-brand-line bg-brand-bg-alt p-4">
+    <div className="rounded-2xl border border-brand-line bg-brand-bg-alt p-4 shadow-sm">
       <span className="mb-3 block text-[12px] font-bold uppercase tracking-wide text-brand-muted">
         Account Health
       </span>
@@ -145,24 +97,24 @@ export default function PlatformFeatures() {
     <section id="platform" className="scroll-mt-24 bg-white px-8 py-[72px]">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
-          eyebrow="Platform"
-          title="Built to remove the guesswork from GCC market entry"
-          sub="Every distributor record carries a confidence score. Every deal is run by a team, not left to a database."
+          eyebrow="How does Tradelomacy work?"
+          title="Opportunity Assessment"
+          sub="The assessment evaluates FMCG brands across five criteria to determine whether the company and its products are viable in the GCC market. Responses are evaluated against our proprietary Company Assessment Framework (CAF), a scoring system built on real distributor relationships and in-market experience."
         />
         <FeatureRow
-          title="Verified matching"
-          body="Search a network of Saudi and UAE distributors filtered by category, channel, and price tier — each record scored by how well it's actually been verified, not just listed."
-          media={<DistributorMatchMock />}
+          title="MATCHED: Verified Distributor & Retailers"
+          body="Distributors in our database are classified according to our 3-Tier system, providing visibility into numerous detailed variables. Matching FMCG brands and distributors based on data and in-market relationships."
+          media={<MatchCard />}
         />
         <FeatureRow
           reverse
-          title="Deal execution"
-          body="From first outreach to signed contract, our team leads negotiation, term structuring, and closing — so a match turns into a working commercial relationship."
+          title="Deal Execution"
+          body="An in-market expert is selected to perform 3 key functions: 1. Channel Strategy 2. Economics Waterfall: Price Value Chain Model 3. Partner Selection"
           media={<DealPipelineMock />}
         />
         <FeatureRow
-          title="Relationship management"
-          body="Post-signature account management keeps the partnership on track and feeds fresh data back into the network, improving every future match."
+          title="Country Management"
+          body="Growing market share and brand positioning through: 1. Channel performance 2. Channel development 3. Operational flow management"
           media={<AccountHealthMock />}
         />
       </div>

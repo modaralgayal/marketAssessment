@@ -41,7 +41,7 @@ export default function SiteFooter() {
           </div>
         </div>
         <div className="mt-8 border-t border-brand-line pt-5 text-[13px] text-brand-muted">
-          © 2026 [Platform Name] Oy. All rights reserved. —{" "}
+          © 2026 Integrate Us Oy. All rights reserved. —{" "}
           <Link to="/privacy" className="underline hover:text-brand-teal">
             Privacy Policy
           </Link>{" "}

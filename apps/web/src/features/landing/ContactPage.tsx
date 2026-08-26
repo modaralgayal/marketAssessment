@@ -21,13 +21,13 @@ export default function ContactPage() {
         </p>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div className="rounded-md border border-brand-line bg-brand-bg-alt p-6">
+          <div className="rounded-2xl border border-brand-line bg-brand-bg-alt p-6 shadow-sm">
             <div className="mb-1 text-xs font-bold uppercase tracking-[1px] text-brand-muted">
               Email
             </div>
             <div className="text-[15px] font-semibold text-brand-ink">[company email]</div>
           </div>
-          <div className="rounded-md border border-brand-line bg-brand-bg-alt p-6">
+          <div className="rounded-2xl border border-brand-line bg-brand-bg-alt p-6 shadow-sm">
             <div className="mb-1 text-xs font-bold uppercase tracking-[1px] text-brand-muted">
               Phone
             </div>

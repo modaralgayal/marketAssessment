@@ -3,6 +3,7 @@ import LandingPage from "./features/landing/LandingPage";
 import FormPage from "./features/form/FormPage";
 import PrivacyPolicy from "./features/legal/PrivacyPolicy";
 import ContactPage from "./features/landing/ContactPage";
+import RequestReportPage from "./features/landing/RequestReportPage";
 import AdminLogin from "./features/admin/AdminLogin";
 import AdminList from "./features/admin/AdminList";
 import AdminDetail from "./features/admin/AdminDetail";
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/assessment" element={<FormPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route path="/request-report" element={<RequestReportPage />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route
         path="/admin"

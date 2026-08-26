@@ -2,6 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    font-family: "Hanken Grotesk", "Inter", Arial, sans-serif;
+  }
+}
+
+/* ── Brand palette: Lake & Birch ─────────────────────────────────────────
+   Tokens are space-separated RGB channels so Tailwind opacity modifiers
+   (bg-brand-teal/10) keep working. */
+:root {
+  --brand-teal: 11 61 145;        /* Finnish blue — primary */
+  --brand-teal-dark: 8 44 107;
+  --brand-ink: 16 24 40;
+  --brand-muted: 91 100 114;
+  --brand-line: 236 232 225;      /* warm birch hairline */
+  --brand-bg-alt: 247 245 240;    /* birch */
+  --brand-orange: 232 115 74;     /* sauna terracotta */
+  --brand-glow: 46 109 164;       /* cool blue ambient */
+}
+
+/* Ambient glow behind hero / CTA surfaces */
+.theme-glow {
+  background: radial-gradient(60% 50% at 50% -10%, rgb(var(--brand-glow) / 0.20), transparent 70%);
+}
+
+/* Animated trade-route flow in the hero illustration */
+@keyframes routeFlow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+.hero-route {
+  stroke-dasharray: 5 7;
+  animation: routeFlow 1.1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-route {
+    animation: none;
+  }
+}
+
 body {
   @apply bg-[#F0F4F8] text-[#333333] font-sans;
   line-height: 1.6;

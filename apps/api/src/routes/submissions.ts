@@ -84,6 +84,20 @@ submissionsRouter.post("/", submitLimiter, upload.array("files"), async (req, re
       return res.status(400).json({ error: "At least one catalogue / price-list file is required." });
     }
 
+    // Invite-only: a valid, unused invite token is required to submit.
+    const inviteToken = typeof req.body.invite === "string" ? req.body.invite : "";
+    if (!inviteToken) {
+      return res
+        .status(403)
+        .json({ error: "This assessment is invite-only. Request an invite to access the form." });
+    }
+    const invite = await prisma.invite.findUnique({ where: { token: inviteToken } });
+    if (!invite || invite.status !== "PENDING") {
+      return res
+        .status(403)
+        .json({ error: "This invite link is invalid or has already been used." });
+    }
+
     const rawPayload = req.body.payload;
     if (typeof rawPayload !== "string") {
       return res.status(400).json({ error: "Missing form payload." });
@@ -109,6 +123,15 @@ submissionsRouter.post("/", submitLimiter, upload.array("files"), async (req, re
         });
       }
       await prisma.submissionFile.createMany({ data: fileRows });
+
+      // Consume the invite so the link can't be reused or shared after a
+      // successful submission. Failures here are non-fatal for the submission.
+      await prisma.invite
+        .update({
+          where: { id: invite.id },
+          data: { status: "USED", usedAt: new Date() },
+        })
+        .catch(() => {});
     } catch (uploadErr) {
       await prisma.submission.delete({ where: { id: submission.id } }).catch(() => {});
       throw uploadErr;

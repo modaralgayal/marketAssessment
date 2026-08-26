@@ -5,6 +5,8 @@ import {
   fetchSubmissions,
   evaluateSubmission,
   findMatches,
+  fetchInvites,
+  createInvite,
 } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 
@@ -19,6 +21,35 @@ export default function AdminList() {
 
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [matchingId, setMatchingId] = useState<string | null>(null);
+
+  const [createdLink, setCreatedLink] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+
+  const { data: invitesData } = useQuery({
+    queryKey: ["invites"],
+    queryFn: fetchInvites,
+  });
+
+  const generateInvite = async () => {
+    try {
+      setGenerating(true);
+      const inv = await createInvite();
+      setCreatedLink(inv.link);
+      await queryClient.invalidateQueries({ queryKey: ["invites"] });
+    } catch {
+      alert("Failed to generate invite.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      /* clipboard may be unavailable */
+    }
+  };
 
   const evaluateSubmissionForRow = async (id: string) => {
     try {
@@ -213,6 +244,84 @@ export default function AdminList() {
           </table>
         </div>
       )}
+
+      {/* Invites panel — generate and copy single-use assessment links */}
+      <div className="mt-10">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-brand-ink">Invite links</h2>
+          <button
+            onClick={generateInvite}
+            disabled={generating}
+            className="rounded-full bg-brand-teal px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-teal-dark disabled:opacity-50"
+          >
+            {generating ? "Generating…" : "Generate invite link"}
+          </button>
+        </div>
+
+        {createdLink && (
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-brand-teal/30 bg-brand-teal/5 px-4 py-3">
+            <code className="flex-1 break-all text-[12.5px] text-brand-ink">{createdLink}</code>
+            <button
+              onClick={() => copy(createdLink)}
+              className="shrink-0 rounded border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-white"
+            >
+              Copy
+            </button>
+          </div>
+        )}
+
+        <div className="overflow-hidden rounded-lg border border-brand-line bg-white">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-brand-bg-alt text-xs uppercase tracking-wide text-brand-muted">
+              <tr>
+                <th className="px-4 py-3">Link</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(invitesData?.items ?? []).map((inv) => (
+                <tr key={inv.id} className="border-t border-brand-line">
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => copy(inv.link)}
+                      className="font-mono text-[12px] text-brand-teal hover:underline"
+                      title={inv.link}
+                    >
+                      {inv.token.slice(0, 12)}…
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-brand-muted">{inv.email ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        inv.status === "PENDING"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : inv.status === "USED"
+                            ? "bg-brand-bg-alt text-brand-muted"
+                            : "bg-red-50 text-red-700"
+                      }`}
+                    >
+                      {inv.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-brand-muted">
+                    {new Date(inv.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+              {(!invitesData || invitesData.items.length === 0) && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-brand-muted">
+                    No invites yet. Generate one to send an assessment link.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </AdminLayout>
   );
 }

@@ -91,6 +91,10 @@ export default function PrivacyPolicy() {
           <p className="mt-3">
             It does not cover websites or services operated by third parties that we merely link to.
           </p>
+          <p className="mt-3">
+            The Service is intended for businesses and professionals aged 18 or over. We do not
+            knowingly collect personal data from anyone under the age of 18.
+          </p>
         </Section>
 
         {/* 3. What we collect */}
@@ -366,8 +370,8 @@ export default function PrivacyPolicy() {
           <ul className="list-disc space-y-1 pl-5">
             <li>
               Assessment submissions and attached files:{" "}
-              <strong>[X years]</strong> from the date of submission, or until the end of any
-              resulting client relationship plus [X years] for legal-claims limitation periods.
+              <strong>3 years</strong> from the date of submission, or until the end of any
+              resulting client relationship plus 7 years for legal-claims limitation periods.
             </li>
             <li>
               AI-extracted structured data and scores: retained with the associated submission for
@@ -427,24 +431,8 @@ export default function PrivacyPolicy() {
           </p>
         </Section>
 
-        {/* 11. Children */}
-        <Section n="11" id="children" title="Children">
-          <p>
-            The Service is intended for businesses and professionals and is not directed to children
-            under 16. We do not knowingly collect personal data from children.
-          </p>
-        </Section>
-
-        {/* 12. Changes */}
-        <Section n="12" id="changes" title="Changes to this policy">
-          <p>
-            We may update this policy from time to time. Material changes will be notified on the
-            Service or by email. The "effective date" at the top reflects the latest version.
-          </p>
-        </Section>
-
-        {/* 13. Disclaimer */}
-        <Section n="13" id="disclaimer" title="Legal status of this document">
+        {/* 11. Disclaimer */}
+        <Section n="11" id="disclaimer" title="Legal status of this document">
           <Notice>
             This Privacy Policy is provided for transparency and as a starting template. It is{" "}
             <strong>not legal advice</strong>. Publication of a privacy policy does not, by itself,
@@ -457,8 +445,8 @@ export default function PrivacyPolicy() {
           </Notice>
         </Section>
 
-        {/* 14. Contact */}
-        <Section n="14" id="contact" title="Contact us">
+        {/* 12. Contact */}
+        <Section n="12" id="contact" title="Contact us">
           <p>
             {CONTROLLER.name}
             <br />
@@ -513,8 +501,6 @@ function Toc() {
     ["retention", "Retention"],
     ["security", "Security"],
     ["rights", "Your rights"],
-    ["children", "Children"],
-    ["changes", "Changes"],
     ["disclaimer", "Legal status"],
     ["contact", "Contact"],
   ];

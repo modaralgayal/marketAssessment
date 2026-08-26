@@ -2,16 +2,16 @@ import { SectionHead } from "../ui";
 
 const CARDS = [
   {
-    h: "Confidence-scored data",
-    p: "Every match is tagged by how it was verified, not assumed from a public listing.",
+    h: "MATCHED",
+    p: "Screening every distributor against a brand's category, channel, pricing tier, and positioning requirements. Ranks the qualifying candidates using a fit score calibrated by verified relationship data.",
   },
   {
-    h: "Full-cycle execution",
-    p: "We don't stop at an introduction. We stay through negotiation and signature.",
+    h: "In-Country Experts",
+    p: "On-the-ground specialists embedded in the target market, giving direct access to local regulatory know-how, cultural fluency, and distributor relationships.",
   },
   {
-    h: "Aligned pricing",
-    p: "Retainer plus commission, stepping down over time — we're paid on results.",
+    h: "AI Powered",
+    p: "Combines real-world trade intelligence gathered by our in-country experts with AI-driven analysis, turning verified market insight into accurate, data-backed distributor assessments and matches.",
   },
   {
     h: "Category specialists",
@@ -32,12 +32,12 @@ export default function WhyGrid() {
     <section className="bg-white px-8 py-[72px]">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
-          eyebrow="Why Integrate Us"
+          eyebrow="Why Tradelomacy"
           title="Why exporters choose us over a distributor list"
         />
         <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
           {CARDS.map((c) => (
-            <div key={c.h} className="rounded-lg border border-brand-line bg-white p-6">
+            <div key={c.h} className="rounded-2xl border border-brand-line bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <h4 className="text-base font-bold text-brand-ink">{c.h}</h4>
               <p className="mt-2 text-sm text-brand-muted">{c.p}</p>
             </div>

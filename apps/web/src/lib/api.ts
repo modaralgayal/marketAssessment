@@ -11,16 +11,86 @@ async function authHeader(): Promise<Record<string, string>> {
 }
 
 /** Public: submit the assessment form with attached files. */
-export async function submitAssessment(payload: unknown, files: File[]): Promise<{ id: string }> {
+export async function submitAssessment(
+  payload: unknown,
+  files: File[],
+  invite?: string,
+): Promise<{ id: string }> {
   const form = new FormData();
   form.append("payload", JSON.stringify(payload));
   for (const file of files) form.append("files", file);
+  if (invite) form.append("invite", invite);
 
   const res = await fetch(`${BASE}/api/submissions`, { method: "POST", body: form });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Submission failed");
   }
+  return res.json();
+}
+
+// ── Invites (assessment access gating) ────────────────────────────────────
+
+/** Public: check whether an invite token is valid (used to gate /assessment). */
+export async function validateInvite(token: string): Promise<{ valid: boolean; reason?: string }> {
+  const res = await fetch(`${BASE}/api/invites/validate?token=${encodeURIComponent(token)}`);
+  if (res.ok) return res.json();
+  try {
+    const body = await res.json();
+    return { valid: false, reason: body.reason };
+  } catch {
+    return { valid: false };
+  }
+}
+
+/** Public: submit a "Request a Report" form. */
+export async function requestReport(payload: {
+  subject: string;
+  message: string;
+  email: string;
+}): Promise<{ id: string; emailSent: boolean }> {
+  const res = await fetch(`${BASE}/api/report-requests`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to send your request");
+  }
+  return res.json();
+}
+
+/** Admin: list invites (with their public links). */
+export async function fetchInvites(): Promise<{
+  items: Array<{
+    id: string;
+    token: string;
+    email: string | null;
+    status: string;
+    createdAt: string;
+    usedAt: string | null;
+    link: string;
+  }>;
+}> {
+  const res = await fetch(`${BASE}/api/invites`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load invites");
+  return res.json();
+}
+
+/** Admin: create a single-use invite and return its link. */
+export async function createInvite(email?: string): Promise<{
+  id: string;
+  token: string;
+  status: string;
+  link: string;
+}> {
+  const res = await fetch(`${BASE}/api/invites`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(email ? { email } : {}),
+  });
+  if (!res.ok) throw new Error("Failed to create invite");
   return res.json();
 }
 

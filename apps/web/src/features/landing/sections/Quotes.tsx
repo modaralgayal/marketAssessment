@@ -20,7 +20,7 @@ export default function Quotes() {
           {QUOTES.map((q, i) => (
             <div
               key={i}
-              className="rounded-lg border border-brand-line bg-white p-6 text-[15px] leading-relaxed text-brand-ink"
+              className="rounded-2xl border border-brand-line bg-white p-6 text-[15px] leading-relaxed text-brand-ink shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <p>{q.q}</p>
               <div className="mt-3.5 text-[13px] font-bold text-brand-ink">{q.a}</div>

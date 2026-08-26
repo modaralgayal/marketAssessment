@@ -33,7 +33,7 @@ export function Button({
   const styles =
     variant === "primary"
       ? "bg-brand-teal text-white shadow-sm hover:bg-brand-teal-dark hover:shadow-md hover:-translate-y-px"
-      : "border border-brand-line bg-white text-brand-ink hover:border-brand-teal hover:text-brand-teal hover:bg-[#0F7B7F]/[0.03]";
+      : "border border-brand-line bg-white text-brand-ink hover:border-brand-teal hover:text-brand-teal hover:bg-brand-teal/[0.03]";
   const cls = `${base} ${styles} ${className}`;
   if (to) return <Link to={to} className={cls}>{children}</Link>;
   if (href) return <a href={href} className={cls}>{children}</a>;

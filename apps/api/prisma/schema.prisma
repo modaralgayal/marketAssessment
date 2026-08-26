@@ -179,6 +179,39 @@ model Customer {
   @@index([customerStatus])
 }
 
+// ── Invites (single-use access tokens that gate the assessment form) ──────
+
+enum InviteStatus {
+  PENDING
+  USED
+  REVOKED
+}
+
+model Invite {
+  id        String       @id @default(cuid())
+  token     String       @unique
+  email     String? // optional: the intended recipient of the invite
+  status    InviteStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  usedAt    DateTime?
+
+  @@index([token])
+  @@index([status])
+}
+
+// ── Report access requests (public "Request a Report" form) ──────────────
+
+model ReportRequest {
+  id        String   @id @default(cuid())
+  subject   String
+  message   String
+  email     String
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 enum RevenueBracket {
   R1_5M
   R5_20M

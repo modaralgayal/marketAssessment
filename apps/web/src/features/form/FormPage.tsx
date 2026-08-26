@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -19,7 +19,7 @@ import {
   ADAPTABILITY_OPTIONS,
   FILE_CONSTRAINTS,
 } from "@mea/shared";
-import { submitAssessment } from "../../lib/api";
+import { submitAssessment, validateInvite } from "../../lib/api";
 import {
   SectionHeader,
   Field,
@@ -98,6 +98,28 @@ export default function FormPage() {
       gccCurrentlyActive: undefined,
     },
   });
+
+  const [params] = useSearchParams();
+  const inviteToken = params.get("invite") ?? "";
+  const [gate, setGate] = useState<"loading" | "open" | "denied">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!inviteToken) {
+      setGate("denied");
+      return;
+    }
+    validateInvite(inviteToken)
+      .then((r) => {
+        if (!cancelled) setGate(r.valid ? "open" : "denied");
+      })
+      .catch(() => {
+        if (!cancelled) setGate("denied");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteToken]);
 
   const consentRef = useRef<HTMLLabelElement>(null);
 
@@ -190,7 +212,7 @@ export default function FormPage() {
     setBlockReasons([]);
     setSubmitting(true);
     try {
-      await submitAssessment(data, files);
+      await submitAssessment(data, files, inviteToken);
       setDone(true);
       window.scrollTo({ top: 0 });
     } catch (err) {
@@ -207,6 +229,16 @@ export default function FormPage() {
         <SuccessScreen />
       </>
     );
+
+  if (gate === "loading")
+    return (
+      <>
+        <SiteNav />
+        <div className="p-16 text-center text-sm text-brand-muted">Checking your invite…</div>
+      </>
+    );
+
+  if (gate === "denied") return <InviteDenied />;
 
   return (
     <>
@@ -532,6 +564,39 @@ export default function FormPage() {
         </div>
       </form>
     </div>
+    </>
+  );
+}
+
+/** Shown when /assessment is reached without a valid, unused invite token. */
+function InviteDenied() {
+  return (
+    <>
+      <SiteNav />
+      <div className="mx-auto max-w-[640px] px-6 py-24 text-center">
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-bg-alt text-xl text-brand-teal">
+          🔒
+        </div>
+        <h1 className="text-2xl font-bold text-brand-ink">This assessment is invite-only</h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-brand-muted">
+          The market-entry assessment is available by invitation. Request a report and we'll
+          send you a private link to access the form.
+        </p>
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <Link
+            to="/request-report"
+            className="rounded-full bg-brand-teal px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-teal-dark"
+          >
+            Request a Report
+          </Link>
+          <Link
+            to="/"
+            className="rounded-full border border-brand-line px-6 py-3 text-sm font-bold text-brand-ink transition hover:border-brand-teal hover:text-brand-teal"
+          >
+            Back to home
+          </Link>
+        </div>
+      </div>
     </>
   );
 }
