@@ -84,16 +84,19 @@ const FEATURES = [
     title: "MATCHED: Verified Distributor & Retailers",
     body: "Distributors in our database are classified according to our 3-Tier system, providing visibility into numerous detailed variables. Matching FMCG brands and distributors based on data and in-market relationships.",
     media: <MatchCard />,
+    fullWidth: true,
   },
   {
     title: "Deal Execution",
     body: "An in-market expert is selected to perform 3 key functions: 1. Channel Strategy 2. Economics Waterfall: Price Value Chain Model 3. Partner Selection",
     media: <DealPipelineMock />,
+    fullWidth: false,
   },
   {
     title: "Country Management",
     body: "Growing market share and brand positioning through: 1. Channel performance 2. Channel development 3. Operational flow management",
     media: <AccountHealthMock />,
+    fullWidth: false,
   },
 ];
 
@@ -109,13 +112,23 @@ export default function PlatformFeatures() {
         <div className="mt-12 flex flex-col">
           {FEATURES.map((f, i) => (
             <div key={f.title}>
-              <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
-                <div>
-                  <h3 className="text-[22px] font-bold text-brand-ink">{f.title}</h3>
-                  <p className="mt-3 text-[15px] text-brand-muted">{f.body}</p>
+              {f.fullWidth ? (
+                <>
+                  <div className="max-w-[820px]">
+                    <h3 className="text-[22px] font-bold text-brand-ink">{f.title}</h3>
+                    <p className="mt-3 text-[15px] text-brand-muted">{f.body}</p>
+                  </div>
+                  <div className="mt-10">{f.media}</div>
+                </>
+              ) : (
+                <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
+                  <div>
+                    <h3 className="text-[22px] font-bold text-brand-ink">{f.title}</h3>
+                    <p className="mt-3 text-[15px] text-brand-muted">{f.body}</p>
+                  </div>
+                  <div>{f.media}</div>
                 </div>
-                <div>{f.media}</div>
-              </div>
+              )}
               {i < FEATURES.length - 1 && (
                 <div className="flex justify-center py-4">
                   <DownArrow />

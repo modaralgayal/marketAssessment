@@ -1,60 +1,89 @@
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center justify-center rounded bg-brand-teal/10 px-1.5 py-0.5 text-[9px] font-extrabold text-brand-teal">
-      {children}
-    </span>
-  );
-}
-
 export default function MatchCard() {
   return (
-    <div className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-[1px] text-brand-muted">
-          Live match
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-brand-teal/10 px-2.5 py-1 text-[10px] font-bold text-brand-teal">
-          <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <path d="M3.5 8.5l3 3 6-7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Verified
-        </span>
-      </div>
-
-      <div className="my-4 flex items-center gap-3">
-        <div className="flex-1 rounded-xl border border-brand-line bg-brand-bg-alt px-3 py-2.5">
-          <div className="mb-1 flex items-center gap-1.5">
-            <Chip>EU</Chip>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-brand-muted">Brand</span>
+    <article className="match-card" data-template-id="match-card">
+      <div className="match-card__content">
+        <header className="match-card__header">
+          <div>
+            <div className="match-card__overline">The Tradelomacy route</div>
+            <h1 className="match-card__title">Live market match</h1>
           </div>
-          <div className="text-[13px] font-semibold text-brand-ink">European F&amp;B Brand</div>
-        </div>
-
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-teal text-white">
-          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M7 5l6 5-6 5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M13 5l-6 5 6 5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
-          </svg>
-        </div>
-
-        <div className="flex-1 rounded-xl border border-brand-teal bg-brand-teal/5 px-3 py-2.5">
-          <div className="mb-1 flex items-center gap-1.5">
-            <Chip>GCC</Chip>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-brand-muted">Distributor</span>
+          <div className="match-card__status-set" aria-label="Match status">
+            <span className="match-card__live">
+              <span className="match-card__live-dot" aria-hidden="true" />
+              <span>Live match</span>
+            </span>
+            <span className="match-card__verified">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8.5 12.2l2.3 2.3 4.7-5.2" />
+              </svg>
+              <span>Verified</span>
+            </span>
           </div>
-          <div className="text-[13px] font-semibold text-brand-ink">Verified · SA / UAE</div>
-        </div>
-      </div>
+        </header>
 
-      <div>
-        <div className="flex items-center justify-between text-[11px]">
-          <span className="text-brand-muted">Fit score</span>
-          <span className="font-bold text-brand-teal">92%</span>
-        </div>
-        <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-brand-line">
-          <div className="h-2 w-[92%] rounded-full bg-brand-teal" />
-        </div>
+        <section className="match-card__layout" aria-label="European to GCC match relationship">
+          <section className="match-card__entity match-card__entity--origin" aria-labelledby="origin-name">
+            <div>
+              <p className="match-card__entity-label">Origin</p>
+              <h2 id="origin-name" className="match-card__entity-name">European F&amp;B brand</h2>
+            </div>
+            <div className="match-card__entity-footer">
+              <span className="match-card__rule" aria-hidden="true" />
+              <div className="match-card__chips" aria-label="Origin categories">
+                <span className="match-card__chip">European</span>
+                <span className="match-card__chip">F&amp;B</span>
+              </div>
+            </div>
+          </section>
+
+          <div className="match-card__transfer" aria-label="Transfer relationship">
+            <div className="match-card__control" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m16 3 4 4-4 4" />
+                <path d="M20 7H4" />
+                <path d="m8 21-4-4 4-4" />
+                <path d="M4 17h16" />
+              </svg>
+            </div>
+            <span className="match-card__transfer-label">EU → GCC</span>
+          </div>
+
+          <section className="match-card__entity match-card__entity--destination" aria-labelledby="destination-name">
+            <div>
+              <p className="match-card__entity-label">Destination</p>
+              <h2 id="destination-name" className="match-card__entity-name">Verified GCC distributor</h2>
+            </div>
+            <div className="match-card__entity-footer">
+              <span className="match-card__rule" aria-hidden="true" />
+              <div className="match-card__chips" aria-label="Destination categories">
+                <span className="match-card__chip">GCC</span>
+                <span className="match-card__chip match-card__chip--accent">Verified</span>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section className="match-card__fit" aria-label="Match fit score">
+          <div className="match-card__fit-copy">
+            <span className="match-card__fit-label">Match fit</span>
+            <div
+              className="match-card__fit-track"
+              role="progressbar"
+              aria-label="Match fit score"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={92}
+            >
+              <div className="match-card__fit-progress" />
+            </div>
+          </div>
+          <div className="match-card__fit-score" aria-label="92 percent match fit">
+            <b>92</b>
+            <span>%</span>
+          </div>
+        </section>
       </div>
-    </div>
+    </article>
   );
 }
