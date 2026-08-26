@@ -139,11 +139,14 @@ export default function PlatformFeatures() {
     <section id="platform" className="bp scroll-mt-24 px-8 py-24">
       <div className="mx-auto max-w-[1160px]">
         <div className="intro">
-          <p className="eyebrow">The Tradelomacy platform</p>
-          <h1 className="intro-title">Clarity for every cross-border opportunity.</h1>
+          <p className="eyebrow">How does Tradelomacy work?</p>
+          <h1 className="intro-title">Opportunity Assessment</h1>
           <p className="intro-copy">
-            Bring market intelligence, account context, and commercial momentum
-            into one considered operating view.
+            The assessment evaluates FMCG brands across five criteria to
+            determine whether the company and its products are viable in the
+            GCC market. Responses are evaluated against our proprietary Company
+            Assessment Framework (CAF), a scoring system built on real
+            distributor relationships and in-market experience.
           </p>
         </div>
 
@@ -170,9 +173,9 @@ export default function PlatformFeatures() {
         <FeatureRow
           index="01"
           reverse
-          kicker="Pipeline visibility"
-          title="Move opportunities forward with confidence."
-          body="A focused commercial view makes every handoff, relationship, and next step easier to see across your route to market."
+          kicker=""
+          title="Deal Execution"
+          body="An in-market expert is selected to perform 3 key functions: 1. Channel Strategy 2. Economics Waterfall: Price Value Chain Model 3. Partner Selection"
           mock={<DealPipelineMock />}
         />
 
@@ -180,9 +183,9 @@ export default function PlatformFeatures() {
 
         <FeatureRow
           index="02"
-          kicker="Account health"
-          title="Understand the strength behind every account."
-          body="Bring relationship signals into a single, balanced picture so your team can invest attention where it matters most."
+          kicker=""
+          title="Country Management"
+          body="Growing market share and brand positioning through: 1. Channel performance 2. Channel development 3. Operational flow management"
           mock={<AccountHealthMock />}
         />
       </div>
