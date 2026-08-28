@@ -21,3 +21,15 @@ filesRouter.get("/:id/download", async (req, res, next) => {
     next(err);
   }
 });
+
+/** Admin: download a catalogue file attached to a customer. */
+filesRouter.get("/customer/:id/download", async (req, res, next) => {
+  try {
+    const file = await prisma.customerFile.findUnique({ where: { id: req.params.id } });
+    if (!file) return res.status(404).json({ error: "File not found" });
+    const url = await storage.getSignedUrl(file.storageKey, 300);
+    return res.json({ url, originalName: file.originalName });
+  } catch (err) {
+    next(err);
+  }
+});

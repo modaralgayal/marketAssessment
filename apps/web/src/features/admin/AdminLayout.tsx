@@ -1,9 +1,23 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const { pathname } = useLocation();
+
+  const isActive = (base: string) =>
+    base === "/admin"
+      ? pathname === "/admin" || pathname.startsWith("/admin/submissions")
+      : pathname.startsWith(base);
+
+  const tabClass = (base: string) =>
+    `border-b-2 pb-1 transition ${
+      isActive(base)
+        ? "border-white font-semibold text-white"
+        : "border-transparent text-white/70 hover:text-white"
+    }`;
+
   return (
     <div className="min-h-screen bg-brand-bg-alt">
       <header className="flex items-center justify-between bg-brand-teal px-8 py-4">
@@ -13,10 +27,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             [Platform Name] · Admin
           </span>
         </Link>
-        <nav className="flex items-center gap-6 text-xs text-white/70">
-          <Link to="/admin" className="hover:text-white">Submissions</Link>
-          <Link to="/admin/distributors" className="hover:text-white">Distributors</Link>
-          <Link to="/admin/customers" className="hover:text-white">Customers</Link>
+        <nav className="flex items-center gap-6 text-xs">
+          <Link to="/admin" className={tabClass("/admin")}>Submissions</Link>
+          <Link to="/admin/distributors" className={tabClass("/admin/distributors")}>Distributors</Link>
+          <Link to="/admin/customers" className={tabClass("/admin/customers")}>Manufacturers / Brands</Link>
         </nav>
         <div className="flex items-center gap-4 text-xs text-white/70">
           <span>{user?.email}</span>

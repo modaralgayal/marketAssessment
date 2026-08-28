@@ -16,7 +16,7 @@ import {
   ADAPTABILITY_OPTIONS,
   type CustomerDto,
 } from "@mea/shared";
-import { fetchCustomer, deleteCustomer } from "../../lib/api";
+import { fetchCustomer, deleteCustomer, fetchCustomerFileUrl, setCustomerCategory } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 
 type Opt = ReadonlyArray<{ value: string; label: string }>;
@@ -56,12 +56,45 @@ function statusBadge(status: string) {
   }
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  CUSTOMER: "Customers",
+  POTENTIAL: "Potential Customers",
+  OTHER: "Other",
+};
+
+function categoryBadge(category: string) {
+  switch (category) {
+    case "CUSTOMER": return "bg-brand-teal/15 text-brand-teal";
+    case "POTENTIAL": return "bg-amber-100 text-amber-800";
+    case "OTHER": return "bg-gray-100 text-brand-muted";
+    default: return "bg-gray-100 text-brand-ink";
+  }
+}
+
 export default function CustomerProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+
+  const MOVE_TARGETS = ["CUSTOMER", "POTENTIAL", "OTHER"] as const;
+  type MoveTarget = (typeof MOVE_TARGETS)[number];
+
+  const handleMove = async (target: MoveTarget) => {
+    if (!id || !data || target === data.category) return;
+    setShowMenu(false);
+    setMoving(true);
+    try {
+      await setCustomerCategory(id, target);
+      await queryClient.invalidateQueries({ queryKey: ["customer", id] });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update category");
+    } finally {
+      setMoving(false);
+    }
+  };
 
   const { data, isLoading, error } = useQuery<CustomerDto>({
     queryKey: ["customer", id],
@@ -111,6 +144,20 @@ export default function CustomerProfile() {
                   >
                     Edit
                   </Link>
+                  <div className="border-t border-brand-line px-4 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">
+                    Move to
+                  </div>
+                  {MOVE_TARGETS.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => handleMove(t)}
+                      disabled={moving || t === data?.category}
+                      className="flex w-full items-center justify-between px-4 py-2 text-sm text-brand-ink hover:bg-brand-bg-alt disabled:opacity-40"
+                    >
+                      {CATEGORY_LABELS[t]}
+                      {data?.category === t && <span className="text-brand-teal">●</span>}
+                    </button>
+                  ))}
                   <button
                     onClick={() => { setShowMenu(false); handleDelete(); }}
                     disabled={deleting}
@@ -139,6 +186,9 @@ export default function CustomerProfile() {
             </div>
             <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${statusBadge(data.customerStatus)}`}>
               {data.customerStatus}
+            </span>
+            <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${categoryBadge(data.category)}`}>
+              {CATEGORY_LABELS[data.category] ?? data.category}
             </span>
           </div>
 
@@ -211,8 +261,41 @@ export default function CustomerProfile() {
 
           <Section title="Status & Notes">
             <Row label="Customer Status" value={text(data.customerStatus)} />
+            <Row label="Category" value={CATEGORY_LABELS[data.category] ?? data.category} />
             <Row label="Onboarding Date" value={new Date(data.onboardingDate).toLocaleDateString()} />
             <Row label="Notes" value={text(data.notes)} />
+          </Section>
+
+          <Section title="Files">
+            {data.files && data.files.length > 0 ? (
+              <ul className="divide-y divide-brand-line">
+                {data.files.map((f) => (
+                  <li key={f.id} className="flex items-center justify-between py-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-brand-ink">{f.originalName}</p>
+                      <p className="text-xs text-brand-muted">
+                        {(f.sizeBytes / 1024).toFixed(0)} KB · {new Date(f.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { url } = await fetchCustomerFileUrl(f.id);
+                          window.open(url, "_blank", "noopener");
+                        } catch (err) {
+                          alert(err instanceof Error ? err.message : "Failed to get download link");
+                        }
+                      }}
+                      className="ml-4 flex-shrink-0 rounded border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-brand-bg-alt"
+                    >
+                      Download
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-brand-muted">No files uploaded.</p>
+            )}
           </Section>
         </>
       )}

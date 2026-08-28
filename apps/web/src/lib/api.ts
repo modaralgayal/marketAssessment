@@ -4,6 +4,17 @@ import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorIn
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 async function authHeader(): Promise<Record<string, string>> {
+  // Wait until Firebase has finished initializing its auth state. Reading
+  // `currentUser` synchronously during a cold start (e.g. right after signing
+  // in, or on a fresh tab) can return null even though the session is valid,
+  // which would omit the Authorization header and yield "Missing bearer token".
+  if (typeof auth.authStateReady === "function") {
+    try {
+      await auth.authStateReady();
+    } catch {
+      /* if it ever rejects, fall through to the currentUser check below */
+    }
+  }
   const user = auth.currentUser;
   if (!user) return {};
   const token = await user.getIdToken();
@@ -29,10 +40,29 @@ export async function submitAssessment(
   return res.json();
 }
 
+/** Public: submit the onboarding form (already-acquired client) → creates a Customer directly. */
+export async function submitOnboarding(
+  payload: unknown,
+  files: File[],
+  invite: string,
+): Promise<{ id: string }> {
+  const form = new FormData();
+  form.append("payload", JSON.stringify(payload));
+  for (const file of files) form.append("files", file);
+  form.append("invite", invite);
+
+  const res = await fetch(`${BASE}/api/customers/from-onboarding`, { method: "POST", body: form });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Onboarding failed");
+  }
+  return res.json();
+}
+
 // ── Invites (assessment access gating) ────────────────────────────────────
 
 /** Public: check whether an invite token is valid (used to gate /assessment). */
-export async function validateInvite(token: string): Promise<{ valid: boolean; reason?: string }> {
+export async function validateInvite(token: string): Promise<{ valid: boolean; reason?: string; purpose?: string }> {
   const res = await fetch(`${BASE}/api/invites/validate?token=${encodeURIComponent(token)}`);
   if (res.ok) return res.json();
   try {
@@ -68,6 +98,7 @@ export async function fetchInvites(): Promise<{
     token: string;
     email: string | null;
     status: string;
+    purpose: string;
     createdAt: string;
     usedAt: string | null;
     link: string;
@@ -79,16 +110,20 @@ export async function fetchInvites(): Promise<{
 }
 
 /** Admin: create a single-use invite and return its link. */
-export async function createInvite(email?: string): Promise<{
+export async function createInvite(
+  email?: string,
+  purpose?: "OPPORTUNITY" | "ONBOARDING",
+): Promise<{
   id: string;
   token: string;
   status: string;
+  purpose: string;
   link: string;
 }> {
   const res = await fetch(`${BASE}/api/invites`, {
     method: "POST",
     headers: { ...(await authHeader()), "Content-Type": "application/json" },
-    body: JSON.stringify(email ? { email } : {}),
+    body: JSON.stringify(email ? { email, purpose } : { purpose }),
   });
   if (!res.ok) throw new Error("Failed to create invite");
   return res.json();
@@ -113,9 +148,25 @@ export async function fetchSubmission(id: string): Promise<SubmissionDto> {
   return res.json();
 }
 
+/** Admin: delete a submission. */
+export async function deleteSubmission(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/submissions/${id}`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to delete submission");
+}
+
 /** Admin: get a signed download URL for a file. */
 export async function fetchFileUrl(fileId: string): Promise<{ url: string; originalName: string }> {
   const res = await fetch(`${BASE}/api/files/${fileId}/download`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to get download link");
+  return res.json();
+}
+
+/** Admin: get a signed download URL for a customer's file. */
+export async function fetchCustomerFileUrl(fileId: string): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/files/customer/${fileId}/download`, { headers: await authHeader() });
   if (!res.ok) throw new Error("Failed to get download link");
   return res.json();
 }
@@ -329,6 +380,16 @@ export async function fetchCustomer(id: string): Promise<CustomerDto> {
   return res.json();
 }
 
+/** Admin: fetch the customer created from a submission (404 if none yet). */
+export async function fetchCustomerBySubmission(submissionId: string): Promise<CustomerDto> {
+  const res = await fetch(`${BASE}/api/customers/from-submission/${submissionId}`, {
+    headers: await authHeader(),
+  });
+  if (res.status === 404) throw new Error("NO_CUSTOMER");
+  if (!res.ok) throw new Error("Failed to load customer");
+  return res.json();
+}
+
 export async function createCustomer(data: CustomerInput): Promise<CustomerDto> {
   const res = await fetch(`${BASE}/api/customers`, {
     method: "POST",
@@ -366,6 +427,23 @@ export async function convertSubmissionToCustomer(submissionId: string): Promise
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to convert submission to customer");
+  }
+  return res.json();
+}
+
+/** Admin: move a customer between the 3 category buckets (Customers / Potential / Other). */
+export async function setCustomerCategory(
+  id: string,
+  category: "CUSTOMER" | "POTENTIAL" | "OTHER",
+): Promise<CustomerDto> {
+  const res = await fetch(`${BASE}/api/customers/${id}/category`, {
+    method: "PATCH",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ category }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to update category");
   }
   return res.json();
 }

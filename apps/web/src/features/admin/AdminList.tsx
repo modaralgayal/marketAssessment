@@ -5,10 +5,27 @@ import {
   fetchSubmissions,
   evaluateSubmission,
   findMatches,
+  deleteSubmission,
   fetchInvites,
   createInvite,
 } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
+
+/**
+ * In dev the server builds invite links from WEB_ORIGIN (prod). When we're
+ * running the local app we swap the origin for the current one so the link
+ * opens the form we're actually editing instead of prod.
+ */
+function localInviteLink(link: string): string {
+  if (typeof window === "undefined") return link;
+  if (!/^localhost$|^127\.0\.0\.1$|^\[::1\]$/.test(window.location.hostname)) return link;
+  try {
+    const u = new URL(link);
+    return `${window.location.origin}${u.pathname}${u.search}${u.hash}`;
+  } catch {
+    return link;
+  }
+}
 
 export default function AdminList() {
   const queryClient = useQueryClient();
@@ -21,9 +38,12 @@ export default function AdminList() {
 
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [matchingId, setMatchingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [createdLink, setCreatedLink] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [onboardingLink, setOnboardingLink] = useState<string | null>(null);
+  const [generatingOnboarding, setGeneratingOnboarding] = useState(false);
 
   const { data: invitesData } = useQuery({
     queryKey: ["invites"],
@@ -40,6 +60,19 @@ export default function AdminList() {
       alert("Failed to generate invite.");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const generateOnboardingInvite = async () => {
+    try {
+      setGeneratingOnboarding(true);
+      const inv = await createInvite(undefined, "ONBOARDING");
+      setOnboardingLink(inv.link);
+      await queryClient.invalidateQueries({ queryKey: ["invites"] });
+    } catch {
+      alert("Failed to generate onboarding invite.");
+    } finally {
+      setGeneratingOnboarding(false);
     }
   };
 
@@ -78,6 +111,20 @@ export default function AdminList() {
       alert("Failed to find matches.");
     } finally {
       setMatchingId(null);
+    }
+  };
+
+  const deleteSubmissionForRow = async (id: string, name: string) => {
+    if (!confirm(`Delete submission "${name}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await deleteSubmission(id);
+      await queryClient.invalidateQueries({ queryKey: ["submissions"] });
+    } catch (err) {
+      console.log(err);
+      alert("Failed to delete submission.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -225,6 +272,13 @@ export default function AdminList() {
                       >
                         View
                       </Link>
+                      <button
+                        onClick={() => deleteSubmissionForRow(s.id, s.companyName)}
+                        disabled={deletingId === s.id}
+                        className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                      >
+                        {deletingId === s.id ? "Deleting…" : "Delete"}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -245,24 +299,47 @@ export default function AdminList() {
         </div>
       )}
 
-      {/* Invites panel — generate and copy single-use assessment links */}
+      {/* Invites panel — generate and copy single-use assessment / onboarding links */}
       <div className="mt-10">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-brand-ink">Invite links</h2>
-          <button
-            onClick={generateInvite}
-            disabled={generating}
-            className="rounded-full bg-brand-teal px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-teal-dark disabled:opacity-50"
-          >
-            {generating ? "Generating…" : "Generate invite link"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={generateInvite}
+              disabled={generating}
+              className="rounded-full bg-brand-teal px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-teal-dark disabled:opacity-50"
+            >
+              {generating ? "Generating…" : "Generate assessment invite"}
+            </button>
+            <button
+              onClick={generateOnboardingInvite}
+              disabled={generatingOnboarding}
+              className="rounded-full border border-brand-teal bg-white px-5 py-2.5 text-sm font-bold text-brand-teal shadow-sm transition hover:bg-brand-teal/5 disabled:opacity-50"
+            >
+              {generatingOnboarding ? "Generating…" : "Generate onboarding invite"}
+            </button>
+          </div>
         </div>
 
         {createdLink && (
           <div className="mb-4 flex items-center gap-3 rounded-lg border border-brand-teal/30 bg-brand-teal/5 px-4 py-3">
-            <code className="flex-1 break-all text-[12.5px] text-brand-ink">{createdLink}</code>
+            <span className="shrink-0 rounded bg-brand-teal/15 px-2 py-0.5 text-[10px] font-bold text-brand-teal">ASSESSMENT</span>
+            <code className="flex-1 break-all text-[12.5px] text-brand-ink">{localInviteLink(createdLink)}</code>
             <button
-              onClick={() => copy(createdLink)}
+              onClick={() => copy(localInviteLink(createdLink))}
+              className="shrink-0 rounded border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-white"
+            >
+              Copy
+            </button>
+          </div>
+        )}
+
+        {onboardingLink && (
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-brand-teal/30 bg-brand-teal/5 px-4 py-3">
+            <span className="shrink-0 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">ONBOARDING</span>
+            <code className="flex-1 break-all text-[12.5px] text-brand-ink">{localInviteLink(onboardingLink)}</code>
+            <button
+              onClick={() => copy(localInviteLink(onboardingLink))}
               className="shrink-0 rounded border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-white"
             >
               Copy
@@ -275,6 +352,7 @@ export default function AdminList() {
             <thead className="bg-brand-bg-alt text-xs uppercase tracking-wide text-brand-muted">
               <tr>
                 <th className="px-4 py-3">Link</th>
+                <th className="px-4 py-3">Purpose</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Created</th>
@@ -284,13 +362,35 @@ export default function AdminList() {
               {(invitesData?.items ?? []).map((inv) => (
                 <tr key={inv.id} className="border-t border-brand-line">
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => copy(inv.link)}
-                      className="font-mono text-[12px] text-brand-teal hover:underline"
-                      title={inv.link}
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={localInviteLink(inv.link)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-[12px] text-brand-teal hover:underline"
+                        title={localInviteLink(inv.link)}
+                      >
+                        {inv.token.slice(0, 12)}…
+                      </a>
+                      <button
+                        onClick={() => copy(localInviteLink(inv.link))}
+                        className="rounded border border-brand-line px-2 py-0.5 text-[11px] font-semibold text-brand-muted hover:border-brand-teal hover:text-brand-teal"
+                        title="Copy link"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                        inv.purpose === "ONBOARDING"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-brand-teal/15 text-brand-teal"
+                      }`}
                     >
-                      {inv.token.slice(0, 12)}…
-                    </button>
+                      {inv.purpose === "ONBOARDING" ? "Onboarding" : "Assessment"}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-brand-muted">{inv.email ?? "—"}</td>
                   <td className="px-4 py-3">
@@ -313,7 +413,7 @@ export default function AdminList() {
               ))}
               {(!invitesData || invitesData.items.length === 0) && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-brand-muted">
+                  <td colSpan={5} className="px-4 py-8 text-center text-brand-muted">
                     No invites yet. Generate one to send an assessment link.
                   </td>
                 </tr>

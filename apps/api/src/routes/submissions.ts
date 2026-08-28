@@ -218,3 +218,15 @@ submissionsRouter.patch("/:id/evaluate", requireAdmin, auditLog, async (req, res
     next(err);
   }
 });
+
+/** Admin: delete a submission (and its files + matches, via cascade). */
+submissionsRouter.delete("/:id", requireAdmin, auditLog, async (req, res, next) => {
+  try {
+    const submission = await prisma.submission.findUnique({ where: { id: req.params.id } });
+    if (!submission) return res.status(404).json({ error: "Submission not found" });
+    await prisma.submission.delete({ where: { id: req.params.id } });
+    return res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});

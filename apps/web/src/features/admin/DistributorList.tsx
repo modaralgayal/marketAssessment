@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchDistributors, syncDistributorsFromSheet, recalcDataTiers } from "../../lib/api";
+import { fetchDistributors, deleteDistributor, syncDistributorsFromSheet, recalcDataTiers } from "../../lib/api";
 import { getSheetsToken, preloadGis } from "../../lib/googleSheets";
 import AdminLayout from "./AdminLayout";
 
@@ -17,6 +17,7 @@ export default function DistributorList() {
   const [syncing, setSyncing] = useState(false);
   const [recalcTiers, setRecalcTiers] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Pre-load GIS library so the OAuth popup opens immediately on user click
   useEffect(() => { preloadGis(); }, []);
@@ -31,6 +32,19 @@ export default function DistributorList() {
       alert(err.message ?? "Failed to recalculate tiers.");
     } finally {
       setRecalcTiers(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await deleteDistributor(id);
+      await queryClient.invalidateQueries({ queryKey: ["distributors"] });
+    } catch (err: any) {
+      alert(err.message ?? "Failed to delete distributor");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -158,6 +172,7 @@ export default function DistributorList() {
                 <th className="px-4 py-3">Size / Scale</th>
                 <th className="px-4 py-3">Contact</th>
                 <th className="px-4 py-3">Matches</th>
+                <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -188,11 +203,20 @@ export default function DistributorList() {
                   <td className="px-4 py-3 text-brand-muted">
                     {d.matchCount != null ? d.matchCount : "—"}
                   </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleDelete(d.id, d.companyName)}
+                      disabled={deletingId === d.id}
+                      className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                    >
+                      {deletingId === d.id ? "Deleting…" : "Delete"}
+                    </button>
+                  </td>
                 </tr>
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-brand-muted">
+                  <td colSpan={8} className="px-4 py-8 text-center text-brand-muted">
                     {search ? "No distributors match your search." : "No distributors yet. Import or add one."}
                   </td>
                 </tr>

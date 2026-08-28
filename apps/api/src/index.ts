@@ -23,7 +23,25 @@ app.use(
     contentSecurityPolicy: false, // disabled for now — the web frontend is a separate SPA
   }),
 );
-app.use(cors({ origin: env.WEB_ORIGIN }));
+// Allow the configured web origin (comma-separated list supported) plus any
+// localhost / 127.0.0.1 origin so local dev (web on :5173 → API on :3000)
+// works without exposing the API to arbitrary third-party origins.
+const devOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const allowedOrigins = (env.WEB_ORIGIN ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // same-origin / non-browser requests
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      if (devOrigin.test(origin)) return cb(null, true);
+      cb(new Error("Not allowed by CORS"));
+    },
+  }),
+);
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {

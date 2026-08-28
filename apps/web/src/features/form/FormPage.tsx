@@ -19,7 +19,7 @@ import {
   ADAPTABILITY_OPTIONS,
   FILE_CONSTRAINTS,
 } from "@mea/shared";
-import { submitAssessment, validateInvite } from "../../lib/api";
+import { submitAssessment, submitOnboarding, validateInvite } from "../../lib/api";
 import {
   SectionHeader,
   Field,
@@ -29,7 +29,7 @@ import {
   CheckboxChips,
   YesNoChips,
 } from "./fields";
-import { CoverHeader, PromiseRow, IntroBox, SuccessScreen } from "./Chrome";
+import { CoverHeader, PromiseRow, IntroBox, SuccessScreen, type FormMode } from "./Chrome";
 import SiteNav from "../landing/SiteNav";
 
 // Human-readable names for each schema field, used to name the missing items
@@ -81,12 +81,54 @@ const missingFromErrors = (errs: FieldErrors<SubmissionInput>): string[] => {
   return out;
 };
 
+/**
+ * TEMP DEV HELPER — sample payload for the "Autofill (test)" button so the form
+ * can be submitted without manual entry. Remove this object and the button once
+ * testing is done.
+ */
+const SAMPLE_SUBMISSION: SubmissionInput = {
+  companyName: "Nordic Berries Oy",
+  country: "Finland",
+  website: "https://nordicberries.example.com",
+  industryCategory: "Beverages",
+  annualRevenue: "R5_20M",
+  annualRevenueCustom: "",
+  yearsInBusiness: "12 years",
+  currentExportMarkets: "Sweden, Germany, Poland",
+  halalCert: "NO",
+  sfdaStatus: "NOT_YET",
+  frozenStorage: "NO",
+  shelfLife: "MEDIUM",
+  otherCerts: ["BRCGS", "HACCP"],
+  otherCertsCustom: "",
+  labelLanguages: "Finnish, English, Swedish",
+  productAdaptability: "YES",
+  brandApproach: "SHARED",
+  leadTimes: "3–4 weeks from order confirmation",
+  gccCurrentlyActive: false,
+  currentGccMarkets: [],
+  gccSituation: "",
+  targetMarketPotential: "KSA",
+  targetMarketPotentialOther: "",
+  salesChannels: ["MODERN_TRADE", "ECOMMERCE"],
+  channelStrategy: "Prioritise modern trade in KSA via a national distributor.",
+  moq: "1 pallet",
+  exportContact: true,
+  productionCapacity: "YES",
+  contactFullName: "Test User",
+  contactTitle: "Export Director",
+  contactEmail: "test@example.com",
+  contactPhone: "+358 40 123 4567",
+  anythingElse: "Test submission autofilled for QA.",
+};
+
 export default function FormPage() {
   const {
     register,
     control,
     watch,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<SubmissionInput>({
     resolver: zodResolver(submissionSchema),
@@ -102,6 +144,7 @@ export default function FormPage() {
   const [params] = useSearchParams();
   const inviteToken = params.get("invite") ?? "";
   const [gate, setGate] = useState<"loading" | "open" | "denied">("loading");
+  const [mode, setMode] = useState<FormMode>("assessment");
 
   useEffect(() => {
     let cancelled = false;
@@ -111,7 +154,10 @@ export default function FormPage() {
     }
     validateInvite(inviteToken)
       .then((r) => {
-        if (!cancelled) setGate(r.valid ? "open" : "denied");
+        if (!cancelled) {
+          setMode(r.valid && r.purpose === "ONBOARDING" ? "onboarding" : "assessment");
+          setGate(r.valid ? "open" : "denied");
+        }
       })
       .catch(() => {
         if (!cancelled) setGate("denied");
@@ -212,7 +258,11 @@ export default function FormPage() {
     setBlockReasons([]);
     setSubmitting(true);
     try {
-      await submitAssessment(data, files, inviteToken);
+      if (mode === "onboarding") {
+        await submitOnboarding(data, files, inviteToken);
+      } else {
+        await submitAssessment(data, files, inviteToken);
+      }
       setDone(true);
       window.scrollTo({ top: 0 });
     } catch (err) {
@@ -222,11 +272,32 @@ export default function FormPage() {
     }
   };
 
+  /**
+   * TEMP DEV HELPER — fills every field with SAMPLE_SUBMISSION, attaches a tiny
+   * dummy PDF (so the required-file check passes), and accepts consent, so the
+   * form can be submitted instantly. Remove together with the button when done.
+   */
+  const handleAutofill = () => {
+    reset(SAMPLE_SUBMISSION);
+    setFiles([
+      new File(
+        ["Sample catalogue content for testing purposes only."],
+        "sample-catalogue.pdf",
+        { type: "application/pdf" },
+      ),
+    ]);
+    setConsent(true);
+    setConsentError(false);
+    setFileError(null);
+    setBlockReasons([]);
+    setSubmitError(null);
+  };
+
   if (done)
     return (
       <>
         <SiteNav />
-        <SuccessScreen />
+        <SuccessScreen mode={mode} />
       </>
     );
 
@@ -244,9 +315,9 @@ export default function FormPage() {
     <>
       <SiteNav />
       <div className="w-full bg-white">
-        <CoverHeader />
-      <PromiseRow />
-      <IntroBox />
+        <CoverHeader mode={mode} />
+      <PromiseRow mode={mode} />
+      <IntroBox mode={mode} />
 
       <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="px-8 pb-16 sm:px-16">
         {/* ── 1. Company Profile ── */}
@@ -371,9 +442,10 @@ export default function FormPage() {
           }`}
         >
           <p className="text-[12.5px] text-brand-muted">
-            <strong className="text-brand-ink">Required:</strong> Attach your latest export catalogue
-            (product specifications, certifications, shelf life, packaging formats and dimensions, and
-            pricing where available). Submissions without a catalogue cannot be fully assessed.
+            <strong className="text-brand-ink">Required:</strong>{" "}
+            {mode === "onboarding"
+              ? "Attach your company catalogue (product specifications, certifications, shelf life, packaging formats and dimensions, and pricing where available) so we can complete your profile."
+              : "Attach your latest export catalogue (product specifications, certifications, shelf life, packaging formats and dimensions, and pricing where available). Submissions without a catalogue cannot be fully assessed."}
           </p>
           <input
             type="file"
@@ -515,6 +587,16 @@ export default function FormPage() {
             </div>
           )}
           {submitError && <p className="mb-3 text-sm text-red-600">{submitError}</p>}
+
+          {/* TEMP DEV: quick autofill for testing — remove when not needed */}
+          <button
+            type="button"
+            onClick={handleAutofill}
+            title="Fills the form with sample data and a dummy file so you can submit instantly"
+            className="mb-3 rounded-full border border-amber-400 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
+          >
+            ⚡ Autofill (test)
+          </button>
           <label
             ref={consentRef}
             className={`mt-1 flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-3 ${
@@ -556,10 +638,12 @@ export default function FormPage() {
             disabled={submitting}
             className="mt-4 rounded-full bg-brand-teal px-6 py-3 text-sm font-bold text-white shadow-sm transition-all duration-200 hover:bg-brand-teal-dark hover:shadow-md hover:-translate-y-px active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40 focus-visible:ring-offset-2 disabled:opacity-50"
           >
-            {submitting ? "Submitting…" : "Submit Assessment"}
+            {submitting ? "Submitting…" : mode === "onboarding" ? "Complete Onboarding" : "Submit Assessment"}
           </button>
           <p className="mt-3 text-[11.5px] italic text-brand-muted">
-            We'll review your submission and respond within 5 business days.
+            {mode === "onboarding"
+              ? "Your profile will be saved to our system."
+              : "We'll review your submission and respond within 5 business days."}
           </p>
         </div>
       </form>

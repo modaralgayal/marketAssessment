@@ -9,6 +9,8 @@ export const invitesRouter = Router();
 
 const createSchema = z.object({
   email: z.string().email().optional(),
+  // OPPORTUNITY → creates a Submission; ONBOARDING → creates a Customer directly.
+  purpose: z.enum(["OPPORTUNITY", "ONBOARDING"]).optional(),
 });
 
 /** Build the public assessment URL that carries this invite token. */
@@ -31,7 +33,7 @@ invitesRouter.get("/validate", async (req, res, next) => {
         .status(404)
         .json({ valid: false, reason: invite ? invite.status : "not_found" });
     }
-    return res.json({ valid: true });
+    return res.json({ valid: true, purpose: invite.purpose });
   } catch (err) {
     next(err);
   }
@@ -55,10 +57,10 @@ invitesRouter.get("/", requireAdmin, async (_req, res, next) => {
 /** Admin: create a single-use invite and return its link. */
 invitesRouter.post("/", requireAdmin, async (req, res, next) => {
   try {
-    const { email } = createSchema.parse(req.body ?? {});
+    const { email, purpose } = createSchema.parse(req.body ?? {});
     const token = randomBytes(24).toString("base64url"); // ~32 chars, URL-safe, unguessable
     const invite = await prisma.invite.create({
-      data: { token, email: email ?? null, status: "PENDING" },
+      data: { token, email: email ?? null, status: "PENDING", purpose: purpose ?? "OPPORTUNITY" },
     });
     return res.status(201).json({ ...invite, link: inviteLink(invite.token) });
   } catch (err) {

@@ -27,7 +27,7 @@ import {
   applyCatalogueMapping,
   convertSubmissionToCustomer,
   deleteCustomer,
-  fetchCustomer,
+  fetchCustomerBySubmission,
   type ExtractCatalogueResponse,
 } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
@@ -82,10 +82,10 @@ export default function AdminDetail() {
     enabled: !!id,
   });
 
-  // Check if this submission has an associated customer
+  // Check if this submission has an associated customer (404 until converted)
   const { data: customerData } = useQuery<CustomerDto>({
     queryKey: ["submission", id, "customer"],
-    queryFn: () => fetchCustomer(id!),
+    queryFn: () => fetchCustomerBySubmission(id!),
     enabled: !!id,
     retry: false,
   });
@@ -152,7 +152,7 @@ export default function AdminDetail() {
     setConverting(true);
     try {
       await convertSubmissionToCustomer(id);
-      alert("Customer created successfully! You can view them in the Customers tab.");
+      alert("Customer created successfully! You can view them in the Manufacturers / Brands tab, under Potential Customers.");
       // Redirect to customers list
       window.location.href = "/admin/customers";
     } catch (err) {
