@@ -3,7 +3,7 @@ import multer from "multer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import rateLimit from "express-rate-limit";
-import { submissionSchema, FILE_CONSTRAINTS, type SubmissionDto } from "@mea/shared";
+import { submissionSchema, customerSchema, FILE_CONSTRAINTS, type SubmissionDto } from "@mea/shared";
 import { prisma } from "../prisma.js";
 import { storage } from "../storage/index.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
@@ -102,6 +102,43 @@ submissionsRouter.post("/", submitLimiter, upload.array("files"), async (req, re
     if (typeof rawPayload !== "string") {
       return res.status(400).json({ error: "Missing form payload." });
     }
+
+    // Onboarding invites are for already-acquired clients: create a Customer
+    // directly in the Potential Customers bucket. All other (assessment) invites
+    // create a Submission. Both paths are public and gated only by the invite.
+    if (invite.purpose === "ONBOARDING") {
+      const data = customerSchema.parse(JSON.parse(rawPayload));
+      const customer = await prisma.customer.create({
+        data: { ...data, category: "POTENTIAL" },
+      });
+
+      try {
+        const fileRows = [];
+        for (const file of files) {
+          const key = `customers/${customer.id}/${randomUUID()}${path.extname(file.originalname)}`;
+          await storage.put(key, file.buffer, file.mimetype);
+          fileRows.push({
+            customerId: customer.id,
+            storageKey: key,
+            originalName: file.originalname,
+            contentType: file.mimetype,
+            sizeBytes: file.size,
+          });
+        }
+        await prisma.customerFile.createMany({ data: fileRows });
+
+        // Consume the invite so the link can't be reused. Non-fatal on failure.
+        await prisma.invite
+          .update({ where: { id: invite.id }, data: { status: "USED", usedAt: new Date() } })
+          .catch(() => {});
+      } catch (uploadErr) {
+        await prisma.customer.delete({ where: { id: customer.id } }).catch(() => {});
+        throw uploadErr;
+      }
+
+      return res.status(201).json({ id: customer.id });
+    }
+
     const data = submissionSchema.parse(JSON.parse(rawPayload));
 
     // Create the submission row first so we have an id for the storage keys.

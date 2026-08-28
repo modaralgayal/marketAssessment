@@ -67,3 +67,13 @@ invitesRouter.post("/", requireAdmin, async (req, res, next) => {
     next(err);
   }
 });
+
+/** Admin: delete a single invite (e.g. a mistaken/ unused link). */
+invitesRouter.delete("/:id", requireAdmin, async (req, res, next) => {
+  try {
+    await prisma.invite.delete({ where: { id: req.params.id } });
+    return res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});

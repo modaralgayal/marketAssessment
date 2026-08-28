@@ -19,7 +19,7 @@ import {
   ADAPTABILITY_OPTIONS,
   FILE_CONSTRAINTS,
 } from "@mea/shared";
-import { submitAssessment, submitOnboarding, validateInvite } from "../../lib/api";
+import { submitAssessment, validateInvite } from "../../lib/api";
 import {
   SectionHeader,
   Field,
@@ -258,11 +258,9 @@ export default function FormPage() {
     setBlockReasons([]);
     setSubmitting(true);
     try {
-      if (mode === "onboarding") {
-        await submitOnboarding(data, files, inviteToken);
-      } else {
-        await submitAssessment(data, files, inviteToken);
-      }
+      // One public endpoint handles both: the server routes onboarding invites
+      // to the Potential Customers bucket and assessment invites to Submissions.
+      await submitAssessment(data, files, inviteToken);
       setDone(true);
       window.scrollTo({ top: 0 });
     } catch (err) {

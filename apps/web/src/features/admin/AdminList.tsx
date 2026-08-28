@@ -8,6 +8,7 @@ import {
   deleteSubmission,
   fetchInvites,
   createInvite,
+  deleteInvite,
 } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 
@@ -125,6 +126,22 @@ export default function AdminList() {
       alert("Failed to delete submission.");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const [deletingInviteId, setDeletingInviteId] = useState<string | null>(null);
+
+  const deleteInviteForRow = async (id: string) => {
+    if (!confirm("Delete this invite link? This cannot be undone.")) return;
+    setDeletingInviteId(id);
+    try {
+      await deleteInvite(id);
+      await queryClient.invalidateQueries({ queryKey: ["invites"] });
+    } catch (err) {
+      console.log(err);
+      alert("Failed to delete invite.");
+    } finally {
+      setDeletingInviteId(null);
     }
   };
 
@@ -356,6 +373,7 @@ export default function AdminList() {
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Created</th>
+                <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -409,11 +427,20 @@ export default function AdminList() {
                   <td className="px-4 py-3 text-brand-muted">
                     {new Date(inv.createdAt).toLocaleDateString()}
                   </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => deleteInviteForRow(inv.id)}
+                      disabled={deletingInviteId === inv.id}
+                      className="rounded border border-red-200 px-2.5 py-1 text-[11px] font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {deletingInviteId === inv.id ? "Deleting…" : "Delete"}
+                    </button>
+                  </td>
                 </tr>
               ))}
               {(!invitesData || invitesData.items.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-brand-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-brand-muted">
                     No invites yet. Generate one to send an assessment link.
                   </td>
                 </tr>

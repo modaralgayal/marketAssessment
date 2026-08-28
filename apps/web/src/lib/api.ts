@@ -40,25 +40,6 @@ export async function submitAssessment(
   return res.json();
 }
 
-/** Public: submit the onboarding form (already-acquired client) → creates a Customer directly. */
-export async function submitOnboarding(
-  payload: unknown,
-  files: File[],
-  invite: string,
-): Promise<{ id: string }> {
-  const form = new FormData();
-  form.append("payload", JSON.stringify(payload));
-  for (const file of files) form.append("files", file);
-  form.append("invite", invite);
-
-  const res = await fetch(`${BASE}/api/customers/from-onboarding`, { method: "POST", body: form });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? "Onboarding failed");
-  }
-  return res.json();
-}
-
 // ── Invites (assessment access gating) ────────────────────────────────────
 
 /** Public: check whether an invite token is valid (used to gate /assessment). */
@@ -127,6 +108,15 @@ export async function createInvite(
   });
   if (!res.ok) throw new Error("Failed to create invite");
   return res.json();
+}
+
+/** Admin: delete an invite by id. */
+export async function deleteInvite(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/invites/${id}`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to delete invite");
 }
 
 export interface SubmissionListResponse {
