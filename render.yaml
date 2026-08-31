@@ -43,6 +43,20 @@ services:
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_B64
         sync: false
+      - key: CLAUDE_API_KEY
+        sync: false # required for scoring / matching / catalogue extraction
+      - key: GOOGLE_SHEET_ID
+        sync: false # optional: server-side distributor import from a sheet
+      - key: SMTP_HOST
+        sync: false # optional: report-request email notifications
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
 
   # ── Frontend static site ────────────────────────────────────
   - type: web
@@ -66,3 +80,5 @@ services:
         sync: false
       - key: VITE_FIREBASE_APP_ID
         sync: false
+      - key: VITE_GOOGLE_OAUTH_CLIENT_ID
+        sync: false # optional: admin Google Sheets sync
