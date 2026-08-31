@@ -15,6 +15,7 @@ services:
     name: mea-api
     runtime: node
     plan: 0.5c-512mb
+    nodeVersion: "20"
     rootDir: .
     buildCommand: npm install && npm run db:generate -w @mea/api
     preDeployCommand: npm run db:deploy -w @mea/api
@@ -62,6 +63,7 @@ services:
   - type: web
     name: mea-web
     runtime: static
+    nodeVersion: "20"
     rootDir: .
     buildCommand: npm install && npm run build -w @mea/web
     staticPublishPath: apps/web/dist
