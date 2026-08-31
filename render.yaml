@@ -5,7 +5,7 @@
 
 databases:
   - name: mea-postgres
-    plan: starter
+    plan: 0.1c-256mb
     databaseName: market_entry
     user: market_entry
 
@@ -14,7 +14,7 @@ services:
   - type: web
     name: mea-api
     runtime: node
-    plan: starter
+    plan: 0.5c-512mb
     rootDir: .
     buildCommand: npm install && npm run db:generate -w @mea/api
     preDeployCommand: npm run db:deploy -w @mea/api
