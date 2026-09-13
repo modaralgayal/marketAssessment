@@ -19,21 +19,31 @@ import {
   SFDA_OPTIONS,
   ADAPTABILITY_OPTIONS,
 } from "@mea/shared";
+import { COUNTRIES } from "../landing/countries";
 import { fetchCustomer, createCustomer, updateCustomer } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
+import {
+  Section,
+  Field,
+  TextInput,
+  TextArea,
+  SelectField,
+  MultiSelectDropdown,
+} from "../form/fields";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-6 rounded-lg border border-brand-line bg-white p-6">
-      <h2 className="mb-3 border-b-2 border-brand-teal pb-2 text-base font-bold text-brand-ink">{title}</h2>
-      {children}
-    </section>
-  );
-}
+const COUNTRY_OPTIONS: ReadonlyArray<{ value: string; label: string }> = COUNTRIES.map((c) => ({
+  value: c,
+  label: c,
+}));
 
-const boolSelect = {
-  setValueAs: (v: unknown) => (v === "true" ? true : v === "false" ? false : undefined),
-};
+const YES_NO: ReadonlyArray<{ value: boolean; label: string }> = [
+  { value: true, label: "Yes" },
+  { value: false, label: "No" },
+];
+
+const STATUS_OPTIONS: ReadonlyArray<{ value: string; label: string }> = customerStatuses.map(
+  (s) => ({ value: s, label: s }),
+);
 
 export default function CustomerForm() {
   const { id } = useParams<{ id: string }>();
@@ -45,12 +55,19 @@ export default function CustomerForm() {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CustomerInput>({
     resolver: zodResolver(customerSchema),
   });
+
+  const otherCerts = watch("otherCerts");
+  const gccCurrentlyActive = watch("gccCurrentlyActive");
+  const annualRevenue = watch("annualRevenue");
+  const targetMarketPotential = watch("targetMarketPotential");
 
   // Load existing customer data
   useEffect(() => {
@@ -93,6 +110,7 @@ export default function CustomerForm() {
             anythingElse: customer.anythingElse ?? undefined,
             customerStatus: customer.customerStatus,
             notes: customer.notes ?? undefined,
+            catalogueLink: customer.catalogueLink ?? undefined,
             onboardingDate: customer.onboardingDate ? customer.onboardingDate.slice(0, 10) : undefined,
           });
         })
@@ -120,8 +138,6 @@ export default function CustomerForm() {
     }
   };
 
-  const statusOptions = customerStatuses.map((s) => ({ value: s, label: s }));
-
   if (loading) {
     return (
       <AdminLayout>
@@ -138,523 +154,320 @@ export default function CustomerForm() {
         </h1>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="rounded-lg border border-brand-line bg-white p-6">
-        {/* ── Section 1 - Company Profile ── */}
-        <Section title="1 · Company Profile">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Company Name *
-              </label>
-              <input
-                {...register("companyName")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* ── 1. Company Profile ── */}
+        <Section num={1} title="Company Profile" sub="Basic information about the business">
+          <div className="grid grid-cols-1 gap-x-7 sm:grid-cols-2">
+            <Field label="Company Name" required error={errors.companyName?.message}>
+              <TextInput name="companyName" register={register} placeholder="Legal company name" />
+            </Field>
+            <Field label="Country" required error={errors.country?.message}>
+              <SelectField
+                name="country"
+                control={control}
+                options={COUNTRY_OPTIONS}
+                placeholder="Select a country"
+                searchable
               />
-              {errors.companyName && <p className="mt-1 text-xs text-red-600">{errors.companyName.message}</p>}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Country *
-              </label>
-              <input
-                {...register("country")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+            </Field>
+          </div>
+          <Field label="Website" error={errors.website?.message}>
+            <TextInput name="website" register={register} placeholder="www.company.com" />
+          </Field>
+          <Field
+            label="Industry / Product Category"
+            required
+            error={errors.industryCategory?.message}
+          >
+            <TextInput name="industryCategory" register={register} placeholder="e.g. Dairy, Beverages" />
+          </Field>
+          <Field label="Annual Revenue" required error={errors.annualRevenue?.message}>
+            <SelectField
+              name="annualRevenue"
+              control={control}
+              options={REVENUE_OPTIONS}
+              placeholder="Select a range"
+            />
+          </Field>
+          {annualRevenue === "CUSTOM" && (
+            <Field label="Annual Revenue (specified)" error={errors.annualRevenueCustom?.message}>
+              <TextInput
+                name="annualRevenueCustom"
+                register={register}
+                placeholder="Describe the custom revenue figure"
               />
-              {errors.country && <p className="mt-1 text-xs text-red-600">{errors.country.message}</p>}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Website
-              </label>
-              <input
-                {...register("website")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+            </Field>
+          )}
+          <div className="grid grid-cols-1 gap-x-7 sm:grid-cols-2">
+            <Field label="Years in Business" error={errors.yearsInBusiness?.message}>
+              <TextInput name="yearsInBusiness" register={register} placeholder="e.g. 12 years" />
+            </Field>
+            <Field label="Current Export Markets" error={errors.currentExportMarkets?.message}>
+              <TextInput
+                name="currentExportMarkets"
+                register={register}
+                placeholder="e.g. Sweden, Germany, Poland"
               />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Industry / Category *
-              </label>
-              <input
-                {...register("industryCategory")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-              {errors.industryCategory && (
-                <p className="mt-1 text-xs text-red-600">{errors.industryCategory.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Annual Revenue *
-              </label>
-              <select
-                {...register("annualRevenue")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {REVENUE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              {errors.annualRevenue && (
-                <p className="mt-1 text-xs text-red-600">{errors.annualRevenue.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Annual Revenue (Custom)
-              </label>
-              <input
-                {...register("annualRevenueCustom")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Years in Business
-              </label>
-              <input
-                {...register("yearsInBusiness")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Current Export Markets
-              </label>
-              <input
-                {...register("currentExportMarkets")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
+            </Field>
           </div>
         </Section>
 
-        {/* ── Section 2 - Products and Operations ── */}
-        <Section title="2 · Products and Operations">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Halal Certification *
-              </label>
-              <select
-                {...register("halalCert")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {YES_NO_UNSURE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                SFDA / ADAFSA Registration
-              </label>
-              <select
-                {...register("sfdaStatus")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {SFDA_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Frozen Storage Required *
-              </label>
-              <select
-                {...register("frozenStorage")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {FROZEN_STORAGE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Shelf Life *
-              </label>
-              <select
-                {...register("shelfLife")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {SHELF_LIFE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Product Adaptability *
-              </label>
-              <select
-                {...register("productAdaptability")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {ADAPTABILITY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Branding & Promotional Approach *
-              </label>
-              <select
-                {...register("brandApproach")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {BRAND_APPROACH_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Valid Certifications
-              </label>
-              <select
-                {...register("otherCerts")}
-                multiple
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                {OTHER_CERT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Other Certifications (Custom)
-              </label>
-              <input
-                {...register("otherCertsCustom")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+        {/* ── 2. Products and Operations ── */}
+        <Section num={2} title="Products and Operations" sub="What they bring to market">
+          <div className="grid grid-cols-1 gap-x-7 sm:grid-cols-2">
+            <Field label="Halal Certification" required error={errors.halalCert?.message}>
+              <SelectField
+                name="halalCert"
+                control={control}
+                options={YES_NO_UNSURE_OPTIONS}
+                placeholder="Select"
               />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Label Languages
-              </label>
-              <input
-                {...register("labelLanguages")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+            </Field>
+            <Field
+              label="SFDA / ADAFSA Registration"
+              note="SFDA = Saudi · ADAFSA = Abu Dhabi"
+              error={errors.sfdaStatus?.message}
+            >
+              <SelectField
+                name="sfdaStatus"
+                control={control}
+                options={SFDA_OPTIONS}
+                placeholder="Select"
               />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Lead Times
-              </label>
-              <input
-                {...register("leadTimes")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+            </Field>
+            <Field
+              label="Frozen Storage Required?"
+              note="Needed for frozen / chilled products"
+              error={errors.frozenStorage?.message}
+            >
+              <SelectField
+                name="frozenStorage"
+                control={control}
+                options={FROZEN_STORAGE_OPTIONS}
+                placeholder="Select"
               />
-            </div>
+            </Field>
+            <Field
+              label="Shelf Life"
+              note="Typical shelf life of most products"
+              error={errors.shelfLife?.message}
+            >
+              <SelectField
+                name="shelfLife"
+                control={control}
+                options={SHELF_LIFE_OPTIONS}
+                placeholder="Select"
+              />
+            </Field>
+            <Field
+              label="Product Adaptability"
+              note="Open to adapting specs / labels / packaging?"
+              error={errors.productAdaptability?.message}
+            >
+              <SelectField
+                name="productAdaptability"
+                control={control}
+                options={ADAPTABILITY_OPTIONS}
+                placeholder="Select"
+              />
+            </Field>
+            <Field
+              label="Branding & Promotional Approach"
+              error={errors.brandApproach?.message}
+            >
+              <SelectField
+                name="brandApproach"
+                control={control}
+                options={BRAND_APPROACH_OPTIONS}
+                placeholder="Select"
+              />
+            </Field>
           </div>
+          <Field label="Valid Certifications" note="Select all that apply">
+            <MultiSelectDropdown
+              name="otherCerts"
+              control={control}
+              options={OTHER_CERT_OPTIONS}
+              placeholder="Select certifications"
+            />
+          </Field>
+          {otherCerts?.includes("CUSTOM") && (
+            <Field label="Other Certifications (specified)" error={errors.otherCertsCustom?.message}>
+              <TextInput
+                name="otherCertsCustom"
+                register={register}
+                placeholder="e.g. Rainforest Alliance, Fair Trade, NSF…"
+              />
+            </Field>
+          )}
+          <Field label="Label Languages" note="Languages on current labels" error={errors.labelLanguages?.message}>
+            <TextInput name="labelLanguages" register={register} placeholder="e.g. English, Finnish" />
+          </Field>
+          <Field label="Lead Times" note="Order to delivery" error={errors.leadTimes?.message}>
+            <TextInput name="leadTimes" register={register} placeholder="e.g. 3–4 weeks" />
+          </Field>
+          <Field label="Catalogue Link" note="Optional link to a catalogue / price list">
+            <TextInput
+              name="catalogueLink"
+              register={register}
+              type="url"
+              placeholder="https://…"
+            />
+          </Field>
         </Section>
 
-        {/* ── Section 3 - Target Market ── */}
-        <Section title="3 · Target Market">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Currently Active in GCC *
-              </label>
-              <select
-                {...register("gccCurrentlyActive", boolSelect)}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+        {/* ── 3. Target Market ── */}
+        <Section num={3} title="Target Market" sub="GCC presence and market priorities">
+          <Field label="Currently Active in Any GCC Market?" required error={errors.gccCurrentlyActive?.message}>
+            <SelectField name="gccCurrentlyActive" control={control} options={YES_NO} placeholder="Select" />
+          </Field>
+          {gccCurrentlyActive === true && (
+            <>
+              <Field label="Current GCC Markets" note="Select all that apply">
+                <MultiSelectDropdown
+                  name="currentGccMarkets"
+                  control={control}
+                  options={GCC_MARKET_OPTIONS}
+                  placeholder="Select markets"
+                />
+              </Field>
+              <Field
+                label="Current GCC Situation"
+                note="What's working, what isn't, where's the upside"
+                error={errors.gccSituation?.message}
               >
-                <option value="">—</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Target Market Potential
-              </label>
-              <select
-                {...register("targetMarketPotential")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {TARGET_POTENTIAL_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Target Market Potential (Other)
-              </label>
-              <input
-                {...register("targetMarketPotentialOther")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+                <TextArea
+                  name="gccSituation"
+                  register={register}
+                  rows={3}
+                  placeholder="Describe the current GCC situation"
+                />
+              </Field>
+            </>
+          )}
+          {gccCurrentlyActive === false && (
+            <Field
+              label="Target Market Potential"
+              note="Which market shows the greatest potential"
+              error={errors.targetMarketPotential?.message}
+            >
+              <SelectField
+                name="targetMarketPotential"
+                control={control}
+                options={TARGET_POTENTIAL_OPTIONS}
+                placeholder="Select a market"
               />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Current GCC Markets
-              </label>
-              <select
-                {...register("currentGccMarkets")}
-                multiple
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                {GCC_MARKET_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Current GCC Situation
-              </label>
-              <textarea
-                {...register("gccSituation")}
-                rows={3}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Sales Channels
-              </label>
-              <select
-                {...register("salesChannels")}
-                multiple
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                {SALES_CHANNEL_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Channel Strategy
-              </label>
-              <textarea
-                {...register("channelStrategy")}
-                rows={3}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-          </div>
+            </Field>
+          )}
+          {targetMarketPotential === "OTHER" && (
+            <Field label="Other Markets (specified)" error={errors.targetMarketPotentialOther?.message}>
+              <TextInput name="targetMarketPotentialOther" register={register} placeholder="e.g. Kuwait, Qatar" />
+            </Field>
+          )}
+          <Field label="Sales Channels" note="Select all that apply">
+            <MultiSelectDropdown
+              name="salesChannels"
+              control={control}
+              options={SALES_CHANNEL_OPTIONS}
+              placeholder="Select channels"
+            />
+          </Field>
+          <Field label="Channel Strategy" note="Priorities and approach">
+            <TextArea
+              name="channelStrategy"
+              register={register}
+              rows={3}
+              placeholder="Which channels matter most, and why?"
+            />
+          </Field>
         </Section>
 
-        {/* ── Section 4 - Operational Readiness ── */}
-        <Section title="4 · Operational Readiness">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Minimum Order Quantity
-              </label>
-              <input
-                {...register("moq")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Dedicated Export Contact
-              </label>
-              <select
-                {...register("exportContact", boolSelect)}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Production Capacity *
-              </label>
-              <select
-                {...register("productionCapacity")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {CAPACITY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* ── 4. Operational Readiness ── */}
+        <Section num={4} title="Operational Readiness" sub="Capacity to serve a new market">
+          <div className="grid grid-cols-1 gap-x-7 sm:grid-cols-2">
+            <Field label="Minimum Order Quantity (MOQ)" note="For a first export order" error={errors.moq?.message}>
+              <TextInput name="moq" register={register} placeholder="e.g. 1 pallet" />
+            </Field>
+            <Field
+              label="Dedicated Export Contact?"
+              note="An export manager or point of contact"
+              error={errors.exportContact?.message}
+            >
+              <SelectField name="exportContact" control={control} options={YES_NO} placeholder="Select" />
+            </Field>
           </div>
+          <Field label="Production Capacity" required error={errors.productionCapacity?.message}>
+            <SelectField
+              name="productionCapacity"
+              control={control}
+              options={CAPACITY_OPTIONS}
+              placeholder="Select"
+            />
+          </Field>
         </Section>
 
-        {/* ── Section 5 - Decision-Maker Contact ── */}
-        <Section title="5 · Decision-Maker Contact">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Full Name *
-              </label>
-              <input
-                {...register("contactFullName")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-              {errors.contactFullName && (
-                <p className="mt-1 text-xs text-red-600">{errors.contactFullName.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Title / Position *
-              </label>
-              <input
-                {...register("contactTitle")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-              {errors.contactTitle && (
-                <p className="mt-1 text-xs text-red-600">{errors.contactTitle.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Email *
-              </label>
-              <input
-                {...register("contactEmail")}
-                type="email"
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-              {errors.contactEmail && (
-                <p className="mt-1 text-xs text-red-600">{errors.contactEmail.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Phone
-              </label>
-              <input
-                {...register("contactPhone")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Anything Else
-              </label>
-              <textarea
-                {...register("anythingElse")}
-                rows={2}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
+        {/* ── 5. Decision-Maker Contact ── */}
+        <Section num={5} title="Decision-Maker Contact" sub="Who we'll be speaking with">
+          <div className="grid grid-cols-1 gap-x-7 sm:grid-cols-2">
+            <Field label="Full Name" required error={errors.contactFullName?.message}>
+              <TextInput name="contactFullName" register={register} placeholder="First and last name" />
+            </Field>
+            <Field label="Title / Position" required error={errors.contactTitle?.message}>
+              <TextInput name="contactTitle" register={register} placeholder="e.g. Export Director" />
+            </Field>
+            <Field label="Email Address" required error={errors.contactEmail?.message}>
+              <TextInput name="contactEmail" register={register} type="email" placeholder="your@company.com" />
+            </Field>
+            <Field label="Phone Number" error={errors.contactPhone?.message}>
+              <TextInput name="contactPhone" register={register} type="tel" placeholder="+358 XX XXX XXXX" />
+            </Field>
           </div>
+          <Field
+            label="Anything Else?"
+            note="Any context that helps — past exports, GCC ambitions, challenges."
+            error={errors.anythingElse?.message}
+          >
+            <TextArea
+              name="anythingElse"
+              register={register}
+              rows={4}
+              placeholder="Anything else that helps us understand the products or ambitions."
+            />
+          </Field>
         </Section>
 
         {/* ── Status & Notes ── */}
-        <Section title="Status & Notes">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Customer Status
-              </label>
-              <select
-                {...register("customerStatus")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              >
-                <option value="">—</option>
-                {statusOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.value}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Onboarding Date
-              </label>
+        <Section num={6} title="Status & Notes" sub="Pipeline state and internal notes">
+          <div className="grid grid-cols-1 gap-x-7 sm:grid-cols-2">
+            <Field label="Customer Status" error={errors.customerStatus?.message}>
+              <SelectField
+                name="customerStatus"
+                control={control}
+                options={STATUS_OPTIONS}
+                placeholder="Select a status"
+              />
+            </Field>
+            <Field label="Onboarding Date" error={errors.onboardingDate?.message}>
               <input
                 type="date"
                 {...register("onboardingDate")}
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
+                className="block w-full rounded border border-brand-line bg-white px-3 py-2 text-[13px] text-brand-ink outline-none focus:border-brand-teal"
               />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Notes
-              </label>
-              <textarea
-                {...register("notes")}
-                rows={3}
-                placeholder="Add any notes about this customer (negotiation details, etc.)"
-                className="w-full rounded border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-teal"
-              />
-            </div>
+            </Field>
           </div>
+          <Field label="Notes" note="Negotiation details, context, etc.">
+            <TextArea
+              name="notes"
+              register={register}
+              rows={3}
+              placeholder="Add any notes about this customer."
+            />
+          </Field>
         </Section>
 
-        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <div className="mt-6 flex items-center gap-3">
+        <div className="flex items-center gap-3">
           <button
             type="submit"
             disabled={saving}

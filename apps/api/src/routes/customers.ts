@@ -78,7 +78,7 @@ customersRouter.post("/profile", requireAdmin, async (req, res, next) => {
         productCategory: data.productCategory,
         companyInfo: data.companyInfo,
         dataPool: data.dataPool,
-        category: data.category ?? "POTENTIAL",
+        category: data.category ?? "CUSTOMER",
         customerStatus: data.customerStatus ?? "QUALIFYING",
         // Bridge into the legacy single-contact columns so the list/edit UI
         // keeps working for profile-created customers.
@@ -313,6 +313,7 @@ function toDto(c: any): CustomerDto {
     customerStatus: c.customerStatus,
     category: c.category,
     notes: c.notes ?? undefined,
+    catalogueLink: c.catalogueLink ?? undefined,
     // Profile (direct-create) fields
     logoFileId: c.logoFileId ?? undefined,
     contacts: c.contacts ?? undefined,

@@ -49,6 +49,7 @@ model Submission {
   score                   Float?
   catalogueData           Json?
   catalogueExtractedAt    DateTime?
+  catalogueLink           String?
   updatedAt               DateTime         @default(now()) @updatedAt
   files                   SubmissionFile[]
   matches                 ManufacturerMatch[]
@@ -187,6 +188,7 @@ model Customer {
   customerStatus          CustomerStatus   @default(QUALIFYING)
   category                CustomerCategory @default(POTENTIAL)
   notes                   String?
+  catalogueLink           String?
 
   files                   CustomerFile[]
   createdAt               DateTime         @default(now())

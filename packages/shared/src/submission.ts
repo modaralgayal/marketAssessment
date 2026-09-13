@@ -164,6 +164,9 @@ export const submissionSchema = z
     contactEmail: z.string().trim().min(1, "Email is required").email("Enter a valid email"),
     contactPhone: requiredText("Phone number"),
     anythingElse: requiredText("Additional information"),
+    // Optional pointer to a catalogue hosted elsewhere (provided instead of, or in
+    // addition to, an uploaded file). Server-side logic requires a file OR a link.
+    catalogueLink: optionalText,
   })
   // Conditional requirements: fields that are only shown in the UI under certain
   // conditions must only be required when they are actually visible.

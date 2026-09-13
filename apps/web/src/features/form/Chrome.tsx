@@ -24,48 +24,6 @@ export function CoverHeader({ mode = "assessment" }: { mode?: FormMode }) {
   );
 }
 
-export function PromiseRow({ mode = "assessment" }: { mode?: FormMode }) {
-  const items =
-    mode === "onboarding"
-      ? [
-          { n: 1, t: "You complete your profile", d: "Takes 10–15 minutes. No commitment required." },
-          { n: 2, t: "We set up your record", d: "Our team reviews the details and prepares your profile." },
-          { n: 3, t: "Your profile is ready", d: "Saved in our system and available to our team." },
-        ]
-      : [
-          { n: 1, t: "You fill this in", d: "Takes 10–15 minutes. No commitment required." },
-          { n: 2, t: "We assess your GCC potential", d: "We evaluate your product, market fit, and viability." },
-          { n: 3, t: "You receive a free evaluation", d: "Within 5 business days — scored, honest, actionable." },
-        ];
-  return (
-    <div className="flex flex-col gap-6 border-b border-brand-line bg-brand-bg-alt px-8 py-5 sm:flex-row">
-      {items.map((i) => (
-        <div key={i.n} className="flex flex-1 items-start gap-2.5">
-          <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-brand-teal text-xs font-bold text-white">
-            {i.n}
-          </div>
-          <div className="text-xs leading-snug text-brand-muted">
-            <strong className="mb-0.5 block text-[12.5px] text-brand-ink">{i.t}</strong>
-            {i.d}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function IntroBox({ mode = "assessment" }: { mode?: FormMode }) {
-  return (
-    <div className="border-l-4 border-brand-teal bg-[#0F7B7F]/5 px-8 py-6">
-      <p className="text-[13px] leading-relaxed text-brand-ink">
-        {mode === "onboarding"
-          ? "[Platform Name] is setting up your company profile so our team can support your GCC market entry. Please complete the sections below with your current company and product information — the more detail you provide, the better we can support you."
-          : "[Platform Name] runs market entry projects for European food and beverage companies entering Saudi Arabia and the UAE. Our scope covers the full commercial cycle — market assessment, regulatory preparation, partner search, distributor outreach, negotiation, and contract execution. We stay engaged after the first deal is signed, managing the commercial relationship and driving growth on the ground."}
-      </p>
-    </div>
-  );
-}
-
 export function SuccessScreen({ mode = "assessment" }: { mode?: FormMode }) {
   return (
     <div className="mx-auto my-16 max-w-[640px] rounded-lg border border-brand-line bg-white p-12 text-center shadow-sm">

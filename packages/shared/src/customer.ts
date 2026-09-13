@@ -121,6 +121,7 @@ export const customerSchema = z.object({
     .refine((v) => !v || !Number.isNaN(Date.parse(v)), "Enter a valid date"),
   customerStatus: z.enum(customerStatuses).optional(),
   notes: optionalText,
+  catalogueLink: optionalText,
 });
 
 export type CustomerInput = z.infer<typeof customerSchema>;
@@ -167,6 +168,7 @@ export interface CustomerDto extends Omit<CustomerInput, "onboardingDate"> {
   customerStatus: CustomerStatus;
   category: CustomerCategory;
   files: SubmissionFileDto[];
+  catalogueLink?: string | null;
   // Profile (direct-create) fields
   logoFileId?: string | null;
   contacts?: ContactPerson[] | null;

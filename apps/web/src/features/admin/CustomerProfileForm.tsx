@@ -67,6 +67,7 @@ export default function CustomerProfileForm() {
     try {
       const cleaned: CustomerProfileInput = {
         ...data,
+        category: "CUSTOMER",
         website: data.website?.trim() ? data.website.trim() : undefined,
         productCategory: data.productCategory?.trim() ? data.productCategory.trim() : undefined,
         companyInfo: data.companyInfo?.trim() ? data.companyInfo.trim() : undefined,

@@ -80,9 +80,6 @@ function toDto(s: any): SubmissionDto {
 submissionsRouter.post("/", submitLimiter, upload.array("files"), async (req, res, next) => {
   try {
     const files = (req.files as Express.Multer.File[] | undefined) ?? [];
-    if (files.length === 0) {
-      return res.status(400).json({ error: "At least one catalogue / price-list file is required." });
-    }
 
     // Invite-only: a valid, unused invite token is required to submit.
     const inviteToken = typeof req.body.invite === "string" ? req.body.invite : "";
@@ -108,8 +105,13 @@ submissionsRouter.post("/", submitLimiter, upload.array("files"), async (req, re
     // create a Submission. Both paths are public and gated only by the invite.
     if (invite.purpose === "ONBOARDING") {
       const data = customerSchema.parse(JSON.parse(rawPayload));
+      if (files.length === 0 && !data.catalogueLink) {
+        return res
+          .status(400)
+          .json({ error: "Attach a catalogue / price-list file or provide a link." });
+      }
       const customer = await prisma.customer.create({
-        data: { ...data, category: "POTENTIAL" },
+        data: { ...data, category: "POTENTIAL", catalogueLink: data.catalogueLink ?? null },
       });
 
       try {
@@ -140,12 +142,20 @@ submissionsRouter.post("/", submitLimiter, upload.array("files"), async (req, re
     }
 
     const data = submissionSchema.parse(JSON.parse(rawPayload));
+    if (files.length === 0 && !data.catalogueLink) {
+      return res
+        .status(400)
+        .json({ error: "Attach a catalogue / price-list file or provide a link." });
+    }
 
     // Create the submission row first so we have an id for the storage keys.
-    const submission = await prisma.submission.create({ data });
+    const submission = await prisma.submission.create({
+      data: { ...data, catalogueLink: data.catalogueLink ?? null },
+    });
 
     // Upload files to object storage, then persist their metadata. If any
-    // upload fails, clean up the orphaned submission.
+    // upload fails, clean up the orphaned submission. (Skipped when the submitter
+    // supplied a link instead of uploading files.)
     try {
       const fileRows = [];
       for (const file of files) {

@@ -45,17 +45,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function statusBadge(status: string) {
-  switch (status) {
-    case "QUALIFYING": return "bg-amber-100 text-amber-800";
-    case "ACTIVE": return "bg-green-100 text-green-800";
-    case "INACTIVE": return "bg-gray-100 text-brand-muted";
-    case "WON": return "bg-blue-100 text-blue-800";
-    case "LOST": return "bg-red-100 text-red-800";
-    default: return "bg-gray-100 text-brand-ink";
-  }
-}
-
 const CATEGORY_LABELS: Record<string, string> = {
   CUSTOMER: "Customers",
   POTENTIAL: "Potential Customers",
@@ -199,9 +188,6 @@ export default function CustomerProfile() {
                 Onboarded {new Date(data.onboardingDate).toLocaleDateString()}
               </p>
             </div>
-            <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${statusBadge(data.customerStatus)}`}>
-              {data.customerStatus}
-            </span>
             <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${categoryBadge(data.category)}`}>
               {CATEGORY_LABELS[data.category] ?? data.category}
             </span>
@@ -322,8 +308,7 @@ export default function CustomerProfile() {
             <Row label="Anything Else" value={text(data.anythingElse)} />
           </Section>
 
-          <Section title="Status & Notes">
-            <Row label="Customer Status" value={text(data.customerStatus)} />
+          <Section title="Notes & Details">
             <Row label="Category" value={CATEGORY_LABELS[data.category] ?? data.category} />
             <Row label="Onboarding Date" value={new Date(data.onboardingDate).toLocaleDateString()} />
             <Row label="Notes" value={text(data.notes)} />

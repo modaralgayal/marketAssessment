@@ -54,25 +54,10 @@ export default function CustomerList() {
       );
     });
 
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "QUALIFYING": return "bg-amber-100 text-amber-800";
-      case "ACTIVE": return "bg-green-100 text-green-800";
-      case "INACTIVE": return "bg-gray-100 text-brand-muted";
-      case "WON": return "bg-blue-100 text-blue-800";
-      case "LOST": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const categoryBadge = (category: string) => {
-    switch (category) {
-      case "CUSTOMER": return "bg-brand-teal/15 text-brand-teal";
-      case "POTENTIAL": return "bg-amber-100 text-amber-800";
-      case "OTHER": return "bg-gray-100 text-brand-muted";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
+  const productCategory = (c: {
+    productCategory?: string | null;
+    industryCategory?: string | null;
+  }) => c.productCategory || c.industryCategory || "—";
 
   return (
     <AdminLayout>
@@ -121,8 +106,7 @@ export default function CustomerList() {
               <tr>
                 <th className="px-4 py-3">Company</th>
                 <th className="px-4 py-3">Country</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Product Category</th>
                 <th className="px-4 py-3">Contact</th>
                 <th className="px-4 py-3">Onboarded</th>
                 <th className="px-4 py-3">Action</th>
@@ -141,15 +125,8 @@ export default function CustomerList() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-brand-muted">{c.country}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${statusBadge(c.customerStatus)}`}>
-                      {c.customerStatus}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${categoryBadge(c.category)}`}>
-                      {c.category}
-                    </span>
+                  <td className="px-4 py-3 text-brand-muted">
+                    {productCategory(c)}
                   </td>
                   <td className="px-4 py-3 text-brand-muted">
                     {c.contactFullName}
@@ -174,7 +151,7 @@ export default function CustomerList() {
               {items.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="px-4 py-8 text-center text-brand-muted"
                   >
                     {search ? "No customers match your search." : "No customers yet."}
