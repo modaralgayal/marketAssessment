@@ -249,7 +249,7 @@ export default function CustomerProfile() {
               {data.companyInfo && (
                 <Row label="Information about the company" value={text(data.companyInfo)} />
               )}
-              {data.dataPool && (
+              {data.dataPool != null && (
                 <Row label="Data Pool" value={<pre className="whitespace-pre-wrap text-xs">{JSON.stringify(data.dataPool, null, 2)}</pre>} />
               )}
             </Section>
