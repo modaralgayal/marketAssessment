@@ -87,32 +87,35 @@ export default function ProcessDiagram() {
         ))}
       </div>
 
-      {/* Right — visual depiction of the flow, framed as a product mock */}
+      {/* Right — compact journey timeline */}
       <div className="h-fit lg:sticky lg:top-24">
-        <div className="product-mock">
-          <div className="mock-topline">
-            <span className="mock-label">The journey at a glance</span>
-            <span className="mock-status">Live</span>
+        <div className="overflow-hidden rounded-xl border border-brand-line bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-brand-line px-5 py-3.5">
+            <span className="text-[11px] font-bold uppercase tracking-[1.2px] text-brand-teal-dark">
+              The journey at a glance
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-teal-dark">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-teal" />
+              Live
+            </span>
           </div>
-          <div className="mock-body flex flex-col" style={{ paddingTop: 22 }}>
+          <div className="flex flex-col px-5 py-5">
             {STEPS.map((step, i) => (
-              <div key={step.t}>
-                <div className="flex items-center gap-4">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-teal text-white">
+              <div key={step.t} className="flex items-start gap-4">
+                <div className="flex flex-col items-center self-stretch">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-teal text-white">
                     <StepIcon index={i} />
                   </div>
-                  <div>
-                    <div className="text-[14.5px] font-bold text-brand-ink">{step.t}</div>
-                    <div className="text-[10.5px] font-semibold uppercase tracking-wide text-brand-muted">
-                      {step.s}
-                    </div>
+                  {i < STEPS.length - 1 && (
+                    <span className="mt-2 w-px flex-1 bg-brand-line" />
+                  )}
+                </div>
+                <div className={i < STEPS.length - 1 ? "pb-6 pt-1.5" : "pt-1.5"}>
+                  <div className="text-[15px] font-bold leading-tight text-brand-ink">{step.t}</div>
+                  <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
+                    {step.s}
                   </div>
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div className="py-2 pl-[22px]">
-                    <DownArrow />
-                  </div>
-                )}
               </div>
             ))}
           </div>
