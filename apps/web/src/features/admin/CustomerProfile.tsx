@@ -27,6 +27,13 @@ const labels = (opts: Opt, values?: string[]) =>
 const yesNo = (v?: boolean | null) => (v === true ? "Yes" : v === false ? "No" : "—");
 const text = (v?: string | null) => (v && v.trim() ? v : "—");
 
+const initials = (name?: string | null) => {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "—";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="grid grid-cols-1 gap-1 border-b border-brand-line py-2.5 sm:grid-cols-[260px_1fr]">
@@ -181,65 +188,43 @@ export default function CustomerProfile() {
 
       {data && (
         <>
-          <div className="mb-6 flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-brand-ink">{data.companyName}</h1>
-              <p className="text-sm text-brand-muted">
+          {/* ── Profile header (social-style) ── */}
+          <section className="overflow-hidden rounded-xl border border-brand-line bg-white shadow-sm">
+            <div className="h-28 w-full bg-gradient-to-r from-brand-teal/25 via-brand-teal/10 to-brand-bg-alt sm:h-32" />
+            <div className="px-6 pb-6">
+              <div className="-mt-12 flex items-end gap-4 sm:-mt-14">
+                <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-brand-bg-alt text-xl font-bold text-brand-teal shadow-sm sm:h-28 sm:w-28">
+                  {data.logoFileId && logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt={`${data.companyName} logo`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    initials(data.companyName)
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 pb-1">
+                  <h1 className="truncate text-2xl font-bold text-brand-ink">{data.companyName}</h1>
+                  <p className="mt-0.5 truncate text-sm text-brand-muted">
+                    {[text(data.country), data.productCategory || data.industryCategory]
+                      .filter(Boolean)
+                      .join("  ·  ") || "—"}
+                  </p>
+                </div>
+                <span
+                  className={`mb-1 inline-block flex-shrink-0 rounded-full px-3 py-1 text-xs font-bold ${categoryBadge(
+                    data.category,
+                  )}`}
+                >
+                  {CATEGORY_LABELS[data.category] ?? data.category}
+                </span>
+              </div>
+              <p className="mt-3 text-xs text-brand-muted">
                 Onboarded {new Date(data.onboardingDate).toLocaleDateString()}
               </p>
             </div>
-            <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${categoryBadge(data.category)}`}>
-              {CATEGORY_LABELS[data.category] ?? data.category}
-            </span>
-          </div>
-
-          {(data.logoFileId || data.contacts?.length || data.productCategory || data.companyInfo || data.dataPool) && (
-            <Section title="Customer Profile">
-              {data.logoFileId && (
-                <Row
-                  label="Logo"
-                  value={
-                    logoUrl ? (
-                      <img
-                        src={logoUrl}
-                        alt={`${data.companyName} logo`}
-                        className="h-20 w-20 rounded border border-brand-line object-contain"
-                      />
-                    ) : (
-                      <span className="text-sm text-brand-muted">Loading…</span>
-                    )
-                  }
-                />
-              )}
-              {data.contacts && data.contacts.length > 0 && (
-                <Row
-                  label={`Contact${data.contacts.length > 1 ? "s" : ""}`}
-                  value={
-                    <ul className="space-y-2">
-                      {data.contacts.map((c, i) => (
-                        <li key={i} className="text-sm text-brand-ink">
-                          <span className="font-semibold">{c.name || "—"}</span>
-                          {c.position ? <span className="text-brand-muted"> · {c.position}</span> : null}
-                          <div className="text-xs text-brand-muted">
-                            {[c.email, c.phone].filter(Boolean).join(" · ") || "—"}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  }
-                />
-              )}
-              {data.productCategory && (
-                <Row label="Product Category" value={text(data.productCategory)} />
-              )}
-              {data.companyInfo && (
-                <Row label="Information about the company" value={text(data.companyInfo)} />
-              )}
-              {data.dataPool != null && (
-                <Row label="Data Pool" value={<pre className="whitespace-pre-wrap text-xs">{JSON.stringify(data.dataPool, null, 2)}</pre>} />
-              )}
-            </Section>
-          )}
+          </section>
 
           <Section title="1 · Company Profile">
             <Row label="Company Name" value={text(data.companyName)} />
@@ -300,12 +285,41 @@ export default function CustomerProfile() {
             <Row label="Branding & Promotional Approach" value={label(BRAND_APPROACH_OPTIONS, data.brandApproach)} />
           </Section>
 
-          <Section title="6 · Decision-Maker Contact">
-            <Row label="Full Name" value={text(data.contactFullName)} />
-            <Row label="Title / Position" value={text(data.contactTitle)} />
-            <Row label="Email" value={text(data.contactEmail)} />
-            <Row label="Phone" value={text(data.contactPhone)} />
-            <Row label="Anything Else" value={text(data.anythingElse)} />
+          {/* ── Contact people (avatar cards; falls back to legacy fields) ── */}
+          <Section title="Contact people">
+            {data.contacts && data.contacts.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {data.contacts.map((c, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 rounded-lg border border-brand-line bg-white p-3"
+                  >
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-brand-teal/15 text-base font-bold text-brand-teal">
+                      {initials(c.name)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-brand-ink">
+                        {c.name || "—"}
+                      </div>
+                      {c.position ? (
+                        <div className="truncate text-xs text-brand-muted">{c.position}</div>
+                      ) : null}
+                      <div className="truncate text-xs text-brand-muted">
+                        {[c.email, c.phone].filter(Boolean).join("  ·  ") || "—"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Row label="Full Name" value={text(data.contactFullName)} />
+                <Row label="Title / Position" value={text(data.contactTitle)} />
+                <Row label="Email" value={text(data.contactEmail)} />
+                <Row label="Phone" value={text(data.contactPhone)} />
+                <Row label="Anything Else" value={text(data.anythingElse)} />
+              </div>
+            )}
           </Section>
 
           <Section title="Notes & Details">

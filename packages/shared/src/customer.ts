@@ -168,7 +168,6 @@ export interface CustomerDto extends Omit<CustomerInput, "onboardingDate"> {
   customerStatus: CustomerStatus;
   category: CustomerCategory;
   files: SubmissionFileDto[];
-  catalogueLink?: string | null;
   // Profile (direct-create) fields
   logoFileId?: string | null;
   contacts?: ContactPerson[] | null;
