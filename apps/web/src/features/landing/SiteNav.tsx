@@ -1,16 +1,18 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "./ui";
+import { useExportLead } from "./StartExportingModal";
 
 const NAV_LINKS = [
   { label: "Platform", href: "/#platform" },
-  { label: "Programs", href: "/#programs" },
+  { label: "Solution", href: "/#programs" },
   { label: "How It Works", href: "/#how-it-works" },
   { label: "FAQ", href: "/#faq" },
 ];
 
 export default function SiteNav() {
   const { hash } = useLocation();
+  const { open } = useExportLead();
 
   // Scroll to the targeted section whenever the hash changes — including when we
   // arrive from another route (e.g. /assessment). Plain "#anchor" links only work
@@ -35,12 +37,13 @@ export default function SiteNav() {
           ))}
         </div>
         <div className="flex items-center gap-2.5">
-          <Link
-            to="/request-report"
-            className="hidden rounded-full border border-brand-line px-5 py-3 text-sm font-bold text-brand-ink hover:border-brand-teal hover:text-brand-teal sm:inline-flex"
+          <Button
+            variant="outline"
+            onClick={open}
+            className="hidden sm:inline-flex"
           >
-            Request a Report
-          </Link>
+            Start Exporting
+          </Button>
           <Button to="/contact" variant="primary">
             Talk to Sales
           </Button>

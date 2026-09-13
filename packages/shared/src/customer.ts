@@ -125,6 +125,41 @@ export const customerSchema = z.object({
 
 export type CustomerInput = z.infer<typeof customerSchema>;
 
+// ── Customer profile (created directly, not via submission conversion) ─────
+
+export interface ContactPerson {
+  name: string;
+  position?: string | null;
+  phone?: string | null;
+  email?: string | null;
+}
+
+const contactPersonSchema = z.object({
+  name: z.string().trim().min(1, "Contact name is required").max(500),
+  position: optionalText,
+  phone: optionalText,
+  email: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .refine((v) => !v || z.string().email().safeParse(v).success, "Enter a valid email"),
+});
+
+export const customerProfileSchema = z.object({
+  companyName: z.string().trim().min(1, "Company name is required").max(500),
+  country: z.string().trim().min(1, "Country is required").max(500),
+  website: optionalText,
+  contacts: z.array(contactPersonSchema).min(1, "Add at least one contact person"),
+  productCategory: optionalText,
+  companyInfo: optionalText,
+  dataPool: z.record(z.unknown()).optional(),
+  customerStatus: z.enum(customerStatuses).optional(),
+  category: z.enum(customerCategories).optional(),
+});
+
+export type CustomerProfileInput = z.infer<typeof customerProfileSchema>;
+
 export interface CustomerDto extends Omit<CustomerInput, "onboardingDate"> {
   id: string;
   submissionId: string;
@@ -132,6 +167,12 @@ export interface CustomerDto extends Omit<CustomerInput, "onboardingDate"> {
   customerStatus: CustomerStatus;
   category: CustomerCategory;
   files: SubmissionFileDto[];
+  // Profile (direct-create) fields
+  logoFileId?: string | null;
+  contacts?: ContactPerson[] | null;
+  productCategory?: string | null;
+  companyInfo?: string | null;
+  dataPool?: unknown;
   createdAt: string;
   updatedAt: string;
 }

@@ -19,6 +19,8 @@ type ButtonProps = {
   href?: string;
   variant?: "primary" | "outline";
   className?: string;
+  onClick?: () => void;
+  type?: "button" | "submit";
 };
 
 export function Button({
@@ -27,6 +29,8 @@ export function Button({
   href,
   variant = "primary",
   className = "",
+  onClick,
+  type = "button",
 }: ButtonProps) {
   const base =
     "inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-bold transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/40 focus-visible:ring-offset-2 active:scale-[0.98]";
@@ -35,9 +39,9 @@ export function Button({
       ? "bg-brand-teal text-white shadow-sm hover:bg-brand-teal-dark hover:shadow-md hover:-translate-y-px"
       : "border border-brand-line bg-white text-brand-ink hover:border-brand-teal hover:text-brand-teal hover:bg-brand-teal/[0.03]";
   const cls = `${base} ${styles} ${className}`;
-  if (to) return <Link to={to} className={cls}>{children}</Link>;
-  if (href) return <a href={href} className={cls}>{children}</a>;
-  return <button className={cls}>{children}</button>;
+  if (to) return <Link to={to} className={cls} onClick={onClick}>{children}</Link>;
+  if (href) return <a href={href} className={cls} onClick={onClick}>{children}</a>;
+  return <button type={type} className={cls} onClick={onClick}>{children}</button>;
 }
 
 export function Eyebrow({ children }: { children: ReactNode }) {

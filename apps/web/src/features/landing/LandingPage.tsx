@@ -1,15 +1,13 @@
 import SiteNav from "./SiteNav";
 import SiteFooter from "./SiteFooter";
 import Hero from "./sections/Hero";
-import LogoStrip from "./sections/LogoStrip";
-import PlatformFeatures from "./sections/PlatformFeatures";
+import OurVision from "./sections/OurVision";
 import Stats from "./sections/Stats";
+import PlatformFeatures from "./sections/PlatformFeatures";
 import WhyGrid from "./sections/WhyGrid";
-import Programs from "./sections/Programs";
 import HowItWorks from "./sections/HowItWorks";
-import Quotes from "./sections/Quotes";
+import Programs from "./sections/Programs";
 import Faq from "./sections/Faq";
-import CtaBand from "./sections/CtaBand";
 
 export default function LandingPage() {
   return (
@@ -17,15 +15,13 @@ export default function LandingPage() {
       <SiteNav />
       <main className="flex-1">
         <Hero />
-        <PlatformFeatures />
+        <OurVision />
         <Stats />
+        <PlatformFeatures />
         <WhyGrid />
         <HowItWorks />
         <Programs />
-        <Quotes />
-        <LogoStrip />
         <Faq />
-        <CtaBand />
       </main>
       <SiteFooter />
     </div>

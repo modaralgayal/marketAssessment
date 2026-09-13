@@ -175,6 +175,13 @@ model Customer {
   contactPhone            String?
   anythingElse            String?
 
+  // Profile (created directly, not via submission conversion)
+  logoFileId             String?        // references a CustomerFile id
+  contacts               Json?          // ContactPerson[]: { name, position?, phone?, email? }
+  productCategory        String?
+  companyInfo            String?        // "Information about the company"
+  dataPool               Json?          // placeholder section for future use
+
   // Additional fields
   onboardingDate          DateTime         @default(now())
   customerStatus          CustomerStatus   @default(QUALIFYING)

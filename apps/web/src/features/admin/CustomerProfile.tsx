@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -102,6 +102,21 @@ export default function CustomerProfile() {
     enabled: !!id,
   });
 
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (data?.logoFileId) {
+      fetchCustomerFileUrl(data.logoFileId)
+        .then((r) => active && setLogoUrl(r.url))
+        .catch(() => active && setLogoUrl(null));
+    } else {
+      setLogoUrl(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [data?.logoFileId]);
+
   const handleDelete = async () => {
     if (!id || !data) return;
     if (!confirm(`Delete "${data.companyName}"? This cannot be undone.`)) return;
@@ -191,6 +206,54 @@ export default function CustomerProfile() {
               {CATEGORY_LABELS[data.category] ?? data.category}
             </span>
           </div>
+
+          {(data.logoFileId || data.contacts?.length || data.productCategory || data.companyInfo || data.dataPool) && (
+            <Section title="Customer Profile">
+              {data.logoFileId && (
+                <Row
+                  label="Logo"
+                  value={
+                    logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt={`${data.companyName} logo`}
+                        className="h-20 w-20 rounded border border-brand-line object-contain"
+                      />
+                    ) : (
+                      <span className="text-sm text-brand-muted">Loading…</span>
+                    )
+                  }
+                />
+              )}
+              {data.contacts && data.contacts.length > 0 && (
+                <Row
+                  label={`Contact${data.contacts.length > 1 ? "s" : ""}`}
+                  value={
+                    <ul className="space-y-2">
+                      {data.contacts.map((c, i) => (
+                        <li key={i} className="text-sm text-brand-ink">
+                          <span className="font-semibold">{c.name || "—"}</span>
+                          {c.position ? <span className="text-brand-muted"> · {c.position}</span> : null}
+                          <div className="text-xs text-brand-muted">
+                            {[c.email, c.phone].filter(Boolean).join(" · ") || "—"}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  }
+                />
+              )}
+              {data.productCategory && (
+                <Row label="Product Category" value={text(data.productCategory)} />
+              )}
+              {data.companyInfo && (
+                <Row label="Information about the company" value={text(data.companyInfo)} />
+              )}
+              {data.dataPool && (
+                <Row label="Data Pool" value={<pre className="whitespace-pre-wrap text-xs">{JSON.stringify(data.dataPool, null, 2)}</pre>} />
+              )}
+            </Section>
+          )}
 
           <Section title="1 · Company Profile">
             <Row label="Company Name" value={text(data.companyName)} />

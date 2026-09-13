@@ -76,15 +76,23 @@ export default function CustomerList() {
 
   return (
     <AdminLayout>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-brand-ink">Manufacturers / Brands</h1>
 
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search company, email, country…"
-          className="w-64 rounded border border-brand-line bg-white px-3 py-2 text-sm outline-none focus:border-brand-teal"
-        />
+        <div className="flex items-center gap-3">
+          <Link
+            to="/admin/customers/new-profile"
+            className="rounded bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:bg-brand-teal-dark"
+          >
+            + New customer profile
+          </Link>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search company, email, country…"
+            className="w-64 rounded border border-brand-line bg-white px-3 py-2 text-sm outline-none focus:border-brand-teal"
+          />
+        </div>
       </div>
 
       <div className="mb-5 flex flex-wrap gap-2">

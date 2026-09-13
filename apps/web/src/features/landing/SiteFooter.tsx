@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 const FOOTER_COLS = [
   { h: "Platform", links: ["Verified Matching", "Deal Execution", "Account Management"] },
-  { h: "Programs", links: ["Direct Supplier", "Trade Body Cohorts"] },
+  { h: "Solution", links: ["Direct Supplier", "Trade Body Cohorts"] },
   { h: "Company", links: ["About", { label: "Contact", to: "/contact" }] },
 ];
 

@@ -13,98 +13,110 @@ import DistributorForm from "./features/admin/DistributorForm";
 import CustomerList from "./features/admin/CustomerList";
 import CustomerForm from "./features/admin/CustomerForm";
 import CustomerProfile from "./features/admin/CustomerProfile";
+import CustomerProfileForm from "./features/admin/CustomerProfileForm";
 import ProtectedRoute from "./features/admin/ProtectedRoute";
+import { ExportLeadProvider } from "./features/landing/StartExportingModal";
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/assessment" element={<FormPage />} />
-      <Route path="/privacy" element={<PrivacyPolicy />} />
-      <Route path="/contact" element={<ContactPage />} />
-      <Route path="/request-report" element={<RequestReportPage />} />
-      <Route path="/admin/login" element={<AdminLogin />} />
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute>
-            <AdminList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/submissions/:id"
-        element={
-          <ProtectedRoute>
-            <AdminDetail />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/distributors"
-        element={
-          <ProtectedRoute>
-            <DistributorList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/distributors/new"
-        element={
-          <ProtectedRoute>
-            <DistributorForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/distributors/:id"
-        element={
-          <ProtectedRoute>
-            <DistributorProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/distributors/:id/edit"
-        element={
-          <ProtectedRoute>
-            <DistributorForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/customers"
-        element={
-          <ProtectedRoute>
-            <CustomerList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/customers/new"
-        element={
-          <ProtectedRoute>
-            <CustomerForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/customers/:id"
-        element={
-          <ProtectedRoute>
-            <CustomerProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/customers/:id/edit"
-        element={
-          <ProtectedRoute>
-            <CustomerForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <ExportLeadProvider>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/assessment" element={<FormPage />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/request-report" element={<RequestReportPage />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/submissions/:id"
+          element={
+            <ProtectedRoute>
+              <AdminDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/distributors"
+          element={
+            <ProtectedRoute>
+              <DistributorList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/distributors/new"
+          element={
+            <ProtectedRoute>
+              <DistributorForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/distributors/:id"
+          element={
+            <ProtectedRoute>
+              <DistributorProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/distributors/:id/edit"
+          element={
+            <ProtectedRoute>
+              <DistributorForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/customers"
+          element={
+            <ProtectedRoute>
+              <CustomerList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/customers/new"
+          element={
+            <ProtectedRoute>
+              <CustomerForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/customers/new-profile"
+          element={
+            <ProtectedRoute>
+              <CustomerProfileForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/customers/:id"
+          element={
+            <ProtectedRoute>
+              <CustomerProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/customers/:id/edit"
+          element={
+            <ProtectedRoute>
+              <CustomerForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ExportLeadProvider>
   );
 }

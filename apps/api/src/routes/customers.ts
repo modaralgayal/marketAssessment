@@ -1,10 +1,26 @@
 import { Router } from "express";
+import multer from "multer";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { z } from "zod";
-import { customerSchema, type CustomerDto } from "@mea/shared";
+import { customerSchema, customerProfileSchema, type CustomerDto } from "@mea/shared";
 import { prisma } from "../prisma.js";
+import { storage } from "../storage/index.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 
 export const customersRouter = Router();
+
+// Logo upload: images only, max 5 MB, held in memory before streaming to R2.
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"].includes(
+      file.mimetype,
+    );
+    cb(ok ? null : new Error("Only image files are allowed for the logo"), ok);
+  },
+});
 
 /** Admin: list all customers. */
 customersRouter.get("/", requireAdmin, async (_req, res, next) => {
@@ -45,6 +61,76 @@ customersRouter.post("/", requireAdmin, async (req, res, next) => {
     next(err);
   }
 });
+
+// ── Direct profile creation (not via submission conversion) ───────────────
+
+/** Admin: create a customer profile directly from the dashboard. */
+customersRouter.post("/profile", requireAdmin, async (req, res, next) => {
+  try {
+    const data = customerProfileSchema.parse(req.body);
+    const primary = data.contacts[0];
+    const customer = await prisma.customer.create({
+      data: {
+        companyName: data.companyName,
+        country: data.country,
+        website: data.website,
+        contacts: data.contacts,
+        productCategory: data.productCategory,
+        companyInfo: data.companyInfo,
+        dataPool: data.dataPool,
+        category: data.category ?? "POTENTIAL",
+        customerStatus: data.customerStatus ?? "QUALIFYING",
+        // Bridge into the legacy single-contact columns so the list/edit UI
+        // keeps working for profile-created customers.
+        contactFullName: primary.name,
+        contactTitle: primary.position ?? "",
+        contactEmail: primary.email ?? "",
+        contactPhone: primary.phone,
+        industryCategory: data.productCategory ?? "",
+      },
+    });
+    return res.status(201).json(toDto(customer));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Admin: upload a customer logo to R2 (creates a CustomerFile, sets logoFileId). */
+customersRouter.post(
+  "/:id/logo",
+  requireAdmin,
+  logoUpload.single("logo"),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No logo file provided" });
+
+      const customer = await prisma.customer.findUnique({ where: { id } });
+      if (!customer) return res.status(404).json({ error: "Customer not found" });
+
+      const ext = path.extname(file.originalname).toLowerCase() || ".png";
+      const key = `customers/${id}/logo-${randomUUID()}${ext}`;
+      await storage.put(key, file.buffer, file.mimetype);
+      const customerFile = await prisma.customerFile.create({
+        data: {
+          customerId: id,
+          storageKey: key,
+          originalName: file.originalname,
+          contentType: file.mimetype,
+          sizeBytes: file.size,
+        },
+      });
+      const updated = await prisma.customer.update({
+        where: { id },
+        data: { logoFileId: customerFile.id },
+      });
+      return res.json(toDto(updated));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 /** Admin: update a customer. */
 customersRouter.put("/:id", requireAdmin, async (req, res, next) => {
@@ -227,6 +313,12 @@ function toDto(c: any): CustomerDto {
     customerStatus: c.customerStatus,
     category: c.category,
     notes: c.notes ?? undefined,
+    // Profile (direct-create) fields
+    logoFileId: c.logoFileId ?? undefined,
+    contacts: c.contacts ?? undefined,
+    productCategory: c.productCategory ?? undefined,
+    companyInfo: c.companyInfo ?? undefined,
+    dataPool: c.dataPool ?? undefined,
     files: (c.files ?? []).map((f: any) => ({
       id: f.id,
       originalName: f.originalName,

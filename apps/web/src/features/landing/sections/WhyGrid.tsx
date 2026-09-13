@@ -7,23 +7,19 @@ const CARDS = [
   },
   {
     h: "In-Country Experts",
-    p: "On-the-ground specialists embedded in the target market, giving direct access to local regulatory know-how, cultural fluency, and distributor relationships.",
+    p: "On-the-ground specialists embedded in the target market, giving direct access to local regulatory know-how, culture, and distributor relationships.",
   },
   {
-    h: "AI Powered",
-    p: "Combines real-world trade intelligence gathered by our in-country experts with AI-driven analysis, turning verified market insight into accurate, data-backed distributor assessments and matches.",
+    h: "Domain expertise",
+    p: "Deep understanding of the F&B industry, pricing structures, deal structures, and product-market fit",
   },
   {
-    h: "Category specialists",
-    p: "Deep focus on food, beverage, and cosmetics — not a generalist trade directory.",
-  },
-  {
-    h: "Dedicated account lead",
-    p: "One point of contact from first call through ongoing account management.",
+    h: "AI-Powered",
+    p: "Our matching reasoning is supported by structured native data that enhances matching accuracy.",
   },
   {
     h: "Fast activation",
-    p: "A qualified shortlist within weeks of kickoff, not months.",
+    p: "A qualified shortlist of potential partners within weeks of kickoff, not months.",
   },
 ];
 
@@ -33,7 +29,7 @@ export default function WhyGrid() {
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
           eyebrow="Why Tradelomacy"
-          title="Why exporters choose us over a distributor list"
+          title="Intelligence, in-market relationships, deep understanding of market dynamics, not a contact database."
         />
         <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
           {CARDS.map((c) => (

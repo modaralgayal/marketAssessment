@@ -1,5 +1,5 @@
 import { auth } from "./firebase";
-import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput, DataTierTemplate, CatalogueExtractedData, CustomerDto, CustomerInput } from "@mea/shared";
+import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput, DataTierTemplate, CatalogueExtractedData, CustomerDto, CustomerInput, CustomerProfileInput } from "@mea/shared";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -70,6 +70,41 @@ export async function requestReport(payload: {
     throw new Error(body.error ?? "Failed to send your request");
   }
   return res.json();
+}
+
+export type TargetMarket = "SAUDI_ARABIA" | "UAE" | "BOTH";
+
+/** Public: submit the "Start Exporting" opportunity-assessment intake form.
+ *  Reuses the existing report-request endpoint — the structured fields are
+ *  composed into the subject/message the team already receives by email. */
+export async function submitExportLead(payload: {
+  companyName: string;
+  country: string;
+  fullName: string;
+  workEmail: string;
+  website?: string;
+  product: string;
+  targetMarket: TargetMarket;
+}): Promise<{ id: string; emailSent: boolean }> {
+  const marketLabel =
+    payload.targetMarket === "SAUDI_ARABIA"
+      ? "Saudi Arabia"
+      : payload.targetMarket === "UAE"
+        ? "UAE"
+        : "Both markets";
+  const subject = `Export opportunity: ${payload.companyName} (${payload.country})`;
+  const message = [
+    `Company: ${payload.companyName}`,
+    `Country: ${payload.country}`,
+    `Contact: ${payload.fullName}`,
+    `Email: ${payload.workEmail}`,
+    payload.website ? `Website: ${payload.website}` : null,
+    `Product to export: ${payload.product}`,
+    `Target export market: ${marketLabel}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return requestReport({ subject, message, email: payload.workEmail });
 }
 
 /** Admin: list invites (with their public links). */
@@ -417,6 +452,36 @@ export async function convertSubmissionToCustomer(submissionId: string): Promise
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to convert submission to customer");
+  }
+  return res.json();
+}
+
+/** Admin: create a customer profile directly from the dashboard. */
+export async function createCustomerProfile(data: CustomerProfileInput): Promise<CustomerDto> {
+  const res = await fetch(`${BASE}/api/customers/profile`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to create customer profile");
+  }
+  return res.json();
+}
+
+/** Admin: upload a customer's logo. */
+export async function uploadCustomerLogo(id: string, file: File): Promise<CustomerDto> {
+  const form = new FormData();
+  form.append("logo", file);
+  const res = await fetch(`${BASE}/api/customers/${id}/logo`, {
+    method: "POST",
+    headers: await authHeader(),
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to upload logo");
   }
   return res.json();
 }

@@ -1,7 +1,7 @@
 const STEPS = [
-  { t: "Assess", s: "CAF score", d: "We assess product, category, and readiness against live GCC demand." },
-  { t: "Match", s: "Fit score", d: "We surface verified matches weighted toward confirmed fit, not volume." },
-  { t: "Execute", s: "Signed contract", d: "We run terms, exclusivity, and pricing conversations through to signature." },
+  { t: "Assess", s: "CAF score", d: "We assess product, category, and readiness for your brand in the target market." },
+  { t: "Match", s: "Verified match", d: "We surface verified matches weighted toward confirmed fit, not volume." },
+  { t: "Execute", s: "Deal execution", d: "With your team, we run terms, exclusivity, and pricing conversations through to signature." },
   { t: "Manage", s: "Account health", d: "We stay engaged post-signature so early friction doesn't unwind the deal." },
 ];
 
