@@ -741,6 +741,43 @@ body {
   background-color: transparent;
 }
 
+/* Solid teal bands opt out of the transparent-section rule above. This
+   selector is more specific, so the brand color actually renders. */
+.landing-bg main > section.band-teal {
+  position: relative;
+  overflow: hidden;
+  background-color: rgb(var(--brand-teal));
+}
+
+/* Keep section content above the grid overlay. */
+.band-teal > div {
+  position: relative;
+  z-index: 1;
+}
+
+/* Carry the drifting blueprint grid onto the solid bands so the motif is
+   continuous. White lines at low opacity read as a subtle grid on teal
+   (tuned down from the lighter backdrop, where they'd be invisible). */
+.band-teal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, .16) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, .16) 1px, transparent 1px);
+  background-size: 80px 80px;
+  -webkit-mask-image: radial-gradient(120% 80% at 50% 50%, #000 35%, transparent 85%);
+  mask-image: radial-gradient(120% 80% at 50% 50%, #000 35%, transparent 85%);
+  opacity: .5;
+  animation: gridDrift 64s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .band-teal::after { animation: none; }
+}
+
 @keyframes gridDrift {
   from { background-position: 0 0, 0 0; }
   to   { background-position: 80px 80px, 80px 80px; }

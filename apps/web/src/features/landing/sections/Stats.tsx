@@ -6,7 +6,7 @@ const STATS = [
 
 export default function Stats() {
   return (
-    <section className="bg-brand-bg-alt px-6 sm:px-8 py-16 sm:py-20">
+    <section className="bg-white px-6 sm:px-8 py-16 sm:py-20">
       <div className="mx-auto max-w-[1160px]">
         <p className="mb-8 text-center text-xs font-extrabold uppercase tracking-[1.5px] text-brand-teal">
           Trusted by European F&B brands

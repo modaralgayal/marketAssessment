@@ -19,7 +19,7 @@ const PROGRAMS = [
 export default function Programs() {
   const { open } = useExportLead();
   return (
-    <section id="programs" className="scroll-mt-24 bg-brand-bg-alt px-6 sm:px-8 py-20 sm:py-24">
+    <section id="programs" className="scroll-mt-24 bg-white px-6 sm:px-8 py-20 sm:py-24">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
           eyebrow="Solution"

@@ -44,9 +44,9 @@ export function Button({
   return <button type={type} className={cls} onClick={onClick}>{children}</button>;
 }
 
-export function Eyebrow({ children }: { children: ReactNode }) {
+export function Eyebrow({ children, light = false }: { children: ReactNode; light?: boolean }) {
   return (
-    <div className="mb-3 text-xs font-extrabold uppercase tracking-[1.5px] text-brand-teal">
+    <div className={`mb-3 text-xs font-extrabold uppercase tracking-[1.5px] ${light ? "text-white" : "text-brand-teal"}`}>
       {children}
     </div>
   );
@@ -56,16 +56,18 @@ export function SectionHead({
   eyebrow,
   title,
   sub,
+  light = false,
 }: {
   eyebrow?: string;
   title: string;
   sub?: string;
+  light?: boolean;
 }) {
   return (
     <div className="mb-12 max-w-[720px]">
-      {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-      <h2 className="text-[34px] font-bold leading-[1.1] text-brand-ink md:text-[40px]">{title}</h2>
-      {sub && <p className="mt-3 text-base text-brand-muted">{sub}</p>}
+      {eyebrow && <Eyebrow light={light}>{eyebrow}</Eyebrow>}
+      <h2 className={`text-[34px] font-bold leading-[1.1] md:text-[40px] ${light ? "text-white" : "text-brand-ink"}`}>{title}</h2>
+      {sub && <p className={`mt-3 text-base ${light ? "text-white/80" : "text-brand-muted"}`}>{sub}</p>}
     </div>
   );
 }

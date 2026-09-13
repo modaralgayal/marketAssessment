@@ -20,9 +20,10 @@ const STEPS = [
 
 export default function PlatformFeatures() {
   return (
-    <section className="bg-white px-6 sm:px-8 py-20 sm:py-24">
+    <section className="band-teal bg-brand-teal px-6 sm:px-8 py-20 sm:py-24">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
+          light
           eyebrow="How does Tradelomacy work?"
           title="A verified path from assessment to market"
         />

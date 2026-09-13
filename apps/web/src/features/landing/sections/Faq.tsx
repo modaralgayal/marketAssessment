@@ -29,14 +29,14 @@ const FAQS = [
 
 export default function Faq() {
   return (
-    <section id="faq" className="scroll-mt-24 bg-white px-6 sm:px-8 py-20 sm:py-24">
+    <section id="faq" className="scroll-mt-24 band-teal bg-brand-teal px-6 sm:px-8 py-20 sm:py-24">
       <div className="mx-auto max-w-[1160px]">
-        <SectionHead eyebrow="FAQ" title="Frequently asked questions" />
+        <SectionHead light eyebrow="FAQ" title="Frequently asked questions" />
         <div>
           {FAQS.map((f) => (
-            <div key={f.q} className="border-b border-brand-line py-5">
-              <h4 className="text-[15.5px] font-bold text-brand-ink">{f.q}</h4>
-              <p className="mt-1.5 text-[14.5px] text-brand-muted">{f.a}</p>
+            <div key={f.q} className="border-b border-white/20 py-5">
+              <h4 className="text-[15.5px] font-bold text-white">{f.q}</h4>
+              <p className="mt-1.5 text-[14.5px] text-white/80">{f.a}</p>
             </div>
           ))}
         </div>

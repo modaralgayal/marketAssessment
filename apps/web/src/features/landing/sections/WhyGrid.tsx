@@ -80,7 +80,7 @@ const CARDS: { icon: IconName; h: string; p: string }[] = [
 
 export default function WhyGrid() {
   return (
-    <section className="bg-brand-bg-alt px-6 sm:px-8 py-20 sm:py-24">
+    <section className="bg-white px-6 sm:px-8 py-20 sm:py-24">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
           eyebrow="Why Tradelomacy"
