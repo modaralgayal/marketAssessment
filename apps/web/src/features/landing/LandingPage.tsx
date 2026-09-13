@@ -8,6 +8,7 @@ import WhyGrid from "./sections/WhyGrid";
 import HowItWorks from "./sections/HowItWorks";
 import Programs from "./sections/Programs";
 import Faq from "./sections/Faq";
+import CtaBand from "./sections/CtaBand";
 
 export default function LandingPage() {
   return (
@@ -22,6 +23,7 @@ export default function LandingPage() {
         <HowItWorks />
         <Programs />
         <Faq />
+        <CtaBand />
       </main>
       <SiteFooter />
     </div>

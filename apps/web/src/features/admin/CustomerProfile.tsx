@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -18,6 +19,15 @@ import {
 } from "@mea/shared";
 import { fetchCustomer, deleteCustomer, fetchCustomerFileUrl, setCustomerCategory } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 type Opt = ReadonlyArray<{ value: string; label: string }>;
 const label = (opts: Opt, value?: string | null) =>
@@ -34,7 +44,7 @@ const initials = (name?: string | null) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="grid grid-cols-1 gap-1 border-b border-brand-line py-2.5 sm:grid-cols-[260px_1fr]">
       <div className="text-xs font-semibold uppercase tracking-wide text-brand-muted">{label}</div>
@@ -43,12 +53,14 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mb-6 rounded-lg border border-brand-line bg-white p-6">
-      <h2 className="mb-3 border-b-2 border-brand-teal pb-2 text-base font-bold text-brand-ink">{title}</h2>
-      {children}
-    </section>
+    <Card>
+      <CardHeader className="border-b border-brand-line pb-3">
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-2">{children}</CardContent>
+    </Card>
   );
 }
 
@@ -58,14 +70,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
-function categoryBadge(category: string) {
-  switch (category) {
-    case "CUSTOMER": return "bg-brand-teal/15 text-brand-teal";
-    case "POTENTIAL": return "bg-amber-100 text-amber-800";
-    case "OTHER": return "bg-gray-100 text-brand-muted";
-    default: return "bg-gray-100 text-brand-ink";
-  }
-}
+const categoryVariant: Record<string, "default" | "amber" | "muted"> = {
+  CUSTOMER: "default",
+  POTENTIAL: "amber",
+  OTHER: "muted",
+};
 
 export default function CustomerProfile() {
   const { id } = useParams<{ id: string }>();
@@ -131,24 +140,19 @@ export default function CustomerProfile() {
   return (
     <AdminLayout>
       <div className="mb-4 flex items-center justify-between">
-        {/* Back link */}
         <Link to="/admin/customers" className="text-sm text-brand-teal hover:underline">
           ← Back to customers
         </Link>
 
-        {/* Three-dot dropdown for actions (top-right) */}
         {data && (
           <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="rounded border border-brand-line bg-white px-3 py-2 text-sm text-brand-muted hover:bg-brand-bg-alt"
-            >
+            <Button variant="outline" size="sm" onClick={() => setShowMenu(!showMenu)}>
               ⋮
-            </button>
+            </Button>
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-lg border border-brand-line bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-brand-line bg-white py-1 shadow-lg">
                   <Link
                     to={`/admin/customers/${id}/edit`}
                     className="block px-4 py-2 text-sm text-brand-ink hover:bg-brand-bg-alt"
@@ -170,7 +174,10 @@ export default function CustomerProfile() {
                     </button>
                   ))}
                   <button
-                    onClick={() => { setShowMenu(false); handleDelete(); }}
+                    onClick={() => {
+                      setShowMenu(false);
+                      handleDelete();
+                    }}
                     disabled={deleting}
                     className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
@@ -189,21 +196,17 @@ export default function CustomerProfile() {
       {data && (
         <>
           {/* ── Profile header (social-style) ── */}
-          <section className="overflow-hidden rounded-xl border border-brand-line bg-white shadow-sm">
+          <Card className="overflow-hidden">
             <div className="h-28 w-full bg-gradient-to-r from-brand-teal/25 via-brand-teal/10 to-brand-bg-alt sm:h-32" />
             <div className="px-6 pb-6">
               <div className="-mt-12 flex items-end gap-4 sm:-mt-14">
-                <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-brand-bg-alt text-xl font-bold text-brand-teal shadow-sm sm:h-28 sm:w-28">
+                <Avatar className="h-24 w-24 border-4 border-white shadow-sm sm:h-28 sm:w-28">
                   {data.logoFileId && logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt={`${data.companyName} logo`}
-                      className="h-full w-full object-cover"
-                    />
+                    <AvatarImage src={logoUrl} alt={`${data.companyName} logo`} />
                   ) : (
-                    initials(data.companyName)
+                    <AvatarFallback className="text-xl">{initials(data.companyName)}</AvatarFallback>
                   )}
-                </div>
+                </Avatar>
                 <div className="min-w-0 flex-1 pb-1">
                   <h1 className="truncate text-2xl font-bold text-brand-ink">{data.companyName}</h1>
                   <p className="mt-0.5 truncate text-sm text-brand-muted">
@@ -212,153 +215,155 @@ export default function CustomerProfile() {
                       .join("  ·  ") || "—"}
                   </p>
                 </div>
-                <span
-                  className={`mb-1 inline-block flex-shrink-0 rounded-full px-3 py-1 text-xs font-bold ${categoryBadge(
-                    data.category,
-                  )}`}
+                <Badge
+                  variant={categoryVariant[data.category] ?? "default"}
+                  className="mb-1 self-start"
                 >
                   {CATEGORY_LABELS[data.category] ?? data.category}
-                </span>
+                </Badge>
               </div>
               <p className="mt-3 text-xs text-brand-muted">
                 Onboarded {new Date(data.onboardingDate).toLocaleDateString()}
               </p>
             </div>
-          </section>
+          </Card>
 
-          <Section title="1 · Company Profile">
-            <Row label="Company Name" value={text(data.companyName)} />
-            <Row label="Country" value={text(data.country)} />
-            <Row label="Website" value={text(data.website)} />
-            <Row label="Industry / Category" value={text(data.industryCategory)} />
-            <Row label="Annual Revenue" value={label(REVENUE_OPTIONS, data.annualRevenue)} />
-            {data.annualRevenue === "CUSTOM" && (
-              <Row label="— Revenue (specified)" value={text(data.annualRevenueCustom)} />
-            )}
-            <Row label="Years in Business" value={text(data.yearsInBusiness)} />
-            <Row label="Current Export Markets" value={text(data.currentExportMarkets)} />
-          </Section>
+          <div className="mt-6 space-y-6">
+            <Panel title="1 · Company Profile">
+              <Row label="Company Name" value={text(data.companyName)} />
+              <Row label="Country" value={text(data.country)} />
+              <Row label="Website" value={text(data.website)} />
+              <Row label="Industry / Category" value={text(data.industryCategory)} />
+              <Row label="Annual Revenue" value={label(REVENUE_OPTIONS, data.annualRevenue)} />
+              {data.annualRevenue === "CUSTOM" && (
+                <Row label="— Revenue (specified)" value={text(data.annualRevenueCustom)} />
+              )}
+              <Row label="Years in Business" value={text(data.yearsInBusiness)} />
+              <Row label="Current Export Markets" value={text(data.currentExportMarkets)} />
+            </Panel>
 
-          <Section title="2 · Products and Operations">
-            <Row label="Frozen Storage Required" value={label(FROZEN_STORAGE_OPTIONS, data.frozenStorage)} />
-            <Row label="Shelf Life" value={label(SHELF_LIFE_OPTIONS, data.shelfLife)} />
-            <Row label="Halal Certification" value={label(YES_NO_UNSURE_OPTIONS, data.halalCert)} />
-            <Row label="SFDA / ADAFSA Status" value={label(SFDA_OPTIONS, data.sfdaStatus)} />
-            <Row label="Other Certifications" value={labels(OTHER_CERT_OPTIONS, data.otherCerts)} />
-            {data.otherCerts?.includes("CUSTOM") && (
-              <Row label="— Other Certifications (specified)" value={text(data.otherCertsCustom)} />
-            )}
-            <Row label="Label Languages" value={text(data.labelLanguages)} />
-            <Row label="Product Adaptability" value={label(ADAPTABILITY_OPTIONS, data.productAdaptability)} />
-            <Row label="Branding & Promotional Approach" value={label(BRAND_APPROACH_OPTIONS, data.brandApproach)} />
-            <Row label="Lead Times" value={text(data.leadTimes)} />
-          </Section>
+            <Panel title="2 · Products and Operations">
+              <Row label="Frozen Storage Required" value={label(FROZEN_STORAGE_OPTIONS, data.frozenStorage)} />
+              <Row label="Shelf Life" value={label(SHELF_LIFE_OPTIONS, data.shelfLife)} />
+              <Row label="Halal Certification" value={label(YES_NO_UNSURE_OPTIONS, data.halalCert)} />
+              <Row label="SFDA / ADAFSA Status" value={label(SFDA_OPTIONS, data.sfdaStatus)} />
+              <Row label="Other Certifications" value={labels(OTHER_CERT_OPTIONS, data.otherCerts)} />
+              {data.otherCerts?.includes("CUSTOM") && (
+                <Row label="— Other Certifications (specified)" value={text(data.otherCertsCustom)} />
+              )}
+              <Row label="Label Languages" value={text(data.labelLanguages)} />
+              <Row label="Product Adaptability" value={label(ADAPTABILITY_OPTIONS, data.productAdaptability)} />
+              <Row label="Branding & Promotional Approach" value={label(BRAND_APPROACH_OPTIONS, data.brandApproach)} />
+              <Row label="Lead Times" value={text(data.leadTimes)} />
+            </Panel>
 
-          <Section title="3 · Target Market">
-            <Row label="Currently Active in GCC" value={yesNo(data.gccCurrentlyActive)} />
-            {data.gccCurrentlyActive === true && (
-              <>
-                <Row label="Current GCC Markets" value={labels(GCC_MARKET_OPTIONS, data.currentGccMarkets)} />
-                <Row label="Current GCC Situation" value={text(data.gccSituation)} />
-              </>
-            )}
-            {data.gccCurrentlyActive === false && (
-              <>
-                <Row label="Target Market Potential" value={label(TARGET_POTENTIAL_OPTIONS, data.targetMarketPotential)} />
-                {data.targetMarketPotential === "OTHER" && (
-                  <Row label="— Other markets (specified)" value={text(data.targetMarketPotentialOther)} />
-                )}
-              </>
-            )}
-            <Row label="Sales Channels" value={labels(SALES_CHANNEL_OPTIONS, data.salesChannels)} />
-            <Row label="Channel Strategy" value={text(data.channelStrategy)} />
-          </Section>
+            <Panel title="3 · Target Market">
+              <Row label="Currently Active in GCC" value={yesNo(data.gccCurrentlyActive)} />
+              {data.gccCurrentlyActive === true && (
+                <>
+                  <Row label="Current GCC Markets" value={labels(GCC_MARKET_OPTIONS, data.currentGccMarkets)} />
+                  <Row label="Current GCC Situation" value={text(data.gccSituation)} />
+                </>
+              )}
+              {data.gccCurrentlyActive === false && (
+                <>
+                  <Row label="Target Market Potential" value={label(TARGET_POTENTIAL_OPTIONS, data.targetMarketPotential)} />
+                  {data.targetMarketPotential === "OTHER" && (
+                    <Row label="— Other markets (specified)" value={text(data.targetMarketPotentialOther)} />
+                  )}
+                </>
+              )}
+              <Row label="Sales Channels" value={labels(SALES_CHANNEL_OPTIONS, data.salesChannels)} />
+              <Row label="Channel Strategy" value={text(data.channelStrategy)} />
+            </Panel>
 
-          <Section title="4 · Operational Readiness">
-            <Row label="Minimum Order Quantity" value={text(data.moq)} />
-            <Row label="Dedicated Export Contact" value={yesNo(data.exportContact)} />
-            <Row label="Production Capacity" value={label(CAPACITY_OPTIONS, data.productionCapacity)} />
-          </Section>
+            <Panel title="4 · Operational Readiness">
+              <Row label="Minimum Order Quantity" value={text(data.moq)} />
+              <Row label="Dedicated Export Contact" value={yesNo(data.exportContact)} />
+              <Row label="Production Capacity" value={label(CAPACITY_OPTIONS, data.productionCapacity)} />
+            </Panel>
 
-          <Section title="5 · Flexibility & Branding">
-            <Row label="Product Adaptability" value={label(ADAPTABILITY_OPTIONS, data.productAdaptability)} />
-            <Row label="Branding & Promotional Approach" value={label(BRAND_APPROACH_OPTIONS, data.brandApproach)} />
-          </Section>
+            <Panel title="5 · Flexibility & Branding">
+              <Row label="Product Adaptability" value={label(ADAPTABILITY_OPTIONS, data.productAdaptability)} />
+              <Row label="Branding & Promotional Approach" value={label(BRAND_APPROACH_OPTIONS, data.brandApproach)} />
+            </Panel>
 
-          {/* ── Contact people (avatar cards; falls back to legacy fields) ── */}
-          <Section title="Contact people">
-            {data.contacts && data.contacts.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {data.contacts.map((c, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 rounded-lg border border-brand-line bg-white p-3"
-                  >
-                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-brand-teal/15 text-base font-bold text-brand-teal">
-                      {initials(c.name)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-brand-ink">
-                        {c.name || "—"}
-                      </div>
-                      {c.position ? (
-                        <div className="truncate text-xs text-brand-muted">{c.position}</div>
-                      ) : null}
-                      <div className="truncate text-xs text-brand-muted">
-                        {[c.email, c.phone].filter(Boolean).join("  ·  ") || "—"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <Row label="Full Name" value={text(data.contactFullName)} />
-                <Row label="Title / Position" value={text(data.contactTitle)} />
-                <Row label="Email" value={text(data.contactEmail)} />
-                <Row label="Phone" value={text(data.contactPhone)} />
-                <Row label="Anything Else" value={text(data.anythingElse)} />
-              </div>
-            )}
-          </Section>
-
-          <Section title="Notes & Details">
-            <Row label="Category" value={CATEGORY_LABELS[data.category] ?? data.category} />
-            <Row label="Onboarding Date" value={new Date(data.onboardingDate).toLocaleDateString()} />
-            <Row label="Notes" value={text(data.notes)} />
-          </Section>
-
-          <Section title="Files">
-            {data.files && data.files.length > 0 ? (
-              <ul className="divide-y divide-brand-line">
-                {data.files.map((f) => (
-                  <li key={f.id} className="flex items-center justify-between py-2.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-brand-ink">{f.originalName}</p>
-                      <p className="text-xs text-brand-muted">
-                        {(f.sizeBytes / 1024).toFixed(0)} KB · {new Date(f.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        try {
-                          const { url } = await fetchCustomerFileUrl(f.id);
-                          window.open(url, "_blank", "noopener");
-                        } catch (err) {
-                          alert(err instanceof Error ? err.message : "Failed to get download link");
-                        }
-                      }}
-                      className="ml-4 flex-shrink-0 rounded border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-brand-bg-alt"
+            {/* ── Contact people (avatar cards; falls back to legacy fields) ── */}
+            <Panel title="Contact people">
+              {data.contacts && data.contacts.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {data.contacts.map((c, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 rounded-xl border border-brand-line bg-brand-bg-alt p-3"
                     >
-                      Download
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-brand-muted">No files uploaded.</p>
-            )}
-          </Section>
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback>{initials(c.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-brand-ink">
+                          {c.name || "—"}
+                        </div>
+                        {c.position ? (
+                          <div className="truncate text-xs text-brand-muted">{c.position}</div>
+                        ) : null}
+                        <div className="truncate text-xs text-brand-muted">
+                          {[c.email, c.phone].filter(Boolean).join("  ·  ") || "—"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Row label="Full Name" value={text(data.contactFullName)} />
+                  <Row label="Title / Position" value={text(data.contactTitle)} />
+                  <Row label="Email" value={text(data.contactEmail)} />
+                  <Row label="Phone" value={text(data.contactPhone)} />
+                  <Row label="Anything Else" value={text(data.anythingElse)} />
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Notes & Details">
+              <Row label="Category" value={CATEGORY_LABELS[data.category] ?? data.category} />
+              <Row label="Onboarding Date" value={new Date(data.onboardingDate).toLocaleDateString()} />
+              <Row label="Notes" value={text(data.notes)} />
+            </Panel>
+
+            <Panel title="Files">
+              {data.files && data.files.length > 0 ? (
+                <ul className="divide-y divide-brand-line">
+                  {data.files.map((f) => (
+                    <li key={f.id} className="flex items-center justify-between py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-brand-ink">{f.originalName}</p>
+                        <p className="text-xs text-brand-muted">
+                          {(f.sizeBytes / 1024).toFixed(0)} KB · {new Date(f.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const { url } = await fetchCustomerFileUrl(f.id);
+                            window.open(url, "_blank", "noopener");
+                          } catch (err) {
+                            alert(err instanceof Error ? err.message : "Failed to get download link");
+                          }
+                        }}
+                      >
+                        Download
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-brand-muted">No files uploaded.</p>
+              )}
+            </Panel>
+          </div>
         </>
       )}
     </AdminLayout>

@@ -19,7 +19,7 @@ const PROGRAMS = [
 export default function Programs() {
   const { open } = useExportLead();
   return (
-    <section id="programs" className="scroll-mt-24 bg-brand-bg-alt px-8 py-24">
+    <section id="programs" className="scroll-mt-24 bg-brand-bg-alt px-6 sm:px-8 py-20 sm:py-24">
       <div className="mx-auto max-w-[1160px]">
         <SectionHead
           eyebrow="Solution"
@@ -29,7 +29,7 @@ export default function Programs() {
           {PROGRAMS.map((p, i) => (
             <div
               key={p.title}
-              className="flex flex-col rounded-3xl border border-brand-line bg-white p-8 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="flex flex-col rounded-xl border border-brand-line bg-white p-8 shadow-sm transition hover:border-brand-teal/40 hover:shadow-md"
             >
               <span className="mb-3.5 w-fit rounded bg-brand-teal/10 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[1px] text-brand-teal-dark">
                 {p.tag}

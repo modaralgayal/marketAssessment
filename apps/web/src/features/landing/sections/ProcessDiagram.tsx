@@ -71,7 +71,7 @@ export default function ProcessDiagram() {
       <div className="flex flex-col">
         {STEPS.map((step, i) => (
           <div key={step.t}>
-            <div className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="rounded-xl border border-brand-line bg-white p-5 shadow-sm transition hover:border-brand-teal/40 hover:shadow-md">
               <h4 className="text-[17px] font-bold text-brand-ink">{step.t}</h4>
               <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
                 {step.s}

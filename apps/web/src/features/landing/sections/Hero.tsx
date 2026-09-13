@@ -1,6 +1,5 @@
 import { Button } from "../ui";
 import { useExportLead } from "../StartExportingModal";
-import HeroArt from "./HeroArt";
 
 export default function Hero() {
   const { open } = useExportLead();
@@ -38,10 +37,6 @@ export default function Hero() {
               Talk to Sales
             </Button>
           </div>
-        </div>
-
-        <div className="mt-16">
-          <HeroArt />
         </div>
       </div>
     </header>

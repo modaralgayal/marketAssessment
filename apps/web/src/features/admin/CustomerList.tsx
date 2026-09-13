@@ -3,6 +3,19 @@ import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchCustomers, deleteCustomer } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SegmentedTabs } from "@/components/ui/tabs";
 
 type Cat = "CUSTOMER" | "POTENTIAL" | "OTHER";
 
@@ -63,104 +76,91 @@ export default function CustomerList() {
     <AdminLayout>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-brand-ink">Manufacturers / Brands</h1>
-
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             to="/admin/customers/new-profile"
-            className="rounded bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:bg-brand-teal-dark"
+            className={buttonVariants({ variant: "default" })}
           >
             + New customer profile
           </Link>
-          <input
+          <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search company, email, country…"
-            className="w-64 rounded border border-brand-line bg-white px-3 py-2 text-sm outline-none focus:border-brand-teal"
+            className="w-full sm:w-64"
           />
         </div>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setCat(t.key)}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-              cat === t.key
-                ? "bg-brand-teal text-white shadow-sm"
-                : "border border-brand-line bg-white text-brand-muted hover:border-brand-teal hover:text-brand-teal"
-            }`}
-          >
-            {t.label} <span className="opacity-70">({counts[t.key]})</span>
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        className="mb-5"
+        value={cat}
+        onValueChange={setCat}
+        items={TABS.map((t) => ({ value: t.key, label: t.label, count: counts[t.key] }))}
+      />
 
       {isLoading && <p className="text-sm text-brand-muted">Loading…</p>}
       {error && <p className="text-sm text-red-600">Failed to load customers.</p>}
 
       {data && (
-        <div className="overflow-hidden rounded-lg border border-brand-line bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-brand-bg-alt text-xs uppercase tracking-wide text-brand-muted">
-              <tr>
-                <th className="px-4 py-3">Company</th>
-                <th className="px-4 py-3">Country</th>
-                <th className="px-4 py-3">Product Category</th>
-                <th className="px-4 py-3">Contact</th>
-                <th className="px-4 py-3">Onboarded</th>
-                <th className="px-4 py-3">Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Company</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Product Category</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Onboarded</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {items.map((c) => (
-                <tr key={c.id} className="border-t border-brand-line hover:bg-[#0F7B7F]/5">
-                  <td className="px-4 py-3">
+                <TableRow key={c.id}>
+                  <TableCell>
                     <Link
                       to={`/admin/customers/${c.id}`}
                       className="font-semibold text-brand-teal hover:underline"
                     >
                       {c.companyName}
                     </Link>
-                  </td>
-                  <td className="px-4 py-3 text-brand-muted">{c.country}</td>
-                  <td className="px-4 py-3 text-brand-muted">
-                    {productCategory(c)}
-                  </td>
-                  <td className="px-4 py-3 text-brand-muted">
+                  </TableCell>
+                  <TableCell className="text-brand-muted">{c.country}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{productCategory(c)}</Badge>
+                  </TableCell>
+                  <TableCell className="text-brand-muted">
                     {c.contactFullName}
                     <br />
                     <span className="text-xs text-brand-muted">{c.contactEmail}</span>
-                  </td>
-                  <td className="px-4 py-3 text-brand-muted">
+                  </TableCell>
+                  <TableCell className="text-brand-muted">
                     {new Date(c.onboardingDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleDelete(c.id, c.companyName)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      className="text-red-600 hover:bg-red-50"
                       disabled={deletingId === c.id}
-                      className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                      onClick={() => handleDelete(c.id, c.companyName)}
                     >
                       {deletingId === c.id ? "Deleting…" : "Delete"}
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
 
               {items.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-8 text-center text-brand-muted"
-                  >
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center text-brand-muted">
                     {search ? "No customers match your search." : "No customers yet."}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </AdminLayout>
   );
