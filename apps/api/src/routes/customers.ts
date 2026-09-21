@@ -3,6 +3,7 @@ import multer from "multer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { customerSchema, customerProfileSchema, type CustomerDto } from "@mea/shared";
 import { prisma } from "../prisma.js";
 import { storage } from "../storage/index.js";
@@ -18,7 +19,13 @@ const logoUpload = multer({
     const ok = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"].includes(
       file.mimetype,
     );
-    cb(ok ? null : new Error("Only image files are allowed for the logo"), ok);
+    // Multer's FileFilterCallback is an overloaded signature, so split the two
+    // cases rather than passing a `Error | null` union with a boolean.
+    if (ok) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed for the logo"));
+    }
   },
 });
 
@@ -77,7 +84,9 @@ customersRouter.post("/profile", requireAdmin, async (req, res, next) => {
         contacts: data.contacts,
         productCategory: data.productCategory,
         companyInfo: data.companyInfo,
-        dataPool: data.dataPool,
+        // Zod infers `dataPool` as `Record<string, unknown>`, which Prisma's JSON
+        // input type (`InputJsonValue`) does not accept directly — cast it.
+        dataPool: data.dataPool as unknown as Prisma.InputJsonValue | undefined,
         category: data.category ?? "CUSTOMER",
         customerStatus: data.customerStatus ?? "QUALIFYING",
         // Bridge into the legacy single-contact columns so the list/edit UI
