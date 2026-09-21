@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Pre-commit hook: block commits that break the web test suite.
+# Enabled repo-wide via: git config core.hooksPath .githooks
+set -e
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "Running web tests before commit..."
+npm test -w @mea/web
