@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import LandingPage from "./features/landing/LandingPage";
 import FormPage from "./features/form/FormPage";
 import PrivacyPolicy from "./features/legal/PrivacyPolicy";
@@ -17,7 +18,43 @@ import CustomerProfileForm from "./features/admin/CustomerProfileForm";
 import ProtectedRoute from "./features/admin/ProtectedRoute";
 import { ExportLeadProvider } from "./features/landing/StartExportingModal";
 
+/**
+ * When the app is reached through an invite link we render an isolated,
+ * navigation-locked version of the form: the visitor can only see and submit
+ * the form — no site nav, no route to the rest of the site. The lock is sticky
+ * for the tab session (sessionStorage) so stripping `?invite=` from the URL
+ * doesn't unlock it.
+ *
+ * Later, isolation moves to a dedicated form subdomain: when served from
+ * VITE_FORM_HOST the app is form-only by default (no invite param required).
+ */
+const FORM_HOST = (import.meta.env as Record<string, string | undefined>).VITE_FORM_HOST;
+
 export default function App() {
+  const [params] = useSearchParams();
+  const inviteParam = params.get("invite");
+
+  const isFormHost =
+    !!FORM_HOST && typeof window !== "undefined" && window.location.hostname === FORM_HOST;
+
+  const lockedToken =
+    inviteParam ||
+    (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("mea_form_invite") : null);
+
+  useEffect(() => {
+    if (inviteParam) sessionStorage.setItem("mea_form_invite", inviteParam);
+  }, [inviteParam]);
+
+  if (lockedToken || isFormHost) {
+    return (
+      <ExportLeadProvider>
+        <Routes>
+          <Route path="*" element={<FormPage standalone />} />
+        </Routes>
+      </ExportLeadProvider>
+    );
+  }
+
   return (
     <ExportLeadProvider>
       <Routes>

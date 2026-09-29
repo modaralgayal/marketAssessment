@@ -103,7 +103,7 @@ const tabClass = (active: boolean) =>
       : "border border-brand-line text-brand-ink hover:border-brand-teal hover:text-brand-teal"
   }`;
 
-export default function FormPage() {
+export default function FormPage({ standalone = false }: { standalone?: boolean }) {
   const {
     register,
     control,
@@ -259,7 +259,7 @@ export default function FormPage() {
   if (done)
     return (
       <>
-        <SiteNav />
+        {!standalone && <SiteNav />}
         <SuccessScreen mode={mode} />
       </>
     );
@@ -267,16 +267,16 @@ export default function FormPage() {
   if (gate === "loading")
     return (
       <>
-        <SiteNav />
+        {!standalone && <SiteNav />}
         <div className="p-16 text-center text-sm text-brand-muted">Checking your invite…</div>
       </>
     );
 
-  if (gate === "denied") return <InviteDenied />;
+  if (gate === "denied") return <InviteDenied standalone={standalone} />;
 
   return (
     <>
-      <SiteNav />
+      {!standalone && <SiteNav />}
       <div className="w-full bg-brand-bg-alt">
         <CoverHeader mode={mode} />
 
@@ -662,9 +662,14 @@ export default function FormPage() {
               />
               <span className="text-[12px] leading-snug text-brand-muted">
                 I have read and agree to the{" "}
-                <Link to="/privacy" className="text-brand-teal underline" target="_blank" rel="noopener noreferrer">
+                <a
+                  href={standalone ? `${window.location.origin}/privacy` : "/privacy"}
+                  className="text-brand-teal underline"
+                  target={standalone ? "_blank" : undefined}
+                  rel="noopener noreferrer"
+                >
                   Privacy Policy
-                </Link>
+                </a>
                 .
               </span>
             </label>
@@ -696,10 +701,10 @@ export default function FormPage() {
 }
 
 /** Shown when /assessment is reached without a valid, unused invite token. */
-function InviteDenied() {
+function InviteDenied({ standalone = false }: { standalone?: boolean }) {
   return (
     <>
-      <SiteNav />
+      {!standalone && <SiteNav />}
       <div className="mx-auto max-w-[640px] px-6 py-24 text-center">
         <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-bg-alt text-xl text-brand-teal">
           🔒
@@ -709,20 +714,22 @@ function InviteDenied() {
           The market-entry assessment is available by invitation. Request a report and we'll
           send you a private link to access the form.
         </p>
-        <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <Link
-            to="/request-report"
-            className="rounded-full bg-brand-teal px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-teal-dark"
-          >
-            Request a Report
-          </Link>
-          <Link
-            to="/"
-            className="rounded-full border border-brand-line px-6 py-3 text-sm font-bold text-brand-ink transition hover:border-brand-teal hover:text-brand-teal"
-          >
-            Back to home
-          </Link>
-        </div>
+        {!standalone && (
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <Link
+              to="/request-report"
+              className="rounded-full bg-brand-teal px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-teal-dark"
+            >
+              Request a Report
+            </Link>
+            <Link
+              to="/"
+              className="rounded-full border border-brand-line px-6 py-3 text-sm font-bold text-brand-ink transition hover:border-brand-teal hover:text-brand-teal"
+            >
+              Back to home
+            </Link>
+          </div>
+        )}
       </div>
     </>
   );
