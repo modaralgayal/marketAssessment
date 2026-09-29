@@ -1,0 +1,15 @@
+{
+  "name": "Tradelomacy",
+  "short_name": "Tradelomacy",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#3047D7",
+  "background_color": "#FFFFFF",
+  "display": "standalone"
+}

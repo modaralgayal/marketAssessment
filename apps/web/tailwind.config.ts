@@ -27,8 +27,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Inter", "Arial", "sans-serif"],
-        display: ["Hanken Grotesk", "Inter", "Arial", "sans-serif"],
+        sans: ["Segoe UI", "Arial", "sans-serif"],
+        display: ["Segoe UI", "Arial", "sans-serif"],
       },
     },
   },

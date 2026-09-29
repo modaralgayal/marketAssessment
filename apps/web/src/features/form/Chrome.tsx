@@ -4,10 +4,7 @@ export function CoverHeader({ mode = "assessment" }: { mode?: FormMode }) {
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-[#0F7B7F]/5 via-white to-white px-8 pb-12 pt-12">
       <div className="mb-9 flex items-center gap-2.5">
-        <div className="h-2.5 w-2.5 rounded-full bg-brand-teal" />
-        <div className="text-xs font-bold uppercase tracking-[3px] text-brand-teal">
-          [Platform Name]
-        </div>
+        <img src="/logo.svg" alt="Tradelomacy" className="h-6 w-auto" />
       </div>
       <h1 className="mb-3.5 text-[28px] font-bold leading-tight text-brand-ink">
         {mode === "onboarding"

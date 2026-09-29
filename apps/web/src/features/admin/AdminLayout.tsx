@@ -22,9 +22,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-brand-bg-alt">
       <header className="flex items-center justify-between bg-brand-teal px-8 py-4">
         <Link to="/admin" className="flex items-center gap-2.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-white" />
+          <img src="/logo-white.svg" alt="Tradelomacy" className="h-6 w-auto" />
           <span className="text-xs font-bold uppercase tracking-[3px] text-white">
-            [Platform Name] · Admin
+            Admin
           </span>
         </Link>
         <nav className="flex items-center gap-6 text-xs">

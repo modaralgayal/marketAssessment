@@ -8,22 +8,23 @@
   h3,
   h4,
   h5 {
-    font-family: "Hanken Grotesk", "Inter", Arial, sans-serif;
+    font-family: "Segoe UI", Arial, sans-serif;
   }
 }
 
-/* ── Brand palette: Lake & Birch ─────────────────────────────────────────
+/* ── Brand palette: Tradelomacy ─────────────────────────────────────────
    Tokens are space-separated RGB channels so Tailwind opacity modifiers
-   (bg-brand-teal/10) keep working. */
+   (bg-brand-teal/10) keep working. Values from the Tradelomacy brand kit:
+   cobalt #3047D7 · ink #171A24 · cloud #F5F6FA · periwinkle #C9D1FF. */
 :root {
-  --brand-teal: 11 61 145;        /* Finnish blue — primary */
-  --brand-teal-dark: 8 44 107;
-  --brand-ink: 16 24 40;
-  --brand-muted: 91 100 114;
-  --brand-line: 236 232 225;      /* warm birch hairline */
-  --brand-bg-alt: 247 245 240;    /* birch */
-  --brand-orange: 232 115 74;     /* sauna terracotta */
-  --brand-glow: 46 109 164;       /* cool blue ambient */
+  --brand-teal: 48 71 215;        /* cobalt — primary */
+  --brand-teal-dark: 36 54 174;   /* darker cobalt */
+  --brand-ink: 23 26 36;          /* ink */
+  --brand-muted: 96 104 118;      /* neutral muted */
+  --brand-line: 228 231 242;      /* cool periwinkle-tinted hairline */
+  --brand-bg-alt: 245 246 250;    /* cloud */
+  --brand-orange: 201 209 255;    /* periwinkle accent */
+  --brand-glow: 48 71 215;        /* cobalt ambient */
 }
 
 /* Ambient glow behind hero / CTA surfaces */
@@ -68,7 +69,7 @@ body {
 
   position: relative;
   overflow: hidden;
-  font-family: "Inter", Arial, sans-serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   color: var(--ha-ink);
   background:
     linear-gradient(90deg, rgba(255, 255, 255, .38) 1px, transparent 1px),
@@ -333,7 +334,7 @@ body {
 
   position: relative;
   overflow: hidden;
-  font-family: "Inter", Arial, sans-serif;
+  font-family: "Segoe UI", Arial, sans-serif;
   color: var(--brand-ink);
   background: var(--surface-warm);
   border: 1px solid rgba(11, 61, 145, .18);

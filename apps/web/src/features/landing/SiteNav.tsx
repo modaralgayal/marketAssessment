@@ -26,8 +26,8 @@ export default function SiteNav() {
   return (
     <nav className="sticky top-0 z-50 border-b border-brand-line bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-[1160px] items-center justify-between px-8 py-4">
-        <Link to="/" className="text-[19px] font-extrabold text-brand-ink">
-          Tradelomacy
+        <Link to="/" className="flex items-center">
+          <img src="/logo.svg" alt="Tradelomacy" className="h-7 w-auto" />
         </Link>
         <div className="hidden items-center gap-7 text-sm font-semibold text-brand-muted md:flex">
           {NAV_LINKS.map((l) => (

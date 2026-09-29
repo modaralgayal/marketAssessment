@@ -21,8 +21,7 @@ export default function AdminLogin() {
     <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-sm rounded-lg border border-brand-line bg-white p-10 text-center shadow-sm">
         <div className="mb-2 flex items-center justify-center gap-2">
-          <div className="h-2.5 w-2.5 rounded-full bg-brand-teal" />
-          <span className="text-xs font-bold uppercase tracking-[3px] text-brand-ink">[Platform Name] Oy</span>
+          <img src="/logo.svg" alt="Tradelomacy" className="h-7 w-auto" />
         </div>
         <h1 className="mb-1 text-lg font-bold text-brand-ink">Admin Dashboard</h1>
         <p className="mb-6 text-sm text-brand-muted">Sign in to view assessment submissions.</p>
