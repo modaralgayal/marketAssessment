@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import FormPage from "./FormPage";
 import { ExportLeadProvider } from "../landing/StartExportingModal";
@@ -154,7 +153,7 @@ describe("FormPage", () => {
   });
 
   it("blocks submission when the file and consent are missing, even with every field filled", async () => {
-    const { container } = renderForm();
+    renderForm();
     await screen.findByText("Submit Assessment");
     await fillAllRequiredFields();
 
