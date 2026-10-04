@@ -8,9 +8,10 @@ import type { CatalogueExtractedData } from "@mea/shared";
 
 export const catalogueRouter = Router();
 
-catalogueRouter.use(requireAdmin);
-catalogueRouter.use(auditLog);
-
+// NOTE: do NOT apply requireAdmin/auditLog globally here. This router is
+// mounted at the bare `/api` prefix (see src/index.ts), so a global guard
+// would intercept — and 401 — every /api/* request that isn't a catalogue
+// route, including the PUBLIC lead POST. The guard is applied per-route below.
 const extractLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 10,
@@ -32,7 +33,7 @@ const KNOWN_FIELD_MAP: Record<string, string[]> = {
 const KNOWN_KEYS = new Set(Object.keys(KNOWN_FIELD_MAP));
 
 /** Extract structured data from a submission's catalogue files. */
-catalogueRouter.post("/submissions/:id/extract-catalogue", extractLimiter, async (req, res) => {
+catalogueRouter.post("/submissions/:id/extract-catalogue", requireAdmin, auditLog, extractLimiter, async (req, res) => {
   try {
     const submission = await prisma.submission.findUnique({
       where: { id: req.params.id },
@@ -91,7 +92,7 @@ catalogueRouter.post("/submissions/:id/extract-catalogue", extractLimiter, async
  * Persist additional data fields extracted from the catalogue.
  * Body: { additionalFields: [{ key, value }] }
  */
-catalogueRouter.post("/submissions/:id/apply-catalogue-mapping", async (req, res) => {
+catalogueRouter.post("/submissions/:id/apply-catalogue-mapping", requireAdmin, auditLog, async (req, res) => {
   try {
     const { additionalFields } = req.body;
     if (!Array.isArray(additionalFields)) {

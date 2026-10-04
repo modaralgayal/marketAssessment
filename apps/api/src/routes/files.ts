@@ -33,3 +33,15 @@ filesRouter.get("/customer/:id/download", async (req, res, next) => {
     next(err);
   }
 });
+
+/** Admin: download a product document attached to a lead (sourcing enquiry). */
+filesRouter.get("/lead/:id/download", async (req, res, next) => {
+  try {
+    const file = await prisma.leadFile.findUnique({ where: { id: req.params.id } });
+    if (!file) return res.status(404).json({ error: "File not found" });
+    const url = await storage.getSignedUrl(file.storageKey, 300);
+    return res.json({ url, originalName: file.originalName });
+  } catch (err) {
+    next(err);
+  }
+});

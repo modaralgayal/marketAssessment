@@ -241,10 +241,75 @@ model ReportRequest {
   subject   String
   message   String
   email     String
+  consent   Boolean  @default(false)
   status    String   @default("NEW")
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ── Leads (public marketing-site lead forms) ───────────────────────────────
+// A single Lead model holds every marketing-site lead, discriminated by `kind`.
+// Shared columns are typed; form-specific fields live on the relevant variant
+// and `attributes` is a JSON catch-all for anything not yet modelled. Files
+// (e.g. the SOURCING product document) live in `LeadFile`.
+
+enum LeadKind {
+  EXPORTING
+  SOURCING
+  ORGANIZATION
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+  kind            LeadKind
+  sourcePage      String? // which route submitted (e.g. "/for-sourcing")
+  // shared contact
+  fullName        String?
+  email           String?
+  phone           String?
+  // exporting-specific
+  companyName     String?
+  country         String?
+  website         String?
+  product         String? // single product line (exporting)
+  targetMarket    String[] @default([]) // EXPORTING: array of ISO country codes (export-only)
+  // organization-specific
+  organizationName String?
+  organizationType String?
+  jobTitle        String?
+  support         String[] @default([]) // ORGANIZATION: selected support options
+  priorities      String?
+  // sourcing-specific
+  sourceCountries String[] @default([]) // SOURCING: "where you source from"
+  products        String? // SOURCING: textarea
+  details         String? // SOURCING: textarea
+  // product document: REQUIRED for SOURCING — link OR upload (not both stored as mandatory)
+  productDocumentLink String?
+  attributes      Json     @default("{}") // any future/extra fields
+  consent         Boolean  @default(false)
+  status          String   @default("NEW")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  files           LeadFile[]
+
+  @@index([kind])
+  @@index([createdAt])
+  @@index([status])
+}
+
+// Mirrors SubmissionFile — used by SOURCING's productDocument upload.
+model LeadFile {
+  id           String   @id @default(cuid())
+  leadId       String
+  storageKey   String
+  originalName String
+  contentType  String
+  sizeBytes    Int
+  createdAt    DateTime @default(now())
+  lead         Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
 }
 
 enum RevenueBracket {

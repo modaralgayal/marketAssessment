@@ -1,4 +1,5 @@
 import express from "express";
+import { pathToFileURL } from "node:url";
 import helmet from "helmet";
 import cors from "cors";
 import { env } from "./env.js";
@@ -11,10 +12,11 @@ import { distributorsRouter } from "./routes/distributors.js";
 import { matchesRouter } from "./routes/matches.js";
 import { catalogueRouter } from "./routes/catalogue.js";
 import { customersRouter } from "./routes/customers.js";
+import { leadsRouter } from "./routes/leads.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
-const app = express();
+export const app = express();
 
 app.set("trust proxy", 1); // behind Render's proxy — needed for rate-limit IP detection
 app.use(
@@ -62,11 +64,17 @@ app.use("/api/files", filesRouter);
 app.use("/api/distributors", distributorsRouter);
 app.use("/api", catalogueRouter);
 app.use("/api/customers", customersRouter);
+app.use("/api/leads", leadsRouter);
 
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
-  console.log(
-    `API listening on http://localhost:${env.PORT} (origin: ${env.WEB_ORIGIN})`,
-  );
-});
+// Only start the HTTP server when this module is the entry point. When imported
+// by tests (supertest), `app` is used directly without binding a port.
+const isMain = import.meta.url === pathToFileURL(process.argv[1] ?? "").href;
+if (isMain) {
+  app.listen(env.PORT, () => {
+    console.log(
+      `API listening on http://localhost:${env.PORT} (origin: ${env.WEB_ORIGIN})`,
+    );
+  });
+}

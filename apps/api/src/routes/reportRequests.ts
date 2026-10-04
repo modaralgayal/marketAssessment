@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { z } from "zod";
+import { reportRequestSchema, BOT_FIELD } from "@mea/shared";
 import { prisma } from "../prisma.js";
 import { sendMail } from "../lib/mailer.js";
 import { env } from "../env.js";
@@ -17,12 +17,6 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-const createSchema = z.object({
-  subject: z.string().trim().min(1, "Subject is required").max(200),
-  message: z.string().trim().min(1, "Please tell us about your operation").max(5000),
-  email: z.string().trim().email("A valid email is required"),
-});
-
 // Throttle to limit abuse of the email-sending endpoint.
 const reportLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -35,10 +29,15 @@ const reportLimiter = rateLimit({
 /** Public: capture a "Request a Report" submission and notify the team. */
 reportRequestsRouter.post("/", reportLimiter, async (req, res, next) => {
   try {
-    const { subject, message, email } = createSchema.parse(req.body);
+    // Honeypot: bots fill hidden fields. Reject silently (no row created).
+    if (req.body[BOT_FIELD]) {
+      return res.status(400).json({ error: "Submission rejected." });
+    }
+
+    const { subject, message, email } = reportRequestSchema.parse(req.body);
 
     const request = await prisma.reportRequest.create({
-      data: { subject, message, email, status: "NEW" },
+      data: { subject, message, email, consent: true, status: "NEW" },
     });
 
     // Notify the team. Email is best-effort: if SMTP isn't configured yet the

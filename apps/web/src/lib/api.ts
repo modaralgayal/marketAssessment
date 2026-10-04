@@ -1,5 +1,5 @@
 import { auth } from "./firebase";
-import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput, DataTierTemplate, CatalogueExtractedData, CustomerDto, CustomerInput, CustomerProfileInput } from "@mea/shared";
+import type { SubmissionDto, DistributorDto, ManufacturerMatchDto, DistributorInput, DataTierTemplate, CatalogueExtractedData, CustomerDto, CustomerInput, CustomerProfileInput, LeadDto } from "@mea/shared";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -63,11 +63,42 @@ export async function requestReport(payload: {
   const res = await fetch(`${BASE}/api/report-requests`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, consent: true }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to send your request");
+  }
+  return res.json();
+}
+
+/** Public: submit a lead to the renewed marketing site's `/api/leads`
+ *  endpoint. `body.kind` is EXPORTING | SOURCING | ORGANIZATION and consent
+ *  must already be `true`. For SOURCING with an uploaded document, pass the
+ *  file and it is sent as multipart (`payload` JSON + `productDocument`). */
+export async function submitLead(
+  body: Record<string, unknown>,
+  file?: File,
+): Promise<{ id: string; emailSent?: boolean }> {
+  if (file) {
+    const form = new FormData();
+    form.append("payload", JSON.stringify(body));
+    form.append("productDocument", file);
+    const res = await fetch(`${BASE}/api/leads`, { method: "POST", body: form });
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      throw new Error((b.error as string) ?? "Submission failed");
+    }
+    return res.json();
+  }
+  const res = await fetch(`${BASE}/api/leads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+    throw new Error((b.error as string) ?? "Submission failed");
   }
   return res.json();
 }
@@ -193,6 +224,35 @@ export async function fetchFileUrl(fileId: string): Promise<{ url: string; origi
 export async function fetchCustomerFileUrl(fileId: string): Promise<{ url: string; originalName: string }> {
   const res = await fetch(`${BASE}/api/files/customer/${fileId}/download`, { headers: await authHeader() });
   if (!res.ok) throw new Error("Failed to get download link");
+  return res.json();
+}
+
+/** Admin: get a signed download URL for a lead's product document. */
+export async function fetchLeadFileUrl(fileId: string): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/files/lead/${fileId}/download`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to get download link");
+  return res.json();
+}
+
+export interface LeadListResponse {
+  total: number;
+  items: LeadDto[];
+}
+
+/** Admin: list leads (renewed marketing-site enquiries). Optional kind filter. */
+export async function fetchLeads(
+  kind?: "EXPORTING" | "SOURCING" | "ORGANIZATION",
+): Promise<LeadListResponse> {
+  const qs = kind ? `?kind=${kind}` : "";
+  const res = await fetch(`${BASE}/api/leads${qs}`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load leads");
+  return res.json();
+}
+
+/** Admin: single lead (with files). */
+export async function fetchLead(id: string): Promise<LeadDto> {
+  const res = await fetch(`${BASE}/api/leads/${id}`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load lead");
   return res.json();
 }
 

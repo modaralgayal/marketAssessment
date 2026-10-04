@@ -29,6 +29,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </Link>
         <nav className="flex items-center gap-6 text-xs">
           <Link to="/admin" className={tabClass("/admin")}>Submissions</Link>
+          <Link to="/admin/leads" className={tabClass("/admin/leads")}>Leads</Link>
           <Link to="/admin/distributors" className={tabClass("/admin/distributors")}>Distributors</Link>
           <Link to="/admin/customers" className={tabClass("/admin/customers")}>Manufacturers / Brands</Link>
         </nav>

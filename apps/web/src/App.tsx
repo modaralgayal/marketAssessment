@@ -1,10 +1,6 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate, useSearchParams } from "react-router-dom";
-import LandingPage from "./features/landing/LandingPage";
+import { Routes, Route, Navigate, useSearchParams, useParams } from "react-router-dom";
 import FormPage from "./features/form/FormPage";
-import PrivacyPolicy from "./features/legal/PrivacyPolicy";
-import ContactPage from "./features/landing/ContactPage";
-import RequestReportPage from "./features/landing/RequestReportPage";
 import AdminLogin from "./features/admin/AdminLogin";
 import AdminList from "./features/admin/AdminList";
 import AdminDetail from "./features/admin/AdminDetail";
@@ -15,8 +11,12 @@ import CustomerList from "./features/admin/CustomerList";
 import CustomerForm from "./features/admin/CustomerForm";
 import CustomerProfile from "./features/admin/CustomerProfile";
 import CustomerProfileForm from "./features/admin/CustomerProfileForm";
+import LeadList from "./features/admin/LeadList";
+import LeadDetail from "./features/admin/LeadDetail";
 import ProtectedRoute from "./features/admin/ProtectedRoute";
 import { ExportLeadProvider } from "./features/landing/StartExportingModal";
+import { MarketingLayout } from "./features/marketing/MarketingLayout";
+import { MarketingPage } from "./features/marketing/pages";
 
 /**
  * When the app is reached through an invite link we render an isolated,
@@ -29,6 +29,11 @@ import { ExportLeadProvider } from "./features/landing/StartExportingModal";
  * VITE_FORM_HOST the app is form-only by default (no invite param required).
  */
 const FORM_HOST = (import.meta.env as Record<string, string | undefined>).VITE_FORM_HOST;
+
+function MarketingPageFromSlug() {
+  const { slug } = useParams();
+  return <MarketingPage route={slug ?? "home"} />;
+}
 
 export default function App() {
   const [params] = useSearchParams();
@@ -58,11 +63,10 @@ export default function App() {
   return (
     <ExportLeadProvider>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        {/* Assessment (invite-gated) — kept in the existing app, outside the marketing shell. */}
         <Route path="/assessment" element={<FormPage />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/request-report" element={<RequestReportPage />} />
+
+        {/* Admin — kept in the existing app, outside the marketing shell. */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
           path="/admin"
@@ -152,6 +156,44 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Renewed marketing-site leads — kept separate from assessment submissions. */}
+        <Route
+          path="/admin/leads"
+          element={
+            <ProtectedRoute>
+              <LeadList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/leads/:id"
+          element={
+            <ProtectedRoute>
+              <LeadDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Renewed marketing site (HTML prototype port) inside the shared shell. */}
+        <Route element={<MarketingLayout />}>
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<MarketingPage route="home" />} />
+          <Route path="/for-exporting" element={<MarketingPage route="for-exporting" />} />
+          <Route path="/for-sourcing" element={<MarketingPage route="for-sourcing" />} />
+          <Route
+            path="/for-governments-and-associations"
+            element={<MarketingPage route="for-governments-and-associations" />}
+          />
+          <Route path="/request-report" element={<MarketingPage route="request-report" />} />
+          <Route path="/contact" element={<MarketingPage route="contact" />} />
+          <Route path="/privacy" element={<MarketingPage route="privacy" />} />
+          <Route path="/start-trading" element={<MarketingPage route="start-trading" />} />
+          <Route path="/for-manufacturers" element={<MarketingPage route="home-copy" />} />
+          <Route path="/insights" element={<MarketingPage route="insights" />} />
+          <Route path="/:slug" element={<MarketingPageFromSlug />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ExportLeadProvider>
