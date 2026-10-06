@@ -169,7 +169,7 @@ export function TradeForm({ project, section }: { project: Project; section: Sec
             )}
           </div>
           <button type="submit" className="button" disabled={busy} aria-busy={busy}>
-            {section.button ?? (sourcing ? "Send sourcing request" : "Send export enquiry")} <span aria-hidden="true">↗</span>
+            {section.button ?? (sourcing ? "Send sourcing request" : "Send export enquiry")} <span aria-hidden="true">↗︎</span>
           </button>
           <ConsentNote />
           <ReviewNote />

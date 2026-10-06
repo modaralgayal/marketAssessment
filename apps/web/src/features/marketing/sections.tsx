@@ -27,7 +27,7 @@ export function Button({
     <TLink href={href} className={`button ${cls}`}>
       <Text project={project} path={path} />
       <span className="arrow" aria-hidden="true">
-        ↗
+        ↗︎
       </span>
     </TLink>
   );
@@ -141,7 +141,7 @@ export function SectionView({ project, route, i, section: s }: { project: Projec
               <h2>For exporting</h2>
               <p>Find relevant buyers and distribution partners for your products.</p>
               <span className="option-link">
-                Explore export opportunities <span aria-hidden="true">↗</span>
+                Explore export opportunities <span aria-hidden="true">↗︎</span>
               </span>
             </TLink>
             <TLink href="#/for-sourcing" className="trade-option">
@@ -149,7 +149,7 @@ export function SectionView({ project, route, i, section: s }: { project: Projec
               <h2>For sourcing</h2>
               <p>Find suppliers around your product and commercial requirements.</p>
               <span className="option-link">
-                Tell us what you need <span aria-hidden="true">↗</span>
+                Tell us what you need <span aria-hidden="true">↗︎</span>
               </span>
             </TLink>
           </div>
@@ -481,7 +481,7 @@ function InsightsPage({ project }: { project: Project }) {
               <div className="article-meta">
                 {a.date} · {a.author}
               </div>
-              <span className="article-link">Read article ↗</span>
+              <span className="article-link">Read article ↗︎</span>
             </TLink>
           );
         })}

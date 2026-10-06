@@ -65,7 +65,7 @@ export function ReportForm({ section }: { section: Section }) {
         })}
       </div>
       <button type="submit" className="button" disabled={busy} aria-busy={busy}>
-        {section.button ?? "Send request"} <span aria-hidden="true">↗</span>
+        {section.button ?? "Send request"} <span aria-hidden="true">↗︎</span>
       </button>
       <ConsentNote />
       <ReviewNote />

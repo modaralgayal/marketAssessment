@@ -3,6 +3,7 @@
 html{scroll-behavior:smooth;scroll-padding-top:100px}
 body{margin:0;background:var(--white);color:var(--ink);font-family:var(--body-font);font-size:17px;line-height:1.65}
 .tl button,.tl input,.tl textarea,.tl select{font:inherit}
+.tl{font-variant-emoji:text}
 .tl a{color:inherit}
 .tl button,.tl a,.tl input,.tl textarea,.tl select,.tl summary{touch-action:manipulation}
 .tl button,.tl a{-webkit-tap-highlight-color:transparent}
@@ -29,7 +30,7 @@ body{margin:0;background:var(--white);color:var(--ink);font-family:var(--body-fo
 .tl .button.light{background:white;color:var(--cobalt);border-color:white}
 .tl .button.outline-light{background:transparent;border-color:#9398AD;color:white}
 .tl .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
-.tl .arrow{font-size:20px;line-height:1}
+.tl .arrow{font-size:20px;line-height:1;font-variant-emoji:text}
 .tl .site-nav{position:sticky;top:0;z-index:30;background:var(--white);border-bottom:1px solid #E4E6EE}
 .tl .nav-inner{height:86px;display:flex;align-items:center;justify-content:space-between;gap:24px}
 .tl .brand-link{display:block;width:219px;flex-shrink:0}

@@ -60,7 +60,7 @@ function Nav() {
                   {n.children.map((c, j) => (
                     <TLink key={j} href={c.href} ariaCurrent={c.href === routePath}>
                       {c.label}
-                      <span aria-hidden="true">↗</span>
+                      <span aria-hidden="true">↗︎</span>
                     </TLink>
                   ))}
                 </div>
@@ -79,7 +79,7 @@ function Nav() {
           <TLink href="#/start-trading" className="button">
             {project.global.primaryLabel}
             <span className="arrow" aria-hidden="true">
-              ↗
+              ↗︎
             </span>
           </TLink>
         </div>

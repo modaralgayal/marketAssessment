@@ -124,7 +124,7 @@ export function OrganizationModal({ project, onClose }: { project: Project; onCl
           />
         </label>
         <button type="submit" className="button" disabled={busy} aria-busy={busy}>
-          Request Contact <span aria-hidden="true">↗</span>
+          Request Contact <span aria-hidden="true">↗︎</span>
         </button>
         <ConsentNote />
         <ReviewNote />
