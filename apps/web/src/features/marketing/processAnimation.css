@@ -1,0 +1,486 @@
+/* Solution-section showcase — looping CSS/JS replica of the
+   Tradelomacy-at-scale motion-graphics video (no video file).
+   Styling ported from the Canva reference build.
+
+   All internal lengths use container-relative units (cqw = 1% of the
+   stage width) so the whole composition scales with the stage itself —
+   not the viewport. This keeps proportions identical at any zoom level
+   and inside any width-capped container (where vw-based sizing crams). */
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap");
+
+.tl .process-animation.pa2 {
+  --pa2-blue: #2b44d6;
+  --pa2-green: #1fa45a;
+  --pa2-green-soft: #e9f8ef;
+  --pa2-red: #d9585c;
+  --pa2-red-soft: #fcecee;
+  --pa2-ink: #121525;
+  --pa2-muted: #5b6172;
+  --pa2-line: #dde3ed;
+  --pa2-paper: #fcfcfd;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--pa2-paper);
+  border: 1px solid var(--pa2-line);
+  border-radius: 14px;
+  color: var(--pa2-ink);
+  font-family: "DM Sans", var(--body-font, system-ui, sans-serif);
+  overflow: hidden;
+  isolation: isolate;
+  container-type: inline-size;
+  container-name: pa2;
+}
+.tl .pa2 * {
+  box-sizing: border-box;
+}
+
+/* faint background network */
+.tl .pa2-network {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.tl .pa2-network path {
+  fill: none;
+  stroke: #dfe6f3;
+  stroke-width: 1.6;
+  opacity: 0.7;
+}
+.tl .pa2-network circle {
+  fill: #ced9ee;
+  opacity: 0.6;
+}
+
+/* hero / headline */
+.tl .pa2-hero {
+  position: absolute;
+  z-index: 4;
+  top: 4.5%;
+  left: 50%;
+  width: min(80%, 1200px);
+  transform: translateX(-50%);
+  text-align: center;
+}
+.tl .pa2-hero h1 {
+  margin: 0;
+  font-size: clamp(1.6cqw, 3.2cqw, 4.7cqw);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  color: var(--pa2-ink);
+}
+.tl .pa2-hero p {
+  margin: 0.5cqw 0 0;
+  color: var(--pa2-muted);
+  font-size: clamp(1cqw, 1.6cqw, 2cqw);
+  letter-spacing: -0.01em;
+}
+
+/* column headings */
+.tl .pa2-col-label {
+  position: absolute;
+  z-index: 4;
+  top: 15%;
+  font-size: clamp(0.8cqw, 1.1cqw, 1.4cqw);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #6b7280;
+}
+.tl .pa2-left-label {
+  left: 7.5%;
+}
+.tl .pa2-right-label {
+  right: 7.5%;
+  text-align: right;
+}
+
+/* party cards */
+.tl .pa2-party-card {
+  position: absolute;
+  z-index: 4;
+  width: 16%;
+  min-height: clamp(4.5cqw, 11cqw, 13cqw);
+  padding: clamp(0.55cqw, 1.1cqw, 1.36cqw);
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: clamp(0.5cqw, 1cqw, 1.2cqw);
+  border: 2.5px solid #e1e6ee;
+  border-radius: clamp(0.7cqw, 1.4cqw, 1.3cqw);
+  background: rgba(248, 249, 251, 0.92);
+  box-shadow: 0 4px 16px rgba(30, 42, 80, 0.04);
+  transition: border-color 0.18s linear, background 0.18s linear, box-shadow 0.18s linear,
+    opacity 0.18s linear, transform 0.18s linear;
+}
+.tl .pa2-party-card.m {
+  left: 7.5%;
+}
+.tl .pa2-party-card.b {
+  right: 7.5%;
+}
+.tl .pa2-party-card.is-active {
+  border-color: var(--pa2-blue);
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(43, 68, 214, 0.16);
+  transform: translateY(-50%) translateY(-4px);
+}
+.tl .pa2-party-card.is-match {
+  border-color: var(--pa2-green);
+  background: var(--pa2-green);
+  box-shadow: 0 13px 28px rgba(31, 164, 90, 0.2);
+}
+.tl .pa2-party-card.is-dim {
+  opacity: 0.5;
+}
+.tl .pa2-party-icon {
+  width: clamp(1.6cqw, 2.6cqw, 3.45cqw);
+  height: clamp(1.6cqw, 2.6cqw, 3.45cqw);
+  flex: 0 0 auto;
+  color: #7e8797;
+  transition: color 0.18s linear;
+}
+.tl .pa2-party-card.is-active .pa2-party-icon {
+  color: var(--pa2-blue);
+}
+.tl .pa2-party-card.is-match .pa2-party-icon {
+  color: #fff;
+}
+.tl .pa2-party-copy {
+  min-width: 0;
+}
+.tl .pa2-party-name {
+  display: block;
+  font-size: clamp(0.9cqw, 1.1cqw, 1.6cqw);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--pa2-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.18s linear;
+}
+.tl .pa2-party-card.is-match .pa2-party-name {
+  color: #fff;
+}
+.tl .pa2-caption {
+  margin-top: 0.25cqw;
+  font-size: clamp(0.64cqw, 0.85cqw, 1.18cqw);
+  font-weight: 600;
+  color: #8a91a0;
+}
+.tl .pa2-party-card.is-active .pa2-caption {
+  color: var(--pa2-blue);
+}
+.tl .pa2-party-card.is-match .pa2-caption {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* opportunity / summary card (cross-fade) */
+.tl .pa2-center {
+  position: absolute;
+  z-index: 5;
+  top: 19%;
+  left: 50%;
+  width: 30%;
+  height: 62%;
+  transform: translateX(-50%);
+}
+.tl .pa2-opportunity,
+.tl .pa2-summary {
+  position: absolute;
+  inset: 0;
+  padding: clamp(0.9cqw, 1.9cqw, 2.36cqw);
+  border-radius: clamp(1cqw, 2cqw, 1.8cqw);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 22px 54px rgba(25, 35, 75, 0.12);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  transition: opacity 0.42s ease, transform 0.42s cubic-bezier(0.22, 0.85, 0.3, 1);
+}
+.tl .pa2-opportunity {
+  border: 3px solid var(--pa2-blue);
+}
+.tl .pa2-summary {
+  border: 3px solid var(--pa2-green);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px) scale(0.985);
+}
+.tl .pa2-center.is-summary .pa2-opportunity {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-13px) scale(0.985);
+}
+.tl .pa2-center.is-summary .pa2-summary {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+.tl .pa2-eyebrow {
+  color: var(--pa2-blue);
+  font-size: clamp(0.8cqw, 0.85cqw, 1.3cqw);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.tl .pa2-summary-eyebrow {
+  color: var(--pa2-green);
+  font-size: clamp(0.8cqw, 0.85cqw, 1.3cqw);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.tl .pa2-opportunity h2,
+.tl .pa2-summary h2 {
+  margin: clamp(0.35cqw, 0.8cqw, 0.9cqw) 0;
+  font-size: clamp(1.18cqw, 1.8cqw, 2.36cqw);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--pa2-ink);
+}
+.tl .pa2-pair-label {
+  color: var(--pa2-blue);
+  font-size: clamp(0.9cqw, 1.05cqw, 1.45cqw);
+  font-weight: 700;
+  min-height: 1.2em;
+}
+.tl .pa2-requirements-label {
+  margin: clamp(0.36cqw, 0.9cqw, 1cqw) 0 clamp(0.3cqw, 0.6cqw, 0.7cqw);
+  color: #808797;
+  font-size: clamp(0.64cqw, 0.62cqw, 0.9cqw);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+.tl .pa2-requirements {
+  display: grid;
+  gap: clamp(0.32cqw, 0.6cqw, 0.68cqw);
+}
+.tl .pa2-requirement {
+  min-height: clamp(1.7cqw, 2.4cqw, 2.9cqw);
+  padding: 0 clamp(0.45cqw, 1cqw, 1.09cqw);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5cqw;
+  border-radius: clamp(0.5cqw, 0.7cqw, 0.9cqw);
+  background: #f4f6f8;
+  transition: background 0.16s linear;
+}
+.tl .pa2-requirement.aligned {
+  background: var(--pa2-green-soft);
+}
+.tl .pa2-requirement.conflict {
+  background: var(--pa2-red-soft);
+}
+.tl .pa2-requirement-name {
+  min-width: 0;
+  font-size: clamp(0.73cqw, 0.85cqw, 1.18cqw);
+  font-weight: 600;
+  color: var(--pa2-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tl .pa2-state {
+  flex: 0 0 auto;
+  font-size: clamp(0.64cqw, 0.75cqw, 1.09cqw);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tl .pa2-state.aligned {
+  color: var(--pa2-green);
+}
+.tl .pa2-state.conflict {
+  color: var(--pa2-red);
+}
+.tl .pa2-match-tile {
+  margin-bottom: clamp(0.36cqw, 0.7cqw, 0.73cqw);
+  padding: clamp(0.45cqw, 0.9cqw, 1cqw);
+  border: 1px solid #bde7cd;
+  border-radius: clamp(0.5cqw, 0.8cqw, 0.9cqw);
+  background: var(--pa2-green-soft);
+}
+.tl .pa2-match-tile strong {
+  display: block;
+  color: #157a43;
+  font-size: clamp(0.82cqw, 0.9cqw, 1.27cqw);
+  font-weight: 700;
+}
+.tl .pa2-match-tile span {
+  display: block;
+  margin-top: 0.3cqw;
+  color: #3a7a52;
+  font-size: clamp(0.64cqw, 0.72cqw, 1cqw);
+}
+.tl .pa2-summary-note {
+  margin: clamp(0.36cqw, 0.8cqw, 0.82cqw) 0 0;
+  color: #697386;
+  font-size: clamp(0.73cqw, 0.85cqw, 1.18cqw);
+}
+
+/* connectors: draw-on paths + traveling dots + final match arcs */
+.tl .pa2-connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: visible;
+}
+.tl .pa2-path {
+  fill: none;
+  stroke: var(--pa2-blue);
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: pa2-draw 0.4s ease forwards;
+}
+.tl .pa2-path.green {
+  stroke: var(--pa2-green);
+}
+.tl .pa2-dot {
+  fill: var(--pa2-blue);
+}
+.tl .pa2-dot.green {
+  fill: var(--pa2-green);
+}
+.tl .pa2-final-path {
+  fill: none;
+  stroke: var(--pa2-green);
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+.tl .pa2-final-path.visible {
+  opacity: 1;
+}
+.tl .pa2-final-dot {
+  fill: var(--pa2-green);
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+.tl .pa2-final-dot.visible {
+  opacity: 1;
+}
+
+/* status pill */
+.tl .pa2-pill {
+  position: absolute;
+  z-index: 5;
+  top: 89%;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: clamp(10cqw, 16cqw, 20cqw);
+  padding: clamp(0.45cqw, 0.85cqw, 0.91cqw) clamp(1cqw, 1.3cqw, 1.8cqw);
+  border-radius: 999px;
+  background: #eef0f4;
+  color: #697386;
+  text-align: center;
+  font-size: clamp(0.82cqw, 0.8cqw, 1.27cqw);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+  transition: background 0.32s ease, color 0.32s ease, transform 0.32s ease;
+}
+.tl .pa2-pill.complete {
+  background: var(--pa2-blue);
+  color: #fff;
+  transform: translateX(-50%) scale(1.03);
+}
+
+/* footer / micro */
+.tl .pa2-footer {
+  position: absolute;
+  z-index: 4;
+  left: 10%;
+  right: 10%;
+  bottom: 3.5%;
+  margin: 0;
+  text-align: center;
+  color: #565e6e;
+  font-size: clamp(0.9cqw, 1.5cqw, 1.8cqw);
+  font-weight: 500;
+}
+.tl .pa2-micro {
+  position: absolute;
+  z-index: 4;
+  bottom: 3.5%;
+  left: 7.5%;
+  margin: 0;
+  color: #9aa1ae;
+  font-size: clamp(0.64cqw, 0.6cqw, 1cqw);
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+@keyframes pa2-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl .pa2-path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .tl .pa2-opportunity,
+  .tl .pa2-summary,
+  .tl .pa2-party-card,
+  .tl .pa2-match-tile {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .tl .pa2-col-label {
+    top: 13%;
+  }
+  .tl .pa2-party-card {
+    width: 19%;
+    min-height: clamp(7cqw, 10cqw, 13cqw);
+    border-width: 1.5px;
+  }
+  .tl .pa2-party-card.m {
+    left: 3.5%;
+  }
+  .tl .pa2-party-card.b {
+    right: 3.5%;
+  }
+  .tl .pa2-center {
+    width: 44%;
+    top: 17%;
+    height: 62%;
+  }
+  .tl .pa2-opportunity,
+  .tl .pa2-summary {
+    border-width: 2px;
+  }
+  .tl .pa2-hero {
+    width: 78%;
+    top: 4.5%;
+  }
+  .tl .pa2-footer {
+    left: 14%;
+    right: 14%;
+    bottom: 4.5%;
+  }
+  .tl .pa2-pill {
+    top: 89%;
+  }
+  .tl .pa2-micro {
+    display: none;
+  }
+}

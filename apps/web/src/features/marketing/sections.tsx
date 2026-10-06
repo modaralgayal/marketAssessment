@@ -1,4 +1,5 @@
-import { createElement, useEffect, useRef, type ReactNode } from "react";
+import { createElement, useEffect, useState, type ReactNode } from "react";
+import "./processAnimation.css";
 import type { Project, Section } from "./content";
 import { text, TLink, accentParts } from "./content";
 import { TradeForm } from "./forms/TradeForm";
@@ -49,44 +50,299 @@ export function Icon({ n }: { n: number }) {
   );
 }
 
-/**
- * Solution-section showcase. The prototype used a looping "matching" video; we
- * now ship that real clip (Tradelomacy-at-scale-1440p.mp4 in /public) and play
- * it here. It autoplays muted + looped, and is paused when the visitor prefers
- * reduced motion.
- */
+/* ------------------------------------------------------------------ *
+ * Solution-section showcase — a looping CSS/JS replica of the old
+ * "Tradelomacy-at-scale" motion-graphics video (no video file). It cycles
+ * through 8 buyer↔manufacturer pairings, drawing connection curves with a
+ * travelling dot and flipping requirement rows, lands two matches (which turn
+ * green and stay), holds the final state, then loops. Honours
+ * prefers-reduced-motion by showing the final frame only.
+ * ------------------------------------------------------------------ */
+
+const PA_ROWS = [
+  "Product specifications",
+  "Market readiness",
+  "Order quantity",
+  "Payment terms",
+  "Delivery timing",
+];
+
+// Pairing order; for the six rejected ones, which rows conflict (false = red).
+const PA_PAIRS: { m: number; b: number; rows: boolean[] }[] = [
+  { m: 1, b: 1, rows: [false, true, true, false, true] },
+  { m: 1, b: 2, rows: [true, false, false, true, false] },
+  { m: 2, b: 2, rows: [false, true, true, true, false] },
+  { m: 2, b: 4, rows: [true, false, false, false, true] },
+  { m: 3, b: 4, rows: [true, true, false, true, false] },
+  { m: 3, b: 2, rows: [false, false, true, false, true] },
+];
+
+type PairStep = { kind: "pair"; n: number; m: number; b: number; rows: boolean[]; outcome: "reject" | "assess" | "match"; dur: number };
+type FinalStep = { kind: "final"; dur: number };
+type PaStep = PairStep | FinalStep;
+
+// Full ~10s timeline: six rejects, then the two matches (assess → flip → match), then a hold.
+const PA_SEQUENCE: PaStep[] = (() => {
+  const out: PaStep[] = [];
+  PA_PAIRS.forEach((p, i) => {
+    out.push({ kind: "pair", n: i + 1, m: p.m, b: p.b, rows: p.rows, outcome: "reject", dur: 850 });
+  });
+  // Matches start with conflicts on Payment terms + Delivery timing, then flip all green.
+  [
+    { m: 1, b: 3 },
+    { m: 4, b: 2 },
+  ].forEach((p, i) => {
+    const n = 7 + i;
+    out.push({ kind: "pair", n, m: p.m, b: p.b, rows: [true, true, true, false, false], outcome: "assess", dur: 850 });
+    out.push({ kind: "pair", n, m: p.m, b: p.b, rows: [true, true, true, true, true], outcome: "match", dur: 950 });
+  });
+  out.push({ kind: "final", dur: 3200 });
+  return out;
+})();
+
+const PA_MATCHES = [
+  { m: 1, b: 3 },
+  { m: 4, b: 2 },
+];
+
+// Connector geometry, in the 160×90 SVG space that maps 1:1 onto the 16:9 stage.
+const PA_Y = [24, 40, 56, 72]; // card vertical centres (top→bottom)
+const PA_CENTER_Y = 45; // vertical centre of the opportunity card
+const PA_CENTER_LX = 62; // left edge of the opportunity card
+const PA_CENTER_RX = 98; // right edge
+const PA_M_RX = 36; // manufacturer card right edge (left 7.5% + width 15% of 160)
+const PA_B_LX = 124; // buyer card left edge (right 7.5% + width 15% of 160)
+
+function cardTopPct(idx: number): number {
+  return (PA_Y[idx - 1] / 90) * 100;
+}
+
+// Curved link from a manufacturer card, into the left edge of the opportunity card.
+function paLeftPath(m: number): string {
+  const ym = PA_Y[m - 1];
+  const bend = Math.max(3, (PA_CENTER_LX - PA_M_RX) * 0.42);
+  return `M${PA_M_RX} ${ym} C ${PA_M_RX + bend} ${ym}, ${PA_CENTER_LX - bend} ${PA_CENTER_Y}, ${PA_CENTER_LX} ${PA_CENTER_Y}`;
+}
+// Curved link out of the right edge of the opportunity card to a buyer card.
+function paRightPath(b: number): string {
+  const yb = PA_Y[b - 1];
+  const bend = Math.max(3, (PA_B_LX - PA_CENTER_RX) * 0.42);
+  return `M${PA_CENTER_RX} ${PA_CENTER_Y} C ${PA_CENTER_RX + bend} ${PA_CENTER_Y}, ${PA_B_LX - bend} ${yb}, ${PA_B_LX} ${yb}`;
+}
+// Big green arc joining a matched pair, drawn in the final hold.
+function paFinalPath(m: number, b: number): string {
+  const ym = PA_Y[m - 1];
+  const yb = PA_Y[b - 1];
+  return `M${PA_M_RX} ${ym} C 75 ${ym - 3}, 85 ${yb + 3}, ${PA_B_LX} ${yb}`;
+}
+function paFinalDot(m: number, b: number): { cx: number; cy: number } {
+  return { cx: 80, cy: (PA_Y[m - 1] + PA_Y[b - 1]) / 2 };
+}
+
+type CardState = "idle" | "active" | "matched" | "dim";
+
+function PaCard({ side, idx, state }: { side: "m" | "b"; idx: number; state: CardState }) {
+  const name = side === "m" ? `Manufacturer 0${idx}` : `Buyer 0${idx}`;
+  const cap =
+    state === "matched" ? "Match found" : state === "active" ? "Assessing" : "Potential partner";
+  return (
+    <article
+      className={`pa2-party-card ${side} ${state === "idle" ? "" : `is-${state}`}`}
+      style={{ top: `${cardTopPct(idx)}%` }}
+    >
+      <svg
+        className="pa2-party-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        {side === "m" ? (
+          <path d="M3 21V9l6-4 6 4v12M3 21h18M9 21v-5h6v5M7 12h2M15 12h2" />
+        ) : (
+          <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21a7 7 0 0 1 14 0" />
+        )}
+      </svg>
+      <div className="pa2-party-copy">
+        <span className="pa2-party-name">{name}</span>
+        <span className="pa2-caption">{cap}</span>
+      </div>
+    </article>
+  );
+}
+
 function ProcessAnimation() {
-  const ref = useRef<HTMLVideoElement>(null);
+  const [step, setStep] = useState(0);
+  const [matched, setMatched] = useState<{ m: number; b: number }[]>([]);
+  const [reduce, setReduce] = useState(false);
 
   useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const apply = () => {
-      if (mq.matches) video.pause();
-      else video.play().catch(() => {});
+    if (mq.matches) {
+      setReduce(true);
+      setStep(PA_SEQUENCE.length - 1);
+      setMatched(PA_MATCHES);
+      return;
+    }
+    let idx = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const cur = PA_SEQUENCE[idx];
+      if (cur.kind === "pair" && cur.outcome === "match") {
+        setMatched((prev) =>
+          prev.some((x) => x.m === cur.m && x.b === cur.b) ? prev : [...prev, { m: cur.m, b: cur.b }],
+        );
+      }
+      idx += 1;
+      if (idx >= PA_SEQUENCE.length) {
+        idx = 0;
+        setMatched([]);
+      }
+      setStep(idx);
+      timer = setTimeout(tick, PA_SEQUENCE[idx].dur);
     };
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
+    timer = setTimeout(tick, PA_SEQUENCE[0].dur);
+    return () => clearTimeout(timer);
   }, []);
+
+  const cur = PA_SEQUENCE[step];
+  const isFinal = cur.kind === "final";
+  const pair = cur.kind === "pair" ? cur : null;
+
+  const stateFor = (side: "m" | "b", idx: number): CardState => {
+    if (matched.some((x) => (side === "m" ? x.m : x.b) === idx)) return "matched";
+    if (isFinal) return "dim";
+    if (pair && (side === "m" ? pair.m : pair.b) === idx) {
+      return pair.outcome === "match" ? "matched" : "active";
+    }
+    return "idle";
+  };
 
   return (
     <div
-      className="process-animation"
+      className="process-animation pa2"
       role="img"
-      aria-label="Tradelomacy matches buyer requirements with verified suppliers at scale."
+      aria-label="Tradelomacy assesses eight buyer–manufacturer pairings against shared requirements and surfaces two compatible matches, at scale."
     >
-      <video
-        ref={ref}
-        className="pa-video"
-        src="/Tradelomacy-at-scale-1440p.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-      />
+      <svg className="pa2-network" viewBox="0 0 2560 1440" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M-80 352 C300 70 650 595 976 342 S1506 125 1850 370 S2290 528 2660 166" />
+        <path d="M-100 1090 C286 822 602 1297 940 1066 S1490 798 1802 1020 S2260 1220 2680 898" />
+        <path d="M160 118 C418 328 656 188 810 38 M1708 38 C1832 248 2018 240 2194 76" />
+        <path d="M34 727 C310 505 560 725 768 867 M1780 720 C2050 486 2302 644 2525 820" />
+        <circle cx="474" cy="267" r="5" />
+        <circle cx="898" cy="400" r="5" />
+        <circle cx="1687" cy="234" r="5" />
+        <circle cx="2100" cy="489" r="5" />
+        <circle cx="584" cy="1190" r="5" />
+        <circle cx="1908" cy="1044" r="5" />
+      </svg>
+
+      <div className="pa2-hero">
+        <h1>One opportunity. Two sides aligned, at scale.</h1>
+        <p>Multiple partners. One shared qualification process.</p>
+      </div>
+
+      <div className="pa2-col-label pa2-left-label">MANUFACTURERS</div>
+      <div className="pa2-col-label pa2-right-label">BUYERS</div>
+
+      {[1, 2, 3, 4].map((i) => (
+        <PaCard key={`m${i}`} side="m" idx={i} state={stateFor("m", i)} />
+      ))}
+      {[1, 2, 3, 4].map((i) => (
+        <PaCard key={`b${i}`} side="b" idx={i} state={stateFor("b", i)} />
+      ))}
+
+      <div className={`pa2-center${isFinal ? " is-summary" : ""}`}>
+        <div className="pa2-opportunity">
+          <div className="pa2-eyebrow">OPPORTUNITY</div>
+          <h2>Potential partnership</h2>
+          <div className="pa2-pair-label">
+            {pair ? `Manufacturer 0${pair.m} + Buyer 0${pair.b}` : ""}
+          </div>
+          <div className="pa2-requirements-label">NON-NEGOTIABLE REQUIREMENTS</div>
+          <div className="pa2-requirements">
+            {PA_ROWS.map((label, r) => {
+              const aligned = pair ? pair.rows[r] : false;
+              return (
+                <div key={label} className={`pa2-requirement ${aligned ? "aligned" : "conflict"}`}>
+                  <span className="pa2-requirement-name">{label}</span>
+                  <span className={`pa2-state ${aligned ? "aligned" : "conflict"}`}>
+                    {aligned ? "✓ Aligned" : "✕ Conflict"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="pa2-summary">
+          <div className="pa2-summary-eyebrow">COMPATIBLE PARTNERSHIPS</div>
+          <h2>Two partnership matches</h2>
+          <div className="pa2-match-tile">
+            <strong>MATCH 01: Manufacturer 01 + Buyer 03</strong>
+            <span>All critical requirements aligned</span>
+          </div>
+          <div className="pa2-match-tile">
+            <strong>MATCH 02: Manufacturer 04 + Buyer 02</strong>
+            <span>All critical requirements aligned</span>
+          </div>
+          <p className="pa2-summary-note">8 pairings assessed across both sides</p>
+        </div>
+      </div>
+
+      <svg className="pa2-connections" viewBox="0 0 160 90" preserveAspectRatio="none" aria-hidden="true">
+        {!isFinal && pair && (
+          <g key={`pair-${step}`}>
+            <path
+              id={`pa2-left-${step}`}
+              className={`pa2-path${pair.outcome === "match" ? " green" : ""}`}
+              pathLength={1}
+              d={paLeftPath(pair.m)}
+            />
+            <path
+              id={`pa2-right-${step}`}
+              className={`pa2-path${pair.outcome === "match" ? " green" : ""}`}
+              pathLength={1}
+              d={paRightPath(pair.b)}
+            />
+            {!reduce && (
+              <>
+                <circle className={`pa2-dot${pair.outcome === "match" ? " green" : ""}`} r={1.7}>
+                  <animateMotion dur={`${Math.min(pair.dur, 1000)}ms`} begin="0.1s" repeatCount="indefinite">
+                    <mpath xlinkHref={`#pa2-left-${step}`} />
+                  </animateMotion>
+                </circle>
+                <circle className={`pa2-dot${pair.outcome === "match" ? " green" : ""}`} r={1.7}>
+                  <animateMotion dur={`${Math.min(pair.dur, 1000)}ms`} begin="0.1s" repeatCount="indefinite">
+                    <mpath xlinkHref={`#pa2-right-${step}`} />
+                  </animateMotion>
+                </circle>
+              </>
+            )}
+          </g>
+        )}
+        {isFinal &&
+          PA_MATCHES.map((mm) => {
+            const dot = paFinalDot(mm.m, mm.b);
+            return (
+              <g key={`final-${mm.m}-${mm.b}`}>
+                <path className="pa2-final-path visible" d={paFinalPath(mm.m, mm.b)} />
+                <circle className="pa2-final-dot visible" cx={dot.cx} cy={dot.cy} r={1.5} />
+              </g>
+            );
+          })}
+      </svg>
+
+      <div className={`pa2-pill${isFinal ? " complete" : ""}`}>
+        {isFinal ? "✓ 2 MATCHES FOUND" : pair ? `ASSESSING PAIRING 0${pair.n} / 08` : ""}
+      </div>
+
+      <footer>
+        <p className="pa2-footer">Find the right partners on both sides of every opportunity.</p>
+        <p className="pa2-micro">ILLUSTRATIVE PLATFORM CONCEPT</p>
+      </footer>
     </div>
   );
 }
