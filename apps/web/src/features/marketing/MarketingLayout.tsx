@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, Outlet } from "react-router-dom";
-import { useProject, TLink, OrgModalProvider, text } from "./content";
+import { useProject, TLink, OrgModalProvider } from "./content";
 import "./marketing.css";
 
 function Nav() {
@@ -26,6 +26,12 @@ function Nav() {
   if (!project) return <header className="site-nav" />;
 
   const nav = project.global.nav;
+  // Hide the Insights page from navigation without deleting it (route,
+  // component and content JSON stay intact). Filters top-level + dropdown items.
+  const isHidden = (href?: string) => !!href && /insights/i.test(href);
+  const visibleNav = nav
+    .filter((n) => !isHidden(n.href))
+    .map((n) => ({ ...n, children: (n.children ?? []).filter((c) => !isHidden(c.href)) }));
   const routePath = "/" + (location.pathname.split("/")[1] ?? "");
 
   return (
@@ -35,7 +41,7 @@ function Nav() {
           <img src={project.assets.logo} alt="TRADELOMACY" />
         </a>
         <nav className="nav-links" aria-label="Main navigation" ref={navRef}>
-          {nav.map((n, i) =>
+          {visibleNav.map((n, i) =>
             n.children?.length ? (
               <div className="nav-dropdown" key={i}>
                 <button
@@ -61,7 +67,7 @@ function Nav() {
               </div>
             ) : (
               <TLink key={i} href={n.href} ariaCurrent={n.href === routePath}>
-                {text(project, `global.nav.${i}.label`)}
+                {n.label}
               </TLink>
             ),
           )}
@@ -88,9 +94,9 @@ function Nav() {
         </button>
       </div>
       <nav className={`mobile-nav${mobileOpen ? " open" : ""}`} id="mobile-menu" aria-label="Mobile navigation">
-        {nav.map((n, i) => (
+        {visibleNav.map((n, i) => (
           <TLink key={i} href={n.href}>
-            {text(project, `global.nav.${i}.label`)}
+            {n.label}
           </TLink>
         ))}
         <TLink href="#/contact">{project.global.secondaryLabel}</TLink>
@@ -103,8 +109,8 @@ function Nav() {
 function Footer() {
   const { project } = useProject();
   if (!project) return <footer className="footer" />;
-  const p = "global.footer";
   const footer = project.global.footer;
+  const footerLinks = footer.links.filter((x) => !/insights/i.test(x.href ?? ""));
   return (
     <footer className="footer">
       <div className="wrap">
@@ -117,9 +123,9 @@ function Footer() {
             <p>{footer.description}</p>
           </div>
           <nav className="footer-links" aria-label="Footer">
-            {footer.links.map((x, i) => (
+            {footerLinks.map((x, i) => (
               <TLink key={i} href={x.href}>
-                {text(project, `${p}.links.${i}.label`)}
+                {x.label}
               </TLink>
             ))}
           </nav>

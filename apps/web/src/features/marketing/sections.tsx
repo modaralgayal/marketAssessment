@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from "react";
+import { createElement, useEffect, useRef, type ReactNode } from "react";
 import type { Project, Section } from "./content";
 import { text, TLink, accentParts } from "./content";
 import { TradeForm } from "./forms/TradeForm";
@@ -50,31 +50,43 @@ export function Icon({ n }: { n: number }) {
 }
 
 /**
- * Always-running "matching" animation for the Solution section. Replaces the
- * prototype's looping video: two parties (buyer / supplier) with a pulsing
- * "Matched." core and travelling data dots along the connection. Pure CSS, no
- * controls — it loops continuously and cannot be paused by the viewer.
+ * Solution-section showcase. The prototype used a looping "matching" video; we
+ * now ship that real clip (Tradelomacy-at-scale-1440p.mp4 in /public) and play
+ * it here. It autoplays muted + looped, and is paused when the visitor prefers
+ * reduced motion.
  */
 function ProcessAnimation() {
+  const ref = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => {
+      if (mq.matches) video.pause();
+      else video.play().catch(() => {});
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
   return (
     <div
       className="process-animation"
       role="img"
-      aria-label="Animation: Tradelomacy matches buyer requirements with a verified supplier."
+      aria-label="Tradelomacy matches buyer requirements with verified suppliers at scale."
     >
-      <div className="pa-node pa-buyer">
-        <span className="pa-kicker">BUYER</span>
-        <span className="pa-title">Buyer requirements</span>
-      </div>
-      <div className="pa-link" aria-hidden="true">
-        <span className="pa-dot" />
-        <span className="pa-dot pa-dot-b" />
-        <span className="pa-core">Matched.</span>
-      </div>
-      <div className="pa-node pa-supplier">
-        <span className="pa-kicker">SUPPLIER</span>
-        <span className="pa-title">Verified supplier</span>
-      </div>
+      <video
+        ref={ref}
+        className="pa-video"
+        src="/Tradelomacy-at-scale-1440p.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+      />
     </div>
   );
 }
@@ -90,7 +102,7 @@ function sectionClass(route: string, s: Section): string {
   const inner =
     ["contact", "request", "access", "legal"].includes(s.type)
       ? "inner-page "
-      : !["hero", "stats"].includes(s.type)
+      : !["hero"].includes(s.type)
         ? "section "
         : "";
   return `${inner}${cls}${s.type === "hero" && s.image ? " hero-background" : ""}`;

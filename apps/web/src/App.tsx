@@ -185,7 +185,6 @@ export default function App() {
             path="/for-governments-and-associations"
             element={<MarketingPage route="for-governments-and-associations" />}
           />
-          <Route path="/request-report" element={<MarketingPage route="request-report" />} />
           <Route path="/contact" element={<MarketingPage route="contact" />} />
           <Route path="/privacy" element={<MarketingPage route="privacy" />} />
           <Route path="/start-trading" element={<MarketingPage route="start-trading" />} />

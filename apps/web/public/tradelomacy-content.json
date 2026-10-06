@@ -70,10 +70,6 @@
           "href": "#/contact"
         },
         {
-          "label": "Request a report",
-          "href": "#/request-report"
-        },
-        {
           "label": "Assessment access",
           "href": "#/assessment"
         },
