@@ -13,8 +13,14 @@ import { matchesRouter } from "./routes/matches.js";
 import { catalogueRouter } from "./routes/catalogue.js";
 import { customersRouter } from "./routes/customers.js";
 import { leadsRouter } from "./routes/leads.js";
+import { accountsRouter } from "./routes/accounts.js";
+import { manufacturerProfilesRouter } from "./routes/manufacturerProfiles.js";
+import { buyerProfilesRouter } from "./routes/buyerProfiles.js";
+import { opportunityCardsRouter } from "./routes/opportunityCards.js";
+import { matchSuggestionsRouter } from "./routes/matchSuggestions.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { isOriginAllowed } from "./lib/corsOrigin.js";
 
 export const app = express();
 
@@ -25,21 +31,13 @@ app.use(
     contentSecurityPolicy: false, // disabled for now — the web frontend is a separate SPA
   }),
 );
-// Allow the configured web origin (comma-separated list supported) plus any
-// localhost / 127.0.0.1 origin so local dev (web on :5173 → API on :3000)
+// Allow the configured web origin (comma-separated list, from WEB_ORIGIN) plus
+// any localhost / 127.0.0.1 origin so local dev (web on :5173 → API on :3000)
 // works without exposing the API to arbitrary third-party origins.
-const devOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
-const allowedOrigins = (env.WEB_ORIGIN ?? "")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
-
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // same-origin / non-browser requests
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      if (devOrigin.test(origin)) return cb(null, true);
+      if (isOriginAllowed(origin)) return cb(null, true);
       cb(new Error("Not allowed by CORS"));
     },
   }),
@@ -65,6 +63,11 @@ app.use("/api/distributors", distributorsRouter);
 app.use("/api", catalogueRouter);
 app.use("/api/customers", customersRouter);
 app.use("/api/leads", leadsRouter);
+app.use("/api/accounts", accountsRouter);
+app.use("/api/manufacturer-profile", manufacturerProfilesRouter);
+app.use("/api/buyer-profile", buyerProfilesRouter);
+app.use("/api/opportunity-cards", opportunityCardsRouter);
+app.use("/api/match-suggestions", matchSuggestionsRouter);
 
 app.use(errorHandler);
 

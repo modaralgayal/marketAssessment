@@ -130,9 +130,9 @@ export type CustomerInput = z.infer<typeof customerSchema>;
 
 export interface ContactPerson {
   name: string;
-  position?: string | null;
-  phone?: string | null;
-  email?: string | null;
+  position?: string | undefined;
+  phone?: string | undefined;
+  email?: string | undefined;
 }
 
 const contactPersonSchema = z.object({

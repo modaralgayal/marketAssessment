@@ -31,6 +31,9 @@ const schema = z.object({
   // Claude api key
   CLAUDE_API_KEY: z.string().optional(),
 
+  // Matchmaking agent API key (server-to-server). Optional at boot.
+  MATCHMAKING_API_KEY: z.string().optional(),
+
   // Email (SMTP) — optional at boot; report-request notifications need it.
   // For Gmail: SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, and SMTP_PASS is a
   // 16-char App Password (not your normal Google password).

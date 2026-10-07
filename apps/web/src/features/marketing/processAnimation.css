@@ -68,7 +68,7 @@
 }
 .tl .pa2-hero h1 {
   margin: 0;
-  font-size: clamp(1.6cqw, 3.2cqw, 4.7cqw);
+  font-size: clamp(1.9cqw, 3.6cqw, 5.4cqw);
   line-height: 1.08;
   letter-spacing: -0.04em;
   font-weight: 700;
@@ -77,7 +77,7 @@
 .tl .pa2-hero p {
   margin: 0.5cqw 0 0;
   color: var(--pa2-muted);
-  font-size: clamp(1cqw, 1.6cqw, 2cqw);
+  font-size: clamp(1.2cqw, 1.8cqw, 2.4cqw);
   letter-spacing: -0.01em;
 }
 
@@ -86,7 +86,9 @@
   position: absolute;
   z-index: 4;
   top: 15%;
-  font-size: clamp(0.8cqw, 1.1cqw, 1.4cqw);
+  width: 16%;
+  text-align: center;
+  font-size: clamp(1cqw, 1.4cqw, 1.8cqw);
   font-weight: 700;
   letter-spacing: 0.16em;
   color: #6b7280;
@@ -96,7 +98,7 @@
 }
 .tl .pa2-right-label {
   right: 7.5%;
-  text-align: right;
+  text-align: center;
 }
 
 /* party cards */
@@ -155,7 +157,7 @@
 }
 .tl .pa2-party-name {
   display: block;
-  font-size: clamp(0.9cqw, 1.1cqw, 1.6cqw);
+  font-size: clamp(1.1cqw, 1.35cqw, 1.9cqw);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--pa2-ink);
@@ -169,7 +171,7 @@
 }
 .tl .pa2-caption {
   margin-top: 0.25cqw;
-  font-size: clamp(0.64cqw, 0.85cqw, 1.18cqw);
+  font-size: clamp(0.8cqw, 1cqw, 1.4cqw);
   font-weight: 600;
   color: #8a91a0;
 }
@@ -202,9 +204,15 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
+  gap: clamp(0.4cqw, 1cqw, 1.4cqw);
   text-align: center;
   transition: opacity 0.42s ease, transform 0.42s cubic-bezier(0.22, 0.85, 0.3, 1);
+}
+.tl .pa2-opportunity > *,
+.tl .pa2-summary > * {
+  flex: 0 0 auto;
+  min-height: 0;
 }
 .tl .pa2-opportunity {
   border: 3px solid var(--pa2-blue);
@@ -227,43 +235,43 @@
 }
 .tl .pa2-eyebrow {
   color: var(--pa2-blue);
-  font-size: clamp(0.8cqw, 0.85cqw, 1.3cqw);
+  font-size: clamp(0.9cqw, 1cqw, 1.5cqw);
   font-weight: 700;
   letter-spacing: 0.16em;
 }
 .tl .pa2-summary-eyebrow {
   color: var(--pa2-green);
-  font-size: clamp(0.8cqw, 0.85cqw, 1.3cqw);
+  font-size: clamp(0.9cqw, 1cqw, 1.5cqw);
   font-weight: 700;
   letter-spacing: 0.16em;
 }
 .tl .pa2-opportunity h2,
 .tl .pa2-summary h2 {
   margin: clamp(0.35cqw, 0.8cqw, 0.9cqw) 0;
-  font-size: clamp(1.18cqw, 1.8cqw, 2.36cqw);
+  font-size: clamp(1.5cqw, 2.2cqw, 3cqw);
   line-height: 1.1;
   letter-spacing: -0.04em;
   color: var(--pa2-ink);
 }
 .tl .pa2-pair-label {
   color: var(--pa2-blue);
-  font-size: clamp(0.9cqw, 1.05cqw, 1.45cqw);
+  font-size: clamp(1.1cqw, 1.3cqw, 1.8cqw);
   font-weight: 700;
   min-height: 1.2em;
 }
 .tl .pa2-requirements-label {
   margin: clamp(0.36cqw, 0.9cqw, 1cqw) 0 clamp(0.3cqw, 0.6cqw, 0.7cqw);
   color: #808797;
-  font-size: clamp(0.64cqw, 0.62cqw, 0.9cqw);
+  font-size: clamp(0.7cqw, 0.78cqw, 1.1cqw);
   font-weight: 700;
   letter-spacing: 0.15em;
 }
 .tl .pa2-requirements {
   display: grid;
-  gap: clamp(0.32cqw, 0.6cqw, 0.68cqw);
+  gap: clamp(0.4cqw, 0.7cqw, 0.85cqw);
 }
 .tl .pa2-requirement {
-  min-height: clamp(1.7cqw, 2.4cqw, 2.9cqw);
+  min-height: clamp(2cqw, 3cqw, 3.6cqw);
   padding: 0 clamp(0.45cqw, 1cqw, 1.09cqw);
   display: flex;
   align-items: center;
@@ -281,7 +289,7 @@
 }
 .tl .pa2-requirement-name {
   min-width: 0;
-  font-size: clamp(0.73cqw, 0.85cqw, 1.18cqw);
+  font-size: clamp(0.9cqw, 1cqw, 1.4cqw);
   font-weight: 600;
   color: var(--pa2-ink);
   white-space: nowrap;
@@ -290,7 +298,7 @@
 }
 .tl .pa2-state {
   flex: 0 0 auto;
-  font-size: clamp(0.64cqw, 0.75cqw, 1.09cqw);
+  font-size: clamp(0.8cqw, 0.9cqw, 1.25cqw);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -310,19 +318,19 @@
 .tl .pa2-match-tile strong {
   display: block;
   color: #157a43;
-  font-size: clamp(0.82cqw, 0.9cqw, 1.27cqw);
+  font-size: clamp(1cqw, 1.1cqw, 1.5cqw);
   font-weight: 700;
 }
 .tl .pa2-match-tile span {
   display: block;
   margin-top: 0.3cqw;
   color: #3a7a52;
-  font-size: clamp(0.64cqw, 0.72cqw, 1cqw);
+  font-size: clamp(0.8cqw, 0.85cqw, 1.1cqw);
 }
 .tl .pa2-summary-note {
   margin: clamp(0.36cqw, 0.8cqw, 0.82cqw) 0 0;
   color: #697386;
-  font-size: clamp(0.73cqw, 0.85cqw, 1.18cqw);
+  font-size: clamp(0.9cqw, 1cqw, 1.3cqw);
 }
 
 /* connectors: draw-on paths + traveling dots + final match arcs */

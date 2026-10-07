@@ -4,3 +4,8 @@ export * from "./customer";
 export * from "./dataTier";
 export * from "./lead";
 export * from "./reportRequest";
+export * from "./account";
+export * from "./manufacturerProfile";
+export * from "./buyerProfile";
+export * from "./opportunityCard";
+export * from "./matchSuggestion";

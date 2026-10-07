@@ -14,6 +14,11 @@ import CustomerProfileForm from "./features/admin/CustomerProfileForm";
 import LeadList from "./features/admin/LeadList";
 import LeadDetail from "./features/admin/LeadDetail";
 import ProtectedRoute from "./features/admin/ProtectedRoute";
+import Signup from "./features/auth/Signup";
+import Login from "./features/auth/Login";
+import RequireRole from "./features/auth/RequireRole";
+import ManufacturerDashboard from "./features/manufacturer/ManufacturerDashboard";
+import BuyerDashboard from "./features/buyer/BuyerDashboard";
 import { ExportLeadProvider } from "./features/landing/StartExportingModal";
 import { MarketingLayout } from "./features/marketing/MarketingLayout";
 import { MarketingPage } from "./features/marketing/pages";
@@ -65,6 +70,30 @@ export default function App() {
       <Routes>
         {/* Assessment (invite-gated) — kept in the existing app, outside the marketing shell. */}
         <Route path="/assessment" element={<FormPage />} />
+
+        {/* Self-service sign-up (invite-gated account creation). */}
+        <Route path="/signup" element={<Signup />} />
+
+        {/* Self-service sign-in for existing buyer/manufacturer accounts. */}
+        <Route path="/login" element={<Login />} />
+
+        {/* Buyer & Manufacturer dashboards (separate, role-gated). */}
+        <Route
+          path="/manufacturer"
+          element={
+            <RequireRole roles={["MANUFACTURER"]}>
+              <ManufacturerDashboard />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/buyer"
+          element={
+            <RequireRole roles={["BUYER"]}>
+              <BuyerDashboard />
+            </RequireRole>
+          }
+        />
 
         {/* Admin — kept in the existing app, outside the marketing shell. */}
         <Route path="/admin/login" element={<AdminLogin />} />

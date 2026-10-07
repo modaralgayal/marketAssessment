@@ -226,12 +226,208 @@ model Invite {
   token     String       @unique
   email     String? // optional: the intended recipient of the invite
   status    InviteStatus @default(PENDING)
-  purpose   String        @default("OPPORTUNITY") // OPPORTUNITY (→ Submission) | ONBOARDING (→ Customer)
+  purpose   String        @default("OPPORTUNITY") // OPPORTUNITY (→ Submission) | ONBOARDING (→ Customer) | ACCOUNT (→ self-service Account)
+  role      String?      // for ACCOUNT invites: BUYER | MANUFACTURER
+  account   Account?     @relation(fields: [accountId], references: [id])
+  accountId String?      @unique
   createdAt DateTime     @default(now())
   usedAt    DateTime?
 
   @@index([token])
   @@index([status])
+}
+
+// ── Self-service accounts (buyers & manufacturers) ────────────────────────
+// Distinct from the admin email-allowlist: an Account is a real, authenticated
+// user who owns a profile and opportunity cards. Created via an ACCOUNT invite.
+
+enum AccountRole {
+  BUYER
+  MANUFACTURER
+  ADMIN
+}
+
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  DISABLED
+}
+
+model Account {
+  id          String       @id @default(cuid())
+  firebaseUid String       @unique
+  email       String
+  role        AccountRole
+  status      AccountStatus @default(ACTIVE)
+  inviteToken String? // the invite token this account was created from
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  manufacturerProfile ManufacturerProfile?
+  buyerProfile        BuyerProfile?
+  opportunityCards    OpportunityCard[]
+  invite              Invite? // the ACCOUNT invite this account was created from
+
+  @@index([firebaseUid])
+  @@index([role])
+}
+
+enum OpportunitySide {
+  BUY // a sourcing need posted by a buyer
+  SELL // a product / capability offered by a manufacturer
+}
+
+enum OpportunityStatus {
+  DRAFT // created, not yet visible to the matchmaking agent
+  POSTED // published — visible to the matchmaking agent
+  ARCHIVED // taken down
+}
+
+// A unit of intent: a manufacturer's offering (SELL) or a buyer's sourcing need
+// (BUY). Posting a card (DRAFT → POSTED) is the explicit handoff to the
+// matchmaking agent, which reads the POSTED feed and writes back MatchSuggestions.
+model OpportunityCard {
+  id             String           @id @default(cuid())
+  ownerAccountId String
+  owner          Account          @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
+  side           OpportunitySide
+  status         OpportunityStatus @default(DRAFT)
+  title          String
+  summary        String?
+  category       String?
+  attributes     Json             @default("{}") // free-form, domain-specific fields
+  publishedAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  matchSuggestions MatchSuggestion[] @relation("cardA")
+  matchSuggestionsB MatchSuggestion[] @relation("cardB")
+
+  @@index([ownerAccountId])
+  @@index([status])
+  @@index([side])
+}
+
+enum MatchSuggestionStatus {
+  NEW
+  REVIEWED
+  DISMISSED
+  ACCEPTED
+}
+
+// Written by the matchmaking agent (server-to-server). Surfaced on both
+// dashboards so each party can see incoming matches on their cards.
+model MatchSuggestion {
+  id         String              @id @default(cuid())
+  cardAId    String
+  cardA      OpportunityCard     @relation("cardA", fields: [cardAId], references: [id], onDelete: Cascade)
+  cardBId    String
+  cardB      OpportunityCard     @relation("cardB", fields: [cardBId], references: [id], onDelete: Cascade)
+  score      Float
+  rationale  String?
+  status     MatchSuggestionStatus @default(NEW)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@index([cardAId])
+  @@index([cardBId])
+}
+
+// ── Manufacturer profile (self-service; mirrors the legacy Customer fields) ─
+
+model ManufacturerProfile {
+  id          String  @id @default(cuid())
+  accountId   String  @unique
+  account     Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  // Section 1 - Company Profile
+  companyName          String
+  country              String
+  website              String?
+  industryCategory     String
+  annualRevenue        RevenueBracket?
+  annualRevenueCustom  String?
+  yearsInBusiness      String?
+  currentExportMarkets String?
+
+  // Section 2 - Products and Operations
+  halalCert            YesNoUnsure?
+  sfdaStatus           SfdaStatus?
+  frozenStorage        FrozenStorage?
+  shelfLife            ShelfLife?
+  otherCerts           String[]
+  otherCertsCustom     String?
+  labelLanguages       String?
+  productAdaptability  Adaptability?
+  brandApproach        BrandApproach?
+  leadTimes            String?
+
+  // Section 3 - Target Market
+  gccCurrentlyActive  Boolean?
+  currentGccMarkets   String[]
+  gccSituation        String?
+  targetMarketPotential TargetPotential?
+  targetMarketPotentialOther String?
+  salesChannels       String[]
+  channelStrategy     String?
+
+  // Section 4 - Operational Readiness
+  moq              String?
+  exportContact    Boolean?
+  productionCapacity Capacity?
+
+  // Section 5 - Decision-Maker Contact
+  contactFullName  String
+  contactTitle     String
+  contactEmail     String
+  contactPhone     String?
+  anythingElse     String?
+
+  // Profile (created directly, not via submission conversion)
+  contacts      Json? // ContactPerson[]: { name, position?, phone?, email? }
+  productCategory String?
+  companyInfo   String?
+  logoFileId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId])
+}
+
+// ── Buyer profile (self-service) ───────────────────────────────────────────
+
+enum BuyerType {
+  IMPORTER_DISTRIBUTOR
+  RETAILER
+}
+
+model BuyerProfile {
+  id        String  @id @default(cuid())
+  accountId String  @unique
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  buyerType        BuyerType
+  companyName      String
+  country          String
+  website          String?
+  // Categories & portfolio
+  categories       String[] @default([])
+  portfolioInfo    String? // "Information about the company"
+  // Sourcing preferences / needs
+  sourcingNeeds    String?
+  targetMarkets    String[] @default([]) // GCC markets of interest
+  // Decision-maker contact
+  contactFullName  String
+  contactTitle     String
+  contactEmail     String
+  contactPhone     String?
+  contacts         Json? // ContactPerson[]: { name, position?, phone?, email? }
+  logoFileId       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId])
 }
 
 // ── Report access requests (public "Request a Report" form) ──────────────

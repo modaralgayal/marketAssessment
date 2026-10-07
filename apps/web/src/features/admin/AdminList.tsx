@@ -46,6 +46,10 @@ export default function AdminList() {
   const [onboardingLink, setOnboardingLink] = useState<string | null>(null);
   const [generatingOnboarding, setGeneratingOnboarding] = useState(false);
 
+  const [accountRole, setAccountRole] = useState<"BUYER" | "MANUFACTURER">("BUYER");
+  const [accountLink, setAccountLink] = useState<string | null>(null);
+  const [generatingAccount, setGeneratingAccount] = useState(false);
+
   const { data: invitesData } = useQuery({
     queryKey: ["invites"],
     queryFn: fetchInvites,
@@ -74,6 +78,19 @@ export default function AdminList() {
       alert("Failed to generate onboarding invite.");
     } finally {
       setGeneratingOnboarding(false);
+    }
+  };
+
+  const generateAccountInvite = async () => {
+    try {
+      setGeneratingAccount(true);
+      const inv = await createInvite(undefined, "ACCOUNT", accountRole);
+      setAccountLink(inv.link);
+      await queryClient.invalidateQueries({ queryKey: ["invites"] });
+    } catch {
+      alert("Failed to generate account invite.");
+    } finally {
+      setGeneratingAccount(false);
     }
   };
 
@@ -335,6 +352,23 @@ export default function AdminList() {
             >
               {generatingOnboarding ? "Generating…" : "Generate onboarding invite"}
             </button>
+            <div className="flex items-center gap-2">
+              <select
+                value={accountRole}
+                onChange={(e) => setAccountRole(e.target.value as "BUYER" | "MANUFACTURER")}
+                className="h-10 rounded-full border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none"
+              >
+                <option value="BUYER">Buyer</option>
+                <option value="MANUFACTURER">Manufacturer</option>
+              </select>
+              <button
+                onClick={generateAccountInvite}
+                disabled={generatingAccount}
+                className="rounded-full bg-brand-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-black disabled:opacity-50"
+              >
+                {generatingAccount ? "Generating…" : "Generate account invite"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -357,6 +391,19 @@ export default function AdminList() {
             <code className="flex-1 break-all text-[12.5px] text-brand-ink">{localInviteLink(onboardingLink)}</code>
             <button
               onClick={() => copy(localInviteLink(onboardingLink))}
+              className="shrink-0 rounded border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-white"
+            >
+              Copy
+            </button>
+          </div>
+        )}
+
+        {accountLink && (
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-brand-ink/20 bg-brand-ink/5 px-4 py-3">
+            <span className="shrink-0 rounded bg-brand-ink px-2 py-0.5 text-[10px] font-bold text-white">ACCOUNT · {accountRole}</span>
+            <code className="flex-1 break-all text-[12.5px] text-brand-ink">{localInviteLink(accountLink)}</code>
+            <button
+              onClick={() => copy(localInviteLink(accountLink))}
               className="shrink-0 rounded border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-white"
             >
               Copy
@@ -404,10 +451,16 @@ export default function AdminList() {
                       className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
                         inv.purpose === "ONBOARDING"
                           ? "bg-amber-100 text-amber-800"
-                          : "bg-brand-teal/15 text-brand-teal"
+                          : inv.purpose === "ACCOUNT"
+                            ? "bg-brand-ink text-white"
+                            : "bg-brand-teal/15 text-brand-teal"
                       }`}
                     >
-                      {inv.purpose === "ONBOARDING" ? "Onboarding" : "Assessment"}
+                      {inv.purpose === "ONBOARDING"
+                        ? "Onboarding"
+                        : inv.purpose === "ACCOUNT"
+                          ? `Account · ${inv.role ?? ""}`
+                          : "Assessment"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-brand-muted">{inv.email ?? "—"}</td>
