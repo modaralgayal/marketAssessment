@@ -5,9 +5,12 @@ import { z } from "zod";
  *
  * The existing `ReportRequest` model now captures GDPR `consent` (the live form
  * already collects it). The honeypot is validated by the route via `BOT_FIELD`
- * (re-exported from `./lead`); it is never stored, and Zod strips unknown keys
- * so it never reaches this schema.
+ * (defined here); it is never stored, and Zod strips unknown keys so it never
+ * reaches this schema.
  */
+
+/** Honeypot field name used by the public report-request form to trap bots. */
+export const BOT_FIELD = "hp";
 
 export const reportRequestSchema = z.object({
   subject: z.string().trim().min(1, "Subject is required").max(200),

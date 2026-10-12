@@ -332,6 +332,34 @@ model MatchSuggestion {
   @@index([cardBId])
 }
 
+// ── Access requests (public "request a user creation" queue) ────────────────
+// A visitor who wants a buyer/manufacturer account submits one of these. An
+// admin approves it, which mints an ACCOUNT invite and emails the link; the
+// visitor then bootstraps their Account from that invite.
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AccessRequest {
+  id           String              @id @default(cuid())
+  name         String
+  email        String
+  company      String?
+  intendedRole AccountRole          // BUYER | MANUFACTURER (stated intent; admin may override)
+  message      String?
+  status       AccessRequestStatus  @default(PENDING)
+  inviteToken  String?              // set on approval → links to Invite.token
+  reviewedBy   String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@index([status])
+  @@index([email])
+}
+
 // ── Manufacturer profile (self-service; mirrors the legacy Customer fields) ─
 
 model ManufacturerProfile {

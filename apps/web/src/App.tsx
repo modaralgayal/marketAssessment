@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { Routes, Route, Navigate, useSearchParams, useParams } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import FormPage from "./features/form/FormPage";
 import AdminLogin from "./features/admin/AdminLogin";
 import AdminList from "./features/admin/AdminList";
@@ -11,29 +10,16 @@ import CustomerList from "./features/admin/CustomerList";
 import CustomerForm from "./features/admin/CustomerForm";
 import CustomerProfile from "./features/admin/CustomerProfile";
 import CustomerProfileForm from "./features/admin/CustomerProfileForm";
-import LeadList from "./features/admin/LeadList";
-import LeadDetail from "./features/admin/LeadDetail";
 import ProtectedRoute from "./features/admin/ProtectedRoute";
 import Signup from "./features/auth/Signup";
 import Login from "./features/auth/Login";
 import RequireRole from "./features/auth/RequireRole";
+import AccessRequests from "./features/admin/AccessRequests";
+import AccountsList from "./features/admin/AccountsList";
 import ManufacturerDashboard from "./features/manufacturer/ManufacturerDashboard";
 import BuyerDashboard from "./features/buyer/BuyerDashboard";
-import { ExportLeadProvider } from "./features/landing/StartExportingModal";
 import { MarketingLayout } from "./features/marketing/MarketingLayout";
 import { MarketingPage } from "./features/marketing/pages";
-
-/**
- * When the app is reached through an invite link we render an isolated,
- * navigation-locked version of the form: the visitor can only see and submit
- * the form — no site nav, no route to the rest of the site. The lock is sticky
- * for the tab session (sessionStorage) so stripping `?invite=` from the URL
- * doesn't unlock it.
- *
- * Later, isolation moves to a dedicated form subdomain: when served from
- * VITE_FORM_HOST the app is form-only by default (no invite param required).
- */
-const FORM_HOST = (import.meta.env as Record<string, string | undefined>).VITE_FORM_HOST;
 
 function MarketingPageFromSlug() {
   const { slug } = useParams();
@@ -41,35 +27,13 @@ function MarketingPageFromSlug() {
 }
 
 export default function App() {
-  const [params] = useSearchParams();
-  const inviteParam = params.get("invite");
-
-  const isFormHost =
-    !!FORM_HOST && typeof window !== "undefined" && window.location.hostname === FORM_HOST;
-
-  const lockedToken =
-    inviteParam ||
-    (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("mea_form_invite") : null);
-
-  useEffect(() => {
-    if (inviteParam) sessionStorage.setItem("mea_form_invite", inviteParam);
-  }, [inviteParam]);
-
-  if (lockedToken || isFormHost) {
-    return (
-      <ExportLeadProvider>
-        <Routes>
-          <Route path="*" element={<FormPage standalone />} />
-        </Routes>
-      </ExportLeadProvider>
-    );
-  }
-
   return (
-    <ExportLeadProvider>
       <Routes>
-        {/* Assessment (invite-gated) — kept in the existing app, outside the marketing shell. */}
-        <Route path="/assessment" element={<FormPage />} />
+        {/* Legacy standalone assessment form. Reached only at its own path via a
+            form-invite link — there is intentionally NO global invite-lock, so
+            /signup and every other route render normally and account-invite
+            links are never hijacked into the form. */}
+        <Route path="/assessment" element={<FormPage standalone />} />
 
         {/* Self-service sign-up (invite-gated account creation). */}
         <Route path="/signup" element={<Signup />} />
@@ -185,21 +149,19 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Renewed marketing-site leads — kept separate from assessment submissions. */}
         <Route
-          path="/admin/leads"
+          path="/admin/access-requests"
           element={
             <ProtectedRoute>
-              <LeadList />
+              <AccessRequests />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/admin/leads/:id"
+          path="/admin/accounts"
           element={
             <ProtectedRoute>
-              <LeadDetail />
+              <AccountsList />
             </ProtectedRoute>
           }
         />
@@ -224,6 +186,5 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </ExportLeadProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { env } from "./env.js";
+import { env } from "../env.js";
 
 // Origins permitted to read API responses. localhost/127.0.0.1 are always
 // allowed so local dev (web :5173 → API :3000) works; every other origin must

@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import FormPage from "./FormPage";
-import { ExportLeadProvider } from "../landing/StartExportingModal";
 
 /**
  * Component test for the public assessment form.
@@ -28,11 +27,9 @@ vi.mock("../../lib/api", () => ({
 
 function renderForm() {
   return render(
-    <ExportLeadProvider>
-      <MemoryRouter initialEntries={["/assessment?invite=valid-token"]}>
-        <FormPage />
-      </MemoryRouter>
-    </ExportLeadProvider>,
+    <MemoryRouter initialEntries={["/assessment?invite=valid-token"]}>
+      <FormPage />
+    </MemoryRouter>,
   );
 }
 

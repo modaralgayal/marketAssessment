@@ -7,7 +7,6 @@ import {
   findMatches,
   deleteSubmission,
   fetchInvites,
-  createInvite,
   deleteInvite,
 } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
@@ -41,58 +40,10 @@ export default function AdminList() {
   const [matchingId, setMatchingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const [createdLink, setCreatedLink] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const [onboardingLink, setOnboardingLink] = useState<string | null>(null);
-  const [generatingOnboarding, setGeneratingOnboarding] = useState(false);
-
-  const [accountRole, setAccountRole] = useState<"BUYER" | "MANUFACTURER">("BUYER");
-  const [accountLink, setAccountLink] = useState<string | null>(null);
-  const [generatingAccount, setGeneratingAccount] = useState(false);
-
   const { data: invitesData } = useQuery({
     queryKey: ["invites"],
     queryFn: fetchInvites,
   });
-
-  const generateInvite = async () => {
-    try {
-      setGenerating(true);
-      const inv = await createInvite();
-      setCreatedLink(inv.link);
-      await queryClient.invalidateQueries({ queryKey: ["invites"] });
-    } catch {
-      alert("Failed to generate invite.");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const generateOnboardingInvite = async () => {
-    try {
-      setGeneratingOnboarding(true);
-      const inv = await createInvite(undefined, "ONBOARDING");
-      setOnboardingLink(inv.link);
-      await queryClient.invalidateQueries({ queryKey: ["invites"] });
-    } catch {
-      alert("Failed to generate onboarding invite.");
-    } finally {
-      setGeneratingOnboarding(false);
-    }
-  };
-
-  const generateAccountInvite = async () => {
-    try {
-      setGeneratingAccount(true);
-      const inv = await createInvite(undefined, "ACCOUNT", accountRole);
-      setAccountLink(inv.link);
-      await queryClient.invalidateQueries({ queryKey: ["invites"] });
-    } catch {
-      alert("Failed to generate account invite.");
-    } finally {
-      setGeneratingAccount(false);
-    }
-  };
 
   const copy = async (text: string) => {
     try {
@@ -333,83 +284,15 @@ export default function AdminList() {
         </div>
       )}
 
-      {/* Invites panel — generate and copy single-use assessment / onboarding links */}
+      {/* Invites panel — single-use account-invite links minted from
+          access-request approvals (the only onboarding path now). */}
       <div className="mt-10">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4">
           <h2 className="text-lg font-bold text-brand-ink">Invite links</h2>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={generateInvite}
-              disabled={generating}
-              className="rounded-full bg-brand-teal px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-teal-dark disabled:opacity-50"
-            >
-              {generating ? "Generating…" : "Generate assessment invite"}
-            </button>
-            <button
-              onClick={generateOnboardingInvite}
-              disabled={generatingOnboarding}
-              className="rounded-full border border-brand-teal bg-white px-5 py-2.5 text-sm font-bold text-brand-teal shadow-sm transition hover:bg-brand-teal/5 disabled:opacity-50"
-            >
-              {generatingOnboarding ? "Generating…" : "Generate onboarding invite"}
-            </button>
-            <div className="flex items-center gap-2">
-              <select
-                value={accountRole}
-                onChange={(e) => setAccountRole(e.target.value as "BUYER" | "MANUFACTURER")}
-                className="h-10 rounded-full border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none"
-              >
-                <option value="BUYER">Buyer</option>
-                <option value="MANUFACTURER">Manufacturer</option>
-              </select>
-              <button
-                onClick={generateAccountInvite}
-                disabled={generatingAccount}
-                className="rounded-full bg-brand-ink px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-black disabled:opacity-50"
-              >
-                {generatingAccount ? "Generating…" : "Generate account invite"}
-              </button>
-            </div>
-          </div>
+          <p className="text-sm text-brand-muted">
+            Account invites are created when an admin approves an access request.
+          </p>
         </div>
-
-        {createdLink && (
-          <div className="mb-4 flex items-center gap-3 rounded-lg border border-brand-teal/30 bg-brand-teal/5 px-4 py-3">
-            <span className="shrink-0 rounded bg-brand-teal/15 px-2 py-0.5 text-[10px] font-bold text-brand-teal">ASSESSMENT</span>
-            <code className="flex-1 break-all text-[12.5px] text-brand-ink">{localInviteLink(createdLink)}</code>
-            <button
-              onClick={() => copy(localInviteLink(createdLink))}
-              className="shrink-0 rounded border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-white"
-            >
-              Copy
-            </button>
-          </div>
-        )}
-
-        {onboardingLink && (
-          <div className="mb-4 flex items-center gap-3 rounded-lg border border-brand-teal/30 bg-brand-teal/5 px-4 py-3">
-            <span className="shrink-0 rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">ONBOARDING</span>
-            <code className="flex-1 break-all text-[12.5px] text-brand-ink">{localInviteLink(onboardingLink)}</code>
-            <button
-              onClick={() => copy(localInviteLink(onboardingLink))}
-              className="shrink-0 rounded border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-white"
-            >
-              Copy
-            </button>
-          </div>
-        )}
-
-        {accountLink && (
-          <div className="mb-4 flex items-center gap-3 rounded-lg border border-brand-ink/20 bg-brand-ink/5 px-4 py-3">
-            <span className="shrink-0 rounded bg-brand-ink px-2 py-0.5 text-[10px] font-bold text-white">ACCOUNT · {accountRole}</span>
-            <code className="flex-1 break-all text-[12.5px] text-brand-ink">{localInviteLink(accountLink)}</code>
-            <button
-              onClick={() => copy(localInviteLink(accountLink))}
-              className="shrink-0 rounded border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-teal hover:bg-white"
-            >
-              Copy
-            </button>
-          </div>
-        )}
 
         <div className="overflow-hidden rounded-lg border border-brand-line bg-white">
           <table className="w-full text-left text-sm">
@@ -494,7 +377,7 @@ export default function AdminList() {
               {(!invitesData || invitesData.items.length === 0) && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-brand-muted">
-                    No invites yet. Generate one to send an assessment link.
+                    No invites yet. Approve an access request to mint one.
                   </td>
                 </tr>
               )}

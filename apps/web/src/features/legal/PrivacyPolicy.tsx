@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import SiteNav from "../landing/SiteNav";
 
 /**
  * Privacy Policy page.
@@ -29,7 +28,6 @@ const CONTROLLER = {
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-white font-sans text-brand-ink">
-      <SiteNav />
       <main className="mx-auto max-w-[820px] px-6 py-12 sm:px-8">
         {/* Header */}
         <div className="mb-2 flex items-center gap-2.5">

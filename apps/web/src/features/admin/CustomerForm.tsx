@@ -19,7 +19,7 @@ import {
   SFDA_OPTIONS,
   ADAPTABILITY_OPTIONS,
 } from "@mea/shared";
-import { COUNTRIES } from "../landing/countries";
+import { COUNTRIES } from "../../lib/countries";
 import { fetchCustomer, createCustomer, updateCustomer } from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 import {

@@ -19,7 +19,7 @@ import {
   ADAPTABILITY_OPTIONS,
   FILE_CONSTRAINTS,
 } from "@mea/shared";
-import { COUNTRIES } from "../landing/countries";
+import { COUNTRIES } from "../../lib/countries";
 import { submitAssessment, validateInvite } from "../../lib/api";
 import {
   Section,
@@ -30,7 +30,6 @@ import {
   MultiSelectDropdown,
 } from "./fields";
 import { CoverHeader, SuccessScreen, type FormMode } from "./Chrome";
-import SiteNav from "../landing/SiteNav";
 
 // Revenue is capped at €300M+ for the form: the higher brackets and the free-text
 // "Custom" option are dropped from the dropdown (the schema enum still allows them).
@@ -259,7 +258,6 @@ export default function FormPage({ standalone = false }: { standalone?: boolean 
   if (done)
     return (
       <>
-        {!standalone && <SiteNav />}
         <SuccessScreen mode={mode} />
       </>
     );
@@ -267,7 +265,6 @@ export default function FormPage({ standalone = false }: { standalone?: boolean 
   if (gate === "loading")
     return (
       <>
-        {!standalone && <SiteNav />}
         <div className="p-16 text-center text-sm text-brand-muted">Checking your invite…</div>
       </>
     );
@@ -276,7 +273,6 @@ export default function FormPage({ standalone = false }: { standalone?: boolean 
 
   return (
     <>
-      {!standalone && <SiteNav />}
       <div className="w-full bg-brand-bg-alt">
         <CoverHeader mode={mode} />
 
@@ -704,7 +700,6 @@ export default function FormPage({ standalone = false }: { standalone?: boolean 
 function InviteDenied({ standalone = false }: { standalone?: boolean }) {
   return (
     <>
-      {!standalone && <SiteNav />}
       <div className="mx-auto max-w-[640px] px-6 py-24 text-center">
         <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-bg-alt text-xl text-brand-teal">
           🔒

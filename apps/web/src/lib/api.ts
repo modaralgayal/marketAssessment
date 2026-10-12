@@ -9,7 +9,6 @@ import type {
   CustomerDto,
   CustomerInput,
   CustomerProfileInput,
-  LeadDto,
   AccountDto,
   ManufacturerProfileDto,
   ManufacturerProfileInput,
@@ -19,6 +18,8 @@ import type {
   OpportunityCardInput,
   MatchSuggestionDto,
   MatchSuggestionStatus,
+  AccessRequestDto,
+  AccountListDto,
 } from "@mea/shared";
 
 // Re-export shared types so feature components can import DTOs / input types
@@ -34,6 +35,8 @@ export type {
   OpportunityCardInput,
   MatchSuggestionDto,
   MatchSuggestionStatus,
+  AccessRequestDto,
+  AccountListDto,
 } from "@mea/shared";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -105,72 +108,6 @@ export async function requestReport(payload: {
     throw new Error(body.error ?? "Failed to send your request");
   }
   return res.json();
-}
-
-/** Public: submit a lead to the renewed marketing site's `/api/leads`
- *  endpoint. `body.kind` is EXPORTING | SOURCING | ORGANIZATION and consent
- *  must already be `true`. For SOURCING with an uploaded document, pass the
- *  file and it is sent as multipart (`payload` JSON + `productDocument`). */
-export async function submitLead(
-  body: Record<string, unknown>,
-  file?: File,
-): Promise<{ id: string; emailSent?: boolean }> {
-  if (file) {
-    const form = new FormData();
-    form.append("payload", JSON.stringify(body));
-    form.append("productDocument", file);
-    const res = await fetch(`${BASE}/api/leads`, { method: "POST", body: form });
-    if (!res.ok) {
-      const b = await res.json().catch(() => ({}));
-      throw new Error((b.error as string) ?? "Submission failed");
-    }
-    return res.json();
-  }
-  const res = await fetch(`${BASE}/api/leads`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const b = await res.json().catch(() => ({}));
-    throw new Error((b.error as string) ?? "Submission failed");
-  }
-  return res.json();
-}
-
-export type TargetMarket = "SAUDI_ARABIA" | "UAE" | "BOTH";
-
-/** Public: submit the "Start Exporting" opportunity-assessment intake form.
- *  Reuses the existing report-request endpoint — the structured fields are
- *  composed into the subject/message the team already receives by email. */
-export async function submitExportLead(payload: {
-  companyName: string;
-  country: string;
-  fullName: string;
-  workEmail: string;
-  website?: string;
-  product: string;
-  targetMarket: TargetMarket;
-}): Promise<{ id: string; emailSent: boolean }> {
-  const marketLabel =
-    payload.targetMarket === "SAUDI_ARABIA"
-      ? "Saudi Arabia"
-      : payload.targetMarket === "UAE"
-        ? "UAE"
-        : "Both markets";
-  const subject = `Export opportunity: ${payload.companyName} (${payload.country})`;
-  const message = [
-    `Company: ${payload.companyName}`,
-    `Country: ${payload.country}`,
-    `Contact: ${payload.fullName}`,
-    `Email: ${payload.workEmail}`,
-    payload.website ? `Website: ${payload.website}` : null,
-    `Product to export: ${payload.product}`,
-    `Target export market: ${marketLabel}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
-  return requestReport({ subject, message, email: payload.workEmail });
 }
 
 /** Admin: list invites (with their public links). */
@@ -264,36 +201,6 @@ export async function fetchCustomerFileUrl(fileId: string): Promise<{ url: strin
   if (!res.ok) throw new Error("Failed to get download link");
   return res.json();
 }
-
-/** Admin: get a signed download URL for a lead's product document. */
-export async function fetchLeadFileUrl(fileId: string): Promise<{ url: string; originalName: string }> {
-  const res = await fetch(`${BASE}/api/files/lead/${fileId}/download`, { headers: await authHeader() });
-  if (!res.ok) throw new Error("Failed to get download link");
-  return res.json();
-}
-
-export interface LeadListResponse {
-  total: number;
-  items: LeadDto[];
-}
-
-/** Admin: list leads (renewed marketing-site enquiries). Optional kind filter. */
-export async function fetchLeads(
-  kind?: "EXPORTING" | "SOURCING" | "ORGANIZATION",
-): Promise<LeadListResponse> {
-  const qs = kind ? `?kind=${kind}` : "";
-  const res = await fetch(`${BASE}/api/leads${qs}`, { headers: await authHeader() });
-  if (!res.ok) throw new Error("Failed to load leads");
-  return res.json();
-}
-
-/** Admin: single lead (with files). */
-export async function fetchLead(id: string): Promise<LeadDto> {
-  const res = await fetch(`${BASE}/api/leads/${id}`, { headers: await authHeader() });
-  if (!res.ok) throw new Error("Failed to load lead");
-  return res.json();
-}
-
 
 export interface ScoreResult {
   score: number;
@@ -624,6 +531,78 @@ export async function fetchAccountMe(): Promise<AccountDto> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to load account");
+  }
+  return res.json();
+}
+
+/** Admin: list all self-service buyer/manufacturer accounts. */
+export async function fetchAccounts(): Promise<{ items: AccountListDto[] }> {
+  const res = await fetch(`${BASE}/api/accounts`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load accounts");
+  return res.json();
+}
+
+// ── Access requests (public request → admin approval → invite email) ────────
+
+/** Public: a visitor requests a buyer/manufacturer account. No auth. */
+export async function requestAccess(payload: {
+  name: string;
+  email: string;
+  company?: string;
+  intendedRole: "BUYER" | "MANUFACTURER";
+  message?: string;
+}): Promise<AccessRequestDto> {
+  const res = await fetch(`${BASE}/api/access-requests`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to submit your request");
+  }
+  return res.json();
+}
+
+export interface AccessRequestListResponse {
+  items: AccessRequestDto[];
+}
+
+/** Admin: list access requests newest-first. */
+export async function fetchAccessRequests(): Promise<AccessRequestListResponse> {
+  const res = await fetch(`${BASE}/api/access-requests`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to load access requests");
+  return res.json();
+}
+
+/** Admin: approve a request — mints an ACCOUNT invite, emails it, marks APPROVED.
+ *  Returns the updated request plus the invite `link` and whether the email sent. */
+export async function approveAccessRequest(
+  id: string,
+  role?: "BUYER" | "MANUFACTURER",
+): Promise<AccessRequestDto & { link: string; emailSent: boolean }> {
+  const res = await fetch(`${BASE}/api/access-requests/${id}/approve`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(role ? { role } : {}),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to approve request");
+  }
+  return res.json();
+}
+
+/** Admin: reject a request. */
+export async function rejectAccessRequest(id: string): Promise<AccessRequestDto> {
+  const res = await fetch(`${BASE}/api/access-requests/${id}/reject`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to reject request");
   }
   return res.json();
 }

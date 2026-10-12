@@ -12,12 +12,12 @@ import { distributorsRouter } from "./routes/distributors.js";
 import { matchesRouter } from "./routes/matches.js";
 import { catalogueRouter } from "./routes/catalogue.js";
 import { customersRouter } from "./routes/customers.js";
-import { leadsRouter } from "./routes/leads.js";
 import { accountsRouter } from "./routes/accounts.js";
 import { manufacturerProfilesRouter } from "./routes/manufacturerProfiles.js";
 import { buyerProfilesRouter } from "./routes/buyerProfiles.js";
 import { opportunityCardsRouter } from "./routes/opportunityCards.js";
 import { matchSuggestionsRouter } from "./routes/matchSuggestions.js";
+import { accessRequestsRouter } from "./routes/accessRequests.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { isOriginAllowed } from "./lib/corsOrigin.js";
@@ -62,12 +62,12 @@ app.use("/api/files", filesRouter);
 app.use("/api/distributors", distributorsRouter);
 app.use("/api", catalogueRouter);
 app.use("/api/customers", customersRouter);
-app.use("/api/leads", leadsRouter);
 app.use("/api/accounts", accountsRouter);
 app.use("/api/manufacturer-profile", manufacturerProfilesRouter);
 app.use("/api/buyer-profile", buyerProfilesRouter);
 app.use("/api/opportunity-cards", opportunityCardsRouter);
 app.use("/api/match-suggestions", matchSuggestionsRouter);
+app.use("/api/access-requests", accessRequestsRouter);
 
 app.use(errorHandler);
 

@@ -224,26 +224,6 @@ describe("posting (POST)", () => {
     expect(JSON.parse(options.body as string).email).toBe("a@b.co");
   });
 
-  it("submitExportLead composes the report-request payload (public)", async () => {
-    stubFetch({ id: "r2", emailSent: false });
-
-    await api.submitExportLead({
-      companyName: "Acme",
-      country: "FI",
-      fullName: "Jane",
-      workEmail: "jane@acme.co",
-      product: "Olives",
-      targetMarket: "UAE",
-    });
-
-    const { url, options } = lastCall();
-    expect(url).toContain("/api/report-requests");
-    const body = JSON.parse(options.body as string);
-    expect(body.subject).toContain("Acme");
-    expect(body.message).toContain("UAE");
-    expect(authHeaderOf(options)).toBeUndefined();
-  });
-
   it("createInvite sends purpose + email and the admin token", async () => {
     setSignedIn();
     stubFetch({ id: "i1", token: "t", status: "ACTIVE", purpose: "ONBOARDING", link: "l" });

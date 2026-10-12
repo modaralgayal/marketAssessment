@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { validateInvite } from "../../lib/api";
@@ -9,16 +9,22 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default function Signup() {
-  const { user, signIn, bootstrap } = useAuth();
+  const { user, signIn, signUpWithEmail, bootstrap } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const invite = params.get("invite");
+  const invite = params.get("accountInvite");
 
   const [validating, setValidating] = useState(Boolean(invite));
   const [inviteRole, setInviteRole] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Email / password fields.
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!invite) {
@@ -63,6 +69,26 @@ export default function Signup() {
     }
   };
 
+  const handleEmailSignUp = async (e: FormEvent) => {
+    e.preventDefault();
+    setEmailError(null);
+    setEmailBusy(true);
+    try {
+      // If not already signed in, create the Firebase account first; otherwise
+      // (bounced back here while signed in) just complete bootstrap.
+      if (!user) await signUpWithEmail(email, password);
+      const account = await bootstrap(invite ?? undefined);
+      navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer", { replace: true });
+    } catch (err) {
+      setEmailError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Account creation failed. Please try again.",
+      );
+      setEmailBusy(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-sm rounded-lg border border-brand-line bg-white p-10 text-center shadow-sm">
@@ -99,6 +125,42 @@ export default function Signup() {
               {busy ? "Setting up…" : "Continue with Google"}
             </button>
             {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+
+            <div className="my-5 flex items-center gap-3 text-xs text-brand-muted">
+              <span className="h-px flex-1 bg-brand-line" />
+              or
+              <span className="h-px flex-1 bg-brand-line" />
+            </div>
+
+            <form onSubmit={handleEmailSignUp} className="space-y-3">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Work email"
+                required
+                autoComplete="email"
+                className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password"
+                required
+                minLength={6}
+                autoComplete="new-password"
+                className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
+              />
+              <button
+                type="submit"
+                disabled={emailBusy}
+                className="w-full rounded-full bg-brand-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black disabled:opacity-50"
+              >
+                {emailBusy ? "Creating account…" : "Create account"}
+              </button>
+              {emailError && <p className="text-xs text-red-600">{emailError}</p>}
+            </form>
           </>
         )}
       </div>

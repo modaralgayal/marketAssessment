@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +6,7 @@ import {
   createCustomerProfile,
   uploadCustomerLogo,
 } from "../../lib/api";
-import { COUNTRIES } from "../landing/countries";
+import { COUNTRIES } from "../../lib/countries";
 import Combobox from "./Combobox";
 import { PRODUCT_CATEGORIES } from "./productCategories";
 import AdminLayout from "./AdminLayout";

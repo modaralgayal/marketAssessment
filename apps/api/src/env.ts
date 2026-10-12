@@ -11,6 +11,12 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(3000),
   WEB_ORIGIN: z.string().default("http://localhost:5173"),
+  // Canonical web-app base URL used to build invite / signup links that are sent
+  // to end users (email body, admin "Action" column). Distinct from WEB_ORIGIN,
+  // which is a comma-separated CORS allowlist and must NOT be used to build
+  // links. Optional: defaults to the first WEB_ORIGIN entry (the primary web
+  // origin). Set this explicitly in prod to the public web URL.
+  WEB_BASE_URL: z.string().optional(),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
   ADMIN_EMAILS: z.string().default(""),
@@ -53,6 +59,13 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+// Single canonical web-app origin for building user-facing links (invite /
+// signup URLs). WEB_ORIGIN is a comma-separated allowlist and cannot be used as
+// a base — so default to its first entry, or an explicit WEB_BASE_URL if set.
+export const webBaseUrl = (
+  env.WEB_BASE_URL ?? env.WEB_ORIGIN.split(",")[0] ?? "http://localhost:5173"
+).trim();
 
 export const adminEmails = new Set(
   env.ADMIN_EMAILS.split(",")

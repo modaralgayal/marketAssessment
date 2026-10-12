@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { submitLead } from "../../../lib/api";
+import { requestReport } from "../../../lib/api";
 import type { Project } from "../content";
 import { InputField, CountrySelect, ConsentNote, ReviewNote, FormFeedback } from "../fields";
 
@@ -37,21 +37,25 @@ export function OrganizationModal({ project, onClose }: { project: Project; onCl
       setMessage("Please select at least one way we can support your organization.");
       return;
     }
+    if (!email.trim()) {
+      setStatus("error");
+      setMessage("Please enter your work email.");
+      return;
+    }
     setBusy(true);
     setStatus("idle");
     setMessage("");
     try {
-      await submitLead({
-        kind: "ORGANIZATION",
-        fullName,
-        email,
-        jobTitle,
-        organizationName,
-        organizationType,
-        country,
-        support,
-        priorities,
-        consent: true,
+      const body: string[] = [];
+      if (jobTitle) body.push(`Job title: ${jobTitle}`);
+      if (organizationType) body.push(`Organization type: ${organizationType}`);
+      if (country) body.push(`Country/territory: ${country}`);
+      if (support.length) body.push(`Support requested: ${support.join(", ")}`);
+      if (priorities) body.push(`Priorities:\n${priorities}`);
+      await requestReport({
+        subject: `Partnership enquiry from ${organizationName || fullName}`,
+        message: body.join("\n"),
+        email: email.trim(),
       });
       setStatus("ok");
       setMessage("Thank you — our partnerships team will be in touch shortly.");

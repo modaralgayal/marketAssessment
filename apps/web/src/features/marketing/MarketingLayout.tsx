@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet } from "react-router-dom";
 import { useProject, TLink, OrgModalProvider } from "./content";
 import "./marketing.css";
 
@@ -73,6 +73,9 @@ function Nav() {
           )}
         </nav>
         <div className="nav-actions">
+          <Link to="/login" className="sales-link">
+            Sign in
+          </Link>
           <TLink href="#/contact" className="sales-link">
             {project.global.secondaryLabel}
           </TLink>
@@ -101,6 +104,7 @@ function Nav() {
         ))}
         <TLink href="#/contact">{project.global.secondaryLabel}</TLink>
         <TLink href="#/start-trading">{project.global.primaryLabel}</TLink>
+        <Link to="/login">Sign in</Link>
       </nav>
     </header>
   );

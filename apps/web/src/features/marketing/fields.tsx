@@ -248,42 +248,6 @@ export function CountryMultiSelect({
   );
 }
 
-export function FileField({
-  name,
-  label,
-  accept,
-  hint,
-  required = false,
-  onChange,
-  optional,
-}: {
-  name: string;
-  label: string;
-  accept: string;
-  hint?: string;
-  required?: boolean;
-  onChange: (file: File | null) => void;
-  optional?: boolean;
-}) {
-  return (
-    <label className="form-field full">
-      <span>
-        {label}
-        {required ? " *" : ""}
-        {optional ? <small> (optional)</small> : null}
-      </span>
-      <input
-        type="file"
-        name={name}
-        accept={accept}
-        required={required}
-        onChange={(e) => onChange(e.target.files?.[0] ?? null)}
-      />
-      {hint && <small>{hint}</small>}
-    </label>
-  );
-}
-
 export function ConsentNote() {
   return (
     <p className="form-consent">

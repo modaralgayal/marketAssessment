@@ -20,3 +20,13 @@ export interface AccountDto {
   inviteToken?: string | null;
   createdAt: string;
 }
+
+/** Admin listing of self-service buyer/manufacturer accounts. */
+export interface AccountListDto {
+  id: string;
+  email: string;
+  role: AccountRole;
+  status: AccountStatus;
+  companyName?: string | null;
+  createdAt: string;
+}

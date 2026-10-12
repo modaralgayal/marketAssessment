@@ -2,7 +2,8 @@ import { Router } from "express";
 import { verifyIdToken } from "../lib/firebaseAdmin.js";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/requireAuth.js";
-import { bootstrapAccountSchema, type AccountDto } from "@mea/shared";
+import { requireAdmin } from "../middleware/requireAdmin.js";
+import { bootstrapAccountSchema, type AccountDto, type AccountListDto } from "@mea/shared";
 
 export const accountsRouter = Router();
 
@@ -47,9 +48,10 @@ accountsRouter.post("/bootstrap", async (req, res, next) => {
     if (!match) return res.status(401).json({ error: "Missing bearer token" });
 
     const decoded = await verifyIdToken(match[1]!);
-    if (!decoded.email_verified) {
-      return res.status(403).json({ error: "Email address is not verified." });
-    }
+    // Email verification is no longer a hard gate: email/password sign-ups are
+    // allowed immediately and nudged to verify later (Firebase still sends the
+    // verification email). The real security boundary is the single-use ACCOUNT
+    // invite — only admin-approved requests carry one.
 
     const existing = await prisma.account.findUnique({ where: { firebaseUid: decoded.uid } });
     if (existing) return res.json(toDto(existing));
@@ -89,6 +91,29 @@ accountsRouter.post("/bootstrap", async (req, res, next) => {
     });
 
     return res.status(201).json(toDto(account));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Admin: list all self-service buyer/manufacturer accounts (with company name
+ *  from the linked profile). Used by the admin "Manufacturers & Buyers" panel. */
+accountsRouter.get("/", requireAdmin, async (_req, res, next) => {
+  try {
+    const accounts = await prisma.account.findMany({
+      where: { role: { in: ["BUYER", "MANUFACTURER"] } },
+      orderBy: { createdAt: "desc" },
+      include: { manufacturerProfile: true, buyerProfile: true },
+    });
+    const items: AccountListDto[] = accounts.map((a) => ({
+      id: a.id,
+      email: a.email,
+      role: a.role as AccountListDto["role"],
+      status: a.status as AccountListDto["status"],
+      companyName: a.manufacturerProfile?.companyName ?? a.buyerProfile?.companyName ?? null,
+      createdAt: a.createdAt.toISOString(),
+    }));
+    return res.json({ items });
   } catch (err) {
     next(err);
   }

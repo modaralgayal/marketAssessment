@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
-import { env } from "../env.js";
+import { webBaseUrl } from "../env.js";
 
 export const invitesRouter = Router();
 
@@ -20,8 +20,8 @@ const createSchema = z.object({
  *  - ACCOUNT invites land on the signup flow (role-scoped dashboard).
  *  - Everything else lands on the existing assessment form. */
 function inviteLink(token: string, purpose?: string | null): string {
-  if (purpose === "ACCOUNT") return `${env.WEB_ORIGIN}/signup?invite=${token}`;
-  return `${env.WEB_ORIGIN}/assessment?invite=${token}`;
+  if (purpose === "ACCOUNT") return `${webBaseUrl}/signup?accountInvite=${token}`;
+  return `${webBaseUrl}/assessment?invite=${token}`;
 }
 
 /**
