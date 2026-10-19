@@ -8,4 +8,5 @@ export * from "./manufacturerProfile";
 export * from "./buyerProfile";
 export * from "./accessRequest";
 export * from "./opportunityCard";
+export * from "./sourcingInquiry";
 export * from "./matchSuggestion";

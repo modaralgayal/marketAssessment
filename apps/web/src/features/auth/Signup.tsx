@@ -19,6 +19,7 @@ export default function Signup() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   // Email / password fields.
   const [email, setEmail] = useState("");
@@ -61,7 +62,7 @@ export default function Signup() {
       // If already signed in (e.g. bounced back here), skip the popup and just
       // complete account bootstrap with the invite token.
       if (!user) await signIn();
-      const account = await bootstrap(invite ?? undefined);
+      const account = await bootstrap(invite ?? undefined, acceptPrivacy);
       navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer", { replace: true });
     } catch {
       setError("Sign-in failed. Please try again.");
@@ -77,7 +78,7 @@ export default function Signup() {
       // If not already signed in, create the Firebase account first; otherwise
       // (bounced back here while signed in) just complete bootstrap.
       if (!user) await signUpWithEmail(email, password);
-      const account = await bootstrap(invite ?? undefined);
+      const account = await bootstrap(invite ?? undefined, acceptPrivacy);
       navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer", { replace: true });
     } catch (err) {
       setEmailError(
@@ -119,7 +120,7 @@ export default function Signup() {
             </p>
             <button
               onClick={handleSignIn}
-              disabled={busy}
+              disabled={busy || !acceptPrivacy}
               className="w-full rounded-full bg-brand-teal px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-brand-teal-dark hover:shadow-md active:scale-[0.98] disabled:opacity-50"
             >
               {busy ? "Setting up…" : "Continue with Google"}
@@ -154,13 +155,34 @@ export default function Signup() {
               />
               <button
                 type="submit"
-                disabled={emailBusy}
+                disabled={emailBusy || !acceptPrivacy}
                 className="w-full rounded-full bg-brand-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black disabled:opacity-50"
               >
                 {emailBusy ? "Creating account…" : "Create account"}
               </button>
               {emailError && <p className="text-xs text-red-600">{emailError}</p>}
             </form>
+
+            <label className="mt-4 flex items-start gap-2 text-left text-xs text-brand-muted">
+              <input
+                type="checkbox"
+                checked={acceptPrivacy}
+                onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                I have read and accept the{" "}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-brand-teal hover:underline"
+                >
+                  Privacy Policy
+                </a>
+                .
+              </span>
+            </label>
           </>
         )}
       </div>

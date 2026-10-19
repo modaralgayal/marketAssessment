@@ -33,10 +33,10 @@ async function authenticate(req: Request, res: Response): Promise<boolean> {
   }
   try {
     const decoded = await verifyIdToken(match[1]!);
-    if (!decoded.email_verified) {
-      res.status(403).json({ error: "Email address is not verified." });
-      return false;
-    }
+    // NOTE: email_verified is intentionally NOT required here. Sign-up no longer
+    // hard-gates on verification (see accounts.ts /bootstrap); an unverified
+    // email/password user can still use the app and is nudged to verify later.
+    // Admin auth (requireAdmin) keeps its own email_verified gate.
     const account = await prisma.account.findUnique({ where: { firebaseUid: decoded.uid } });
     if (!account) {
       res.status(403).json({ error: "Account not found. Please complete sign-up." });

@@ -349,9 +349,9 @@
   stroke-width: 3;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: pa2-draw 0.4s ease forwards;
+  /* continuous marching dots along the connector (pathLength is normalised to 1) */
+  stroke-dasharray: 0.05 0.15;
+  animation: pa2-flow 0.9s linear infinite;
 }
 .tl .pa2-path.green {
   stroke: var(--pa2-green);
@@ -433,9 +433,10 @@
   letter-spacing: 0.13em;
 }
 
-@keyframes pa2-draw {
+@keyframes pa2-flow {
   to {
-    stroke-dashoffset: 0;
+    /* one full dash period (0.05 + 0.15) → seamless loop */
+    stroke-dashoffset: -0.2;
   }
 }
 

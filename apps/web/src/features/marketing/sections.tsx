@@ -177,12 +177,10 @@ function PaCard({ side, idx, state }: { side: "m" | "b"; idx: number; state: Car
 function ProcessAnimation() {
   const [step, setStep] = useState(0);
   const [matched, setMatched] = useState<{ m: number; b: number }[]>([]);
-  const [reduce, setReduce] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (mq.matches) {
-      setReduce(true);
       setStep(PA_SEQUENCE.length - 1);
       setMatched(PA_MATCHES);
       return;
@@ -307,20 +305,6 @@ function ProcessAnimation() {
               pathLength={1}
               d={paRightPath(pair.b)}
             />
-            {!reduce && (
-              <>
-                <circle className={`pa2-dot${pair.outcome === "match" ? " green" : ""}`} r={1.7}>
-                  <animateMotion dur={`${Math.min(pair.dur, 1000)}ms`} begin="0.1s" repeatCount="indefinite">
-                    <mpath xlinkHref={`#pa2-left-${step}`} />
-                  </animateMotion>
-                </circle>
-                <circle className={`pa2-dot${pair.outcome === "match" ? " green" : ""}`} r={1.7}>
-                  <animateMotion dur={`${Math.min(pair.dur, 1000)}ms`} begin="0.1s" repeatCount="indefinite">
-                    <mpath xlinkHref={`#pa2-right-${step}`} />
-                  </animateMotion>
-                </circle>
-              </>
-            )}
           </g>
         )}
         {isFinal &&

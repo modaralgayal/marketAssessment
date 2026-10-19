@@ -11,7 +11,7 @@ import { requestAccess } from "../../lib/api";
  * they need an invite link — and can request one right here.
  */
 export default function Login() {
-  const { user, loading, account, accountLoading, signIn, signInWithEmail } = useAuth();
+  const { user, loading, account, accountLoading, signIn, signInWithEmail, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +21,12 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+
+  // Forgot-password flow.
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState<string | null>(null);
+  const [forgotErr, setForgotErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (account) {
@@ -70,6 +76,21 @@ export default function Login() {
 
   const signedInButNoAccount = Boolean(user) && !accountLoading && !account;
 
+  const handleForgot = async (e: FormEvent) => {
+    e.preventDefault();
+    setForgotErr(null);
+    setForgotMsg(null);
+    setForgotBusy(true);
+    try {
+      await resetPassword(email);
+      setForgotMsg("Check your inbox for a password-reset link.");
+    } catch (err) {
+      setForgotErr(err instanceof Error ? err.message : "Could not send a reset email.");
+    } finally {
+      setForgotBusy(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
       <div className="w-full max-w-sm rounded-lg border border-brand-line bg-white p-10 text-center shadow-sm">
@@ -100,34 +121,80 @@ export default function Login() {
           <span className="h-px flex-1 bg-brand-line" />
         </div>
 
-        <form onSubmit={handleEmailSignIn} className="space-y-3">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Work email"
-            required
-            autoComplete="email"
-            className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            required
-            autoComplete="current-password"
-            className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
-          />
-          <button
-            type="submit"
-            disabled={emailBusy}
-            className="w-full rounded-full bg-brand-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black disabled:opacity-50"
-          >
-            {emailBusy ? "Signing in…" : "Sign in"}
-          </button>
-          {emailError && <p className="text-xs text-red-600">{emailError}</p>}
-        </form>
+        {!forgotOpen ? (
+          <>
+            <form onSubmit={handleEmailSignIn} className="space-y-3">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Work email"
+                required
+                autoComplete="email"
+                className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                required
+                autoComplete="current-password"
+                className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
+              />
+              <button
+                type="submit"
+                disabled={emailBusy}
+                className="w-full rounded-full bg-brand-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black disabled:opacity-50"
+              >
+                {emailBusy ? "Signing in…" : "Sign in"}
+              </button>
+              {emailError && <p className="text-xs text-red-600">{emailError}</p>}
+            </form>
+            <button
+              type="button"
+              onClick={() => {
+                setForgotOpen(true);
+                setForgotErr(null);
+                setForgotMsg(null);
+              }}
+              className="mt-3 text-xs font-medium text-brand-teal hover:underline"
+            >
+              Forgot password?
+            </button>
+          </>
+        ) : (
+          <form onSubmit={handleForgot} className="space-y-3 text-left">
+            <p className="text-sm text-brand-muted">
+              Enter your email and we'll send a link to reset your password.
+            </p>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Work email"
+              required
+              autoComplete="email"
+              className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
+            />
+            <button
+              type="submit"
+              disabled={forgotBusy}
+              className="w-full rounded-full bg-brand-ink px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black disabled:opacity-50"
+            >
+              {forgotBusy ? "Sending…" : "Send reset link"}
+            </button>
+            {forgotMsg && <p className="text-xs text-emerald-600">{forgotMsg}</p>}
+            {forgotErr && <p className="text-xs text-red-600">{forgotErr}</p>}
+            <button
+              type="button"
+              onClick={() => setForgotOpen(false)}
+              className="w-full text-xs font-medium text-brand-teal hover:underline"
+            >
+              Back to sign in
+            </button>
+          </form>
+        )}
       </div>
 
       <RequestAccessCard />

@@ -1,8 +1,6 @@
 import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import FormPage from "./features/form/FormPage";
 import AdminLogin from "./features/admin/AdminLogin";
-import AdminList from "./features/admin/AdminList";
-import AdminDetail from "./features/admin/AdminDetail";
 import DistributorList from "./features/admin/DistributorList";
 import DistributorProfile from "./features/admin/DistributorProfile";
 import DistributorForm from "./features/admin/DistributorForm";
@@ -18,6 +16,7 @@ import AccessRequests from "./features/admin/AccessRequests";
 import AccountsList from "./features/admin/AccountsList";
 import ManufacturerDashboard from "./features/manufacturer/ManufacturerDashboard";
 import BuyerDashboard from "./features/buyer/BuyerDashboard";
+import AccountSettings from "./features/settings/AccountSettings";
 import { MarketingLayout } from "./features/marketing/MarketingLayout";
 import { MarketingPage } from "./features/marketing/pages";
 
@@ -59,21 +58,23 @@ export default function App() {
           }
         />
 
+        {/* Self-service account settings (change password/email, privacy, export, delete). */}
+        <Route
+          path="/settings"
+          element={
+            <RequireRole roles={["BUYER", "MANUFACTURER"]}>
+              <AccountSettings />
+            </RequireRole>
+          }
+        />
+
         {/* Admin — kept in the existing app, outside the marketing shell. */}
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
           path="/admin"
           element={
             <ProtectedRoute>
-              <AdminList />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/submissions/:id"
-          element={
-            <ProtectedRoute>
-              <AdminDetail />
+              <Navigate to="/admin/access-requests" replace />
             </ProtectedRoute>
           }
         />

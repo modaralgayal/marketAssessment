@@ -6,10 +6,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
 
-  const isActive = (base: string) =>
-    base === "/admin"
-      ? pathname === "/admin" || pathname.startsWith("/admin/submissions")
-      : pathname.startsWith(base);
+  const isActive = (base: string) => pathname.startsWith(base);
 
   const tabClass = (base: string) =>
     `border-b-2 pb-1 transition ${
@@ -21,19 +18,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-brand-bg-alt">
       <header className="flex items-center justify-between bg-brand-teal px-8 py-4">
-        <Link to="/admin" className="flex items-center gap-2.5">
+        <Link to="/admin/access-requests" className="flex items-center gap-2.5">
           <img src="/logo-white.svg" alt="Tradelomacy" className="h-6 w-auto" />
           <span className="text-xs font-bold uppercase tracking-[3px] text-white">
             Admin
           </span>
         </Link>
         <nav className="flex items-center gap-6 text-xs">
-          <Link to="/admin" className={tabClass("/admin")}>Submissions</Link>
-          <Link to="/admin/leads" className={tabClass("/admin/leads")}>Leads</Link>
-          <Link to="/admin/distributors" className={tabClass("/admin/distributors")}>Distributors</Link>
-          <Link to="/admin/customers" className={tabClass("/admin/customers")}>Manufacturers / Brands</Link>
-          <Link to="/admin/accounts" className={tabClass("/admin/accounts")}>Manufacturers & Buyers</Link>
           <Link to="/admin/access-requests" className={tabClass("/admin/access-requests")}>Access requests</Link>
+          <Link to="/admin/accounts" className={tabClass("/admin/accounts")}>Accounts</Link>
+          <Link to="/admin/customers" className={tabClass("/admin/customers")}>Customers</Link>
+          <Link to="/admin/distributors" className={tabClass("/admin/distributors")}>Distributors</Link>
         </nav>
         <div className="flex items-center gap-4 text-xs text-white/70">
           <span>{user?.email}</span>

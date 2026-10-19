@@ -16,10 +16,16 @@ import type {
   BuyerProfileInput,
   OpportunityCardDto,
   OpportunityCardInput,
+  MarketCardDto,
+  EngagementRowDto,
+  SourcingInquiryDto,
+  SourcingInquiryInput,
+  OpportunityInteractionStatus,
   MatchSuggestionDto,
   MatchSuggestionStatus,
   AccessRequestDto,
   AccountListDto,
+  PrivacyPolicyVersionDto,
 } from "@mea/shared";
 
 // Re-export shared types so feature components can import DTOs / input types
@@ -33,10 +39,17 @@ export type {
   BuyerProfileInput,
   OpportunityCardDto,
   OpportunityCardInput,
+  MarketCardDto,
+  EngagementRowDto,
+  SourcingInquiryDto,
+  SourcingInquiryInput,
+  SourcingInquiryStatus,
+  OpportunityInteractionStatus,
   MatchSuggestionDto,
   MatchSuggestionStatus,
   AccessRequestDto,
   AccountListDto,
+  PrivacyPolicyVersionDto,
 } from "@mea/shared";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -511,12 +524,16 @@ export async function setCustomerCategory(
 // ── Self-service accounts (buyer / manufacturer) ─────────────────────────
 
 /** Self-service bootstrap: after Firebase sign-in, create or fetch the Account
- *  from the invite token. Idempotent — returns the existing Account if present. */
-export async function bootstrapAccount(inviteToken?: string): Promise<AccountDto> {
+ *  from the invite token. Idempotent — returns the existing Account if present.
+ *  `acceptPrivacy` records acceptance of the current privacy-policy version. */
+export async function bootstrapAccount(
+  inviteToken?: string,
+  acceptPrivacy?: boolean,
+): Promise<AccountDto> {
   const res = await fetch(`${BASE}/api/accounts/bootstrap`, {
     method: "POST",
     headers: { ...(await authHeader()), "Content-Type": "application/json" },
-    body: JSON.stringify(inviteToken ? { inviteToken } : {}),
+    body: JSON.stringify({ ...(inviteToken ? { inviteToken } : {}), ...(acceptPrivacy ? { acceptPrivacy } : {}) }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -539,6 +556,104 @@ export async function fetchAccountMe(): Promise<AccountDto> {
 export async function fetchAccounts(): Promise<{ items: AccountListDto[] }> {
   const res = await fetch(`${BASE}/api/accounts`, { headers: await authHeader() });
   if (!res.ok) throw new Error("Failed to load accounts");
+  return res.json();
+}
+
+// ── Privacy-policy versioning (consent) ───────────────────────────────────
+
+/** Public: the latest published privacy-policy version. */
+export async function fetchPrivacyVersion(): Promise<PrivacyPolicyVersionDto> {
+  const res = await fetch(`${BASE}/api/privacy-policy/version`);
+  if (!res.ok) throw new Error("Failed to load privacy policy version");
+  return res.json();
+}
+
+/** Admin: publish a new privacy-policy version (bumps the number). */
+export async function publishPrivacyVersion(note?: string): Promise<PrivacyPolicyVersionDto> {
+  const res = await fetch(`${BASE}/api/privacy-policy/version`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(note ? { note } : {}),
+  });
+  if (!res.ok) throw new Error("Failed to publish privacy policy version");
+  return res.json();
+}
+
+/** Self-service: accept the latest privacy-policy version. */
+export async function acceptPrivacy(): Promise<AccountDto> {
+  const res = await fetch(`${BASE}/api/accounts/me/privacy`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ accept: true }),
+  });
+  if (!res.ok) throw new Error("Failed to accept privacy policy");
+  return res.json();
+}
+
+// ── Admin account actions ─────────────────────────────────────────────────
+
+/** Admin: disable an account (rejected at sign-in). */
+export async function disableAccount(id: string): Promise<AccountDto> {
+  const res = await fetch(`${BASE}/api/accounts/${id}/disable`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to disable account");
+  return res.json();
+}
+
+/** Admin: re-enable a disabled account. */
+export async function enableAccount(id: string): Promise<AccountDto> {
+  const res = await fetch(`${BASE}/api/accounts/${id}/enable`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to enable account");
+  return res.json();
+}
+
+/** Admin: email the user a Firebase password-reset link. */
+export async function adminResetPassword(id: string): Promise<{ emailSent: boolean }> {
+  const res = await fetch(`${BASE}/api/accounts/${id}/reset-password`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to send password reset");
+  }
+  return res.json();
+}
+
+/** Admin: email the user a Firebase email-verification link. */
+export async function adminResendVerification(id: string): Promise<{ emailSent: boolean }> {
+  const res = await fetch(`${BASE}/api/accounts/${id}/resend-verification`, {
+    method: "POST",
+    headers: await authHeader(),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to resend verification");
+  }
+  return res.json();
+}
+
+// ── Self-service account data ─────────────────────────────────────────────
+
+/** Self-service: export the user's own data (JSON). */
+export async function exportMyData(): Promise<unknown> {
+  const res = await fetch(`${BASE}/api/accounts/me/export`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to export your data");
+  return res.json();
+}
+
+/** Self-service: delete the user's own account (irreversible). */
+export async function deleteMyAccount(): Promise<{ ok: true }> {
+  const res = await fetch(`${BASE}/api/accounts/me`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to delete your account");
   return res.json();
 }
 
@@ -634,6 +749,47 @@ export async function upsertManufacturerProfile(
   return res.json();
 }
 
+// ── Manufacturer catalogue / price-list ─────────────────────────────────
+
+export interface ManufacturerFileDto {
+  id: string;
+  manufacturerProfileId: string;
+  storageKey: string;
+  originalName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export async function uploadManufacturerCatalogue(file: File): Promise<ManufacturerFileDto> {
+  const form = new FormData();
+  form.append("catalogue", file);
+  const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue`, {
+    method: "POST",
+    headers: await authHeader(),
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to upload catalogue");
+  }
+  return res.json();
+}
+
+export async function fetchManufacturerCatalogueUrl(): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue/download`, { headers: await authHeader() });
+  if (!res.ok) throw new Error("Failed to get catalogue link");
+  return res.json();
+}
+
+export async function deleteManufacturerCatalogue(): Promise<void> {
+  const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to remove catalogue");
+}
+
 // ── Buyer profile ───────────────────────────────────────────────────────
 
 export async function fetchBuyerProfile(): Promise<BuyerProfileDto> {
@@ -671,8 +827,9 @@ export async function fetchMyOpportunityCards(status?: "DRAFT" | "POSTED" | "ARC
   return res.json();
 }
 
-/** Marketplace browse: posted cards on the opposite side from the viewer. */
-export async function fetchMarketOpportunityCards(): Promise<OpportunityCardDto[]> {
+/** Marketplace browse: posted cards on the opposite side from the viewer,
+ *  each enriched with the caller's own interaction state + the owner name. */
+export async function fetchMarketOpportunityCards(): Promise<MarketCardDto[]> {
   const res = await fetch(`${BASE}/api/opportunity-cards/market`, { headers: await authHeader() });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -768,6 +925,199 @@ export async function updateMatchSuggestionStatus(
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to update match suggestion");
+  }
+  return res.json();
+}
+
+// ── Sourcing inquiries (buyer buying briefs) ─────────────────────────────
+
+export async function fetchSourcingInquiries(): Promise<SourcingInquiryDto[]> {
+  const res = await fetch(`${BASE}/api/sourcing-inquiries`, { headers: await authHeader() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load sourcing inquiries");
+  }
+  return res.json();
+}
+
+export async function createSourcingInquiry(data: SourcingInquiryInput): Promise<SourcingInquiryDto> {
+  const res = await fetch(`${BASE}/api/sourcing-inquiries`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to create sourcing inquiry");
+  }
+  return res.json();
+}
+
+export async function updateSourcingInquiry(
+  id: string,
+  data: SourcingInquiryInput,
+): Promise<SourcingInquiryDto> {
+  const res = await fetch(`${BASE}/api/sourcing-inquiries/${id}`, {
+    method: "PUT",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to update sourcing inquiry");
+  }
+  return res.json();
+}
+
+export async function deleteSourcingInquiry(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/sourcing-inquiries/${id}`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to delete sourcing inquiry");
+  }
+}
+
+export async function uploadInquiryBrief(inquiryId: string, file: File): Promise<unknown> {
+  const form = new FormData();
+  form.append("brief", file);
+  const res = await fetch(`${BASE}/api/sourcing-inquiries/${inquiryId}/briefs`, {
+    method: "POST",
+    headers: await authHeader(),
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to upload brief");
+  }
+  return res.json();
+}
+
+export async function fetchInquiryBriefUrl(inquiryId: string, fileId: string): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/sourcing-inquiries/${inquiryId}/briefs/${fileId}/download`, {
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to get brief URL");
+  return res.json();
+}
+
+// ── Buyer portfolio documents ────────────────────────────────────────────
+
+export interface BuyerFileDto {
+  id: string;
+  buyerProfileId: string;
+  storageKey: string;
+  originalName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export async function fetchBuyerPortfolio(): Promise<BuyerFileDto[]> {
+  const res = await fetch(`${BASE}/api/buyer-profile/portfolio`, { headers: await authHeader() });
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error("Failed to load portfolio");
+  return res.json();
+}
+
+export async function uploadBuyerPortfolio(file: File): Promise<BuyerFileDto> {
+  const form = new FormData();
+  form.append("portfolio", file);
+  const res = await fetch(`${BASE}/api/buyer-profile/portfolio`, {
+    method: "POST",
+    headers: await authHeader(),
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to upload portfolio");
+  }
+  return res.json();
+}
+
+export async function deleteBuyerPortfolio(fileId: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/buyer-profile/portfolio/${fileId}`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to delete portfolio file");
+}
+
+export async function fetchBuyerPortfolioUrl(fileId: string): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/buyer-profile/portfolio/${fileId}/download`, {
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to get portfolio URL");
+  return res.json();
+}
+
+// ── Card interactions + engagement ───────────────────────────────────────
+
+export interface CardInteractionResult {
+  cardId: string;
+  accountId: string;
+  status: OpportunityInteractionStatus;
+  linkedInquiryId?: string | null;
+  referralNote?: string | null;
+  lastActivityAt?: string | null;
+}
+
+export async function setCardInteraction(
+  cardId: string,
+  status: OpportunityInteractionStatus,
+  extra?: { linkedInquiryId?: string; referralNote?: string },
+): Promise<CardInteractionResult> {
+  const res = await fetch(`${BASE}/api/opportunity-cards/${cardId}/interactions`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ status, ...extra }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to record interaction");
+  }
+  return res.json();
+}
+
+export async function fetchEngagement(): Promise<EngagementRowDto[]> {
+  const res = await fetch(`${BASE}/api/opportunity-cards/engagement`, { headers: await authHeader() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load engagement");
+  }
+  return res.json();
+}
+
+export async function shareOpportunityCard(cardId: string, recipientIds: string[], message?: string): Promise<{ shared: number }> {
+  const res = await fetch(`${BASE}/api/opportunity-cards/${cardId}/share`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ recipientIds, message }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to share card");
+  }
+  return res.json();
+}
+
+// ── Activity feed ─────────────────────────────────────────────────────────
+
+export interface ActivityEventDto {
+  id: string;
+  type: string;
+  payload: unknown;
+  actorAccountId?: string;
+  createdAt: string;
+}
+
+export async function fetchActivity(): Promise<ActivityEventDto[]> {
+  const res = await fetch(`${BASE}/api/activity`, { headers: await authHeader() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load activity");
   }
   return res.json();
 }

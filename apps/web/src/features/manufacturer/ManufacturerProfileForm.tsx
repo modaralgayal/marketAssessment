@@ -8,6 +8,9 @@ import { Textarea } from "../../components/ui/textarea";
 import {
   fetchManufacturerProfile,
   upsertManufacturerProfile,
+  uploadManufacturerCatalogue,
+  fetchManufacturerCatalogueUrl,
+  deleteManufacturerCatalogue,
   type ManufacturerProfileInput,
 } from "../../lib/api";
 import {
@@ -112,6 +115,193 @@ function CheckboxGroup({
   );
 }
 
+function RadioGroup({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (v: string) => void;
+  options: ReadonlyArray<{ value: string; label: string }>;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => (
+          <button
+            type="button"
+            key={o.value}
+            onClick={() => onChange(o.value)}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              value === o.value
+                ? "border-brand-teal bg-brand-teal/10 text-brand-teal"
+                : "border-brand-line text-brand-ink hover:bg-brand-bg-alt"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const COVERAGE_ITEMS: { key: string; label: string }[] = [
+  { key: "products", label: "Products" },
+  { key: "prices", label: "Prices" },
+  { key: "ingredients", label: "Ingredients" },
+  { key: "certificates", label: "Certificates" },
+  { key: "packaging", label: "Packaging" },
+  { key: "logistics", label: "Logistics" },
+];
+
+function CatalogueCoverage({
+  value,
+  onChange,
+}: {
+  value: Record<string, boolean> | undefined;
+  onChange: (v: Record<string, boolean>) => void;
+}) {
+  const current = value ?? {};
+  const setItem = (key: string, val: boolean) => onChange({ ...current, [key]: val });
+  return (
+    <div className="space-y-1.5">
+      <Label>What does your catalogue / price list show?</Label>
+      <div className="divide-y divide-brand-line rounded-lg border border-brand-line">
+        {COVERAGE_ITEMS.map((item) => {
+          const state = current[item.key];
+          return (
+            <div key={item.key} className="flex items-center justify-between px-3 py-2 text-sm text-brand-ink">
+              <span>{item.label}</span>
+              <div className="flex gap-1">
+                {["Yes", "No"].map((opt) => {
+                  const val = opt === "Yes";
+                  const active = state === val;
+                  return (
+                    <button
+                      type="button"
+                      key={opt}
+                      onClick={() => setItem(item.key, val)}
+                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                        active
+                          ? "bg-brand-teal text-white"
+                          : "border border-brand-line text-brand-muted hover:bg-brand-bg-alt"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CatalogueUpload({ catalogueFileId }: { catalogueFileId?: string | null }) {
+  const qc = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const upload = useMutation({
+    mutationFn: (f: File) => uploadManufacturerCatalogue(f),
+    onSuccess: () => {
+      setErr(null);
+      qc.invalidateQueries({ queryKey: ["manufacturer-profile"] });
+    },
+    onError: (e) => setErr(e instanceof Error ? e.message : "Upload failed."),
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteManufacturerCatalogue(),
+    onSuccess: () => {
+      setErr(null);
+      qc.invalidateQueries({ queryKey: ["manufacturer-profile"] });
+    },
+    onError: (e) => setErr(e instanceof Error ? e.message : "Remove failed."),
+  });
+
+  return (
+    <div className="space-y-1.5">
+      <Label>Catalogue / price list</Label>
+      <p className="text-xs text-brand-muted">Upload your product catalogue or price list (PDF, Excel, Word or image, up to 10 MB).</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {catalogueFileId ? (
+          <>
+            <a
+              onClick={async () => {
+                const { url } = await fetchManufacturerCatalogueUrl();
+                window.open(url, "_blank", "noopener");
+              }}
+              className="text-xs font-medium text-brand-teal hover:underline"
+            >
+              View catalogue
+            </a>
+            <button
+              onClick={() => remove.mutate()}
+              disabled={remove.isPending}
+              className="text-xs font-medium text-red-600 hover:underline"
+            >
+              {remove.isPending ? "Removing…" : "Remove"}
+            </button>
+          </>
+        ) : (
+          <label className="cursor-pointer rounded-lg border border-brand-line px-3 py-1.5 text-xs font-medium text-brand-ink hover:bg-brand-bg-alt">
+            {uploading ? "Uploading…" : "Upload catalogue"}
+            <input
+              type="file"
+              className="hidden"
+              disabled={uploading}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setUploading(true);
+                  try {
+                    await upload.mutateAsync(f);
+                  } finally {
+                    setUploading(false);
+                  }
+                }
+                e.target.value = "";
+              }}
+            />
+          </label>
+        )}
+      </div>
+      {err && <p className="text-xs text-red-600">{err}</p>}
+    </div>
+  );
+}
+
+const CERT_OPTIONS = [
+  { value: "Halal", label: "Halal" },
+  { value: "BRCGS", label: "BRCGS" },
+  { value: "IFS", label: "IFS" },
+  { value: "FSSC", label: "FSSC" },
+  { value: "ISO", label: "ISO" },
+  { value: "HACCP", label: "HACCP" },
+  { value: "Organic", label: "Organic" },
+  { value: "Other", label: "Other" },
+  { value: "None", label: "None" },
+];
+
+const BRANDING_OPTIONS = [
+  { value: "brandLed", label: "Brand-led" },
+  { value: "shared", label: "Shared" },
+  { value: "tradeSupport", label: "Trade support" },
+  { value: "priceLed", label: "Price-led" },
+];
+
+const PRIVATE_LABEL_OPTIONS = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+  { value: "considering", label: "Considering" },
+];
+
 export default function ManufacturerProfileForm() {
   const qc = useQueryClient();
   const { data: existing, isLoading } = useQuery({
@@ -157,6 +347,17 @@ export default function ManufacturerProfileForm() {
     contacts: undefined,
     productCategory: undefined,
     companyInfo: undefined,
+    // Expanded profile (reference prototype)
+    exportCount: undefined,
+    topMarkets: undefined,
+    knownFor: undefined,
+    pictures: undefined,
+    logistics: undefined,
+    usp: undefined,
+    branding: undefined,
+    privateLabel: undefined,
+    certs: [],
+    catalogueCoverage: undefined,
   });
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -315,6 +516,56 @@ export default function ManufacturerProfileForm() {
             value={form.salesChannels}
             onChange={(v) => set("salesChannels", v as ManufacturerProfileInput["salesChannels"])}
             options={SALES_CHANNEL_OPTIONS}
+          />
+        </section>
+
+        <section className="space-y-3">
+          <h4 className="text-sm font-semibold text-brand-ink">Additional profile details</h4>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              label="Number of export markets"
+              value={form.exportCount?.toString() ?? ""}
+              onChange={(v) => set("exportCount", v ? Number(v) : undefined)}
+            />
+            {form.exportCount !== undefined && form.exportCount > 0 && (
+              <TextField
+                label="Top markets"
+                value={form.topMarkets ?? ""}
+                onChange={(v) => set("topMarkets", v || undefined)}
+                placeholder="e.g. KSA, UAE, Qatar"
+              />
+            )}
+            <TextField label="Known for" value={form.knownFor ?? ""} onChange={(v) => set("knownFor", v || undefined)} />
+            <TextField label="Logistics" value={form.logistics ?? ""} onChange={(v) => set("logistics", v || undefined)} />
+            <TextField
+              label="Pictures / gallery link"
+              value={form.pictures ?? ""}
+              onChange={(v) => set("pictures", v || undefined)}
+            />
+            <TextField label="USP" value={form.usp ?? ""} onChange={(v) => set("usp", v || undefined)} />
+          </div>
+          <RadioGroup
+            label="Branding approach"
+            value={form.branding}
+            onChange={(v) => set("branding", v || undefined)}
+            options={BRANDING_OPTIONS}
+          />
+          <RadioGroup
+            label="Private label"
+            value={form.privateLabel}
+            onChange={(v) => set("privateLabel", v || undefined)}
+            options={PRIVATE_LABEL_OPTIONS}
+          />
+          <CheckboxGroup
+            label="Certifications"
+            value={form.certs}
+            onChange={(v) => set("certs", v)}
+            options={CERT_OPTIONS}
+          />
+          <CatalogueUpload catalogueFileId={existing?.catalogueFileId} />
+          <CatalogueCoverage
+            value={form.catalogueCoverage}
+            onChange={(v) => set("catalogueCoverage", v)}
           />
         </section>
 

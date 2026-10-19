@@ -1,6 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchAccounts, type AccountListDto } from "../../lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  fetchAccounts,
+  disableAccount,
+  enableAccount,
+  adminResetPassword,
+  adminResendVerification,
+  type AccountListDto,
+} from "../../lib/api";
 import AdminLayout from "./AdminLayout";
 
 function roleLabel(role: string): string {
@@ -23,12 +30,42 @@ const FILTERS = ["ALL", "BUYER", "MANUFACTURER"] as const;
 type Filter = (typeof FILTERS)[number];
 
 export default function AccountsList() {
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["accounts"],
     queryFn: fetchAccounts,
   });
   const [filter, setFilter] = useState<Filter>("ALL");
   const [search, setSearch] = useState("");
+  const [feedback, setFeedback] = useState<Record<string, string>>({});
+
+  const setMsg = (id: string, msg: string) =>
+    setFeedback((f) => ({ ...f, [id]: msg }));
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["accounts"] });
+
+  const disableMut = useMutation({
+    mutationFn: (id: string) => disableAccount(id),
+    onSuccess: () => invalidate(),
+    onError: (e: Error, id) => setMsg(id, e.message),
+  });
+  const enableMut = useMutation({
+    mutationFn: (id: string) => enableAccount(id),
+    onSuccess: () => invalidate(),
+    onError: (e: Error, id) => setMsg(id, e.message),
+  });
+  const resetMut = useMutation({
+    mutationFn: (id: string) => adminResetPassword(id),
+    onSuccess: (r, id) =>
+      setMsg(id, r.emailSent ? "Password-reset email sent." : "Reset email not sent (SMTP not configured)."),
+    onError: (e: Error, id) => setMsg(id, e.message),
+  });
+  const verifyMut = useMutation({
+    mutationFn: (id: string) => adminResendVerification(id),
+    onSuccess: (r, id) =>
+      setMsg(id, r.emailSent ? "Verification email sent." : "Verification email not sent (SMTP not configured)."),
+    onError: (e: Error, id) => setMsg(id, e.message),
+  });
 
   const all = data?.items ?? [];
   const filtered = all.filter((a) => {
@@ -76,7 +113,7 @@ export default function AccountsList() {
       {error && <p className="text-sm text-red-600">Failed to load accounts.</p>}
 
       {data && (
-        <div className="overflow-hidden rounded-lg border border-brand-line bg-white">
+        <div className="overflow-x-auto rounded-lg border border-brand-line bg-white">
           <table className="w-full text-left text-sm">
             <thead className="bg-brand-bg-alt text-xs uppercase tracking-wide text-brand-muted">
               <tr>
@@ -85,11 +122,12 @@ export default function AccountsList() {
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Signed up</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((a) => (
-                <tr key={a.id} className="border-t border-brand-line">
+                <tr key={a.id} className="border-t border-brand-line align-top">
                   <td className="px-4 py-3 font-semibold text-brand-ink">{a.companyName ?? "—"}</td>
                   <td className="px-4 py-3 text-brand-muted">{a.email}</td>
                   <td className="px-4 py-3 text-brand-muted">{roleLabel(a.role)}</td>
@@ -99,11 +137,53 @@ export default function AccountsList() {
                   <td className="px-4 py-3 text-brand-muted">
                     {new Date(a.createdAt).toLocaleDateString()}
                   </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      {a.status === "ACTIVE" ? (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Disable ${a.email}? They won't be able to sign in.`)) {
+                              disableMut.mutate(a.id);
+                            }
+                          }}
+                          disabled={disableMut.isPending}
+                          className="rounded border border-brand-line px-2.5 py-1 text-xs font-medium text-brand-muted hover:border-red-400 hover:text-red-600"
+                        >
+                          Disable
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => enableMut.mutate(a.id)}
+                          disabled={enableMut.isPending}
+                          className="rounded border border-emerald-300 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                        >
+                          Enable
+                        </button>
+                      )}
+                      <button
+                        onClick={() => resetMut.mutate(a.id)}
+                        disabled={resetMut.isPending}
+                        className="rounded border border-brand-line px-2.5 py-1 text-xs font-medium text-brand-muted hover:border-brand-teal hover:text-brand-teal"
+                      >
+                        Reset PW
+                      </button>
+                      <button
+                        onClick={() => verifyMut.mutate(a.id)}
+                        disabled={verifyMut.isPending}
+                        className="rounded border border-brand-line px-2.5 py-1 text-xs font-medium text-brand-muted hover:border-brand-teal hover:text-brand-teal"
+                      >
+                        Verify
+                      </button>
+                    </div>
+                    {feedback[a.id] && (
+                      <p className="mt-1.5 text-xs text-brand-muted">{feedback[a.id]}</p>
+                    )}
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-brand-muted">
+                  <td colSpan={6} className="px-4 py-8 text-center text-brand-muted">
                     No signed-up accounts yet.
                   </td>
                 </tr>

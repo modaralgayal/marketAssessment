@@ -260,16 +260,38 @@ model Account {
   role        AccountRole
   status      AccountStatus @default(ACTIVE)
   inviteToken String? // the invite token this account was created from
+  // Privacy-policy consent tracking (GDPR Art. 7): the version last accepted
+  // and when. null until the user first accepts (recorded at sign-up or later).
+  privacyAcceptedVersion Int?
+  privacyAcceptedAt      DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   manufacturerProfile ManufacturerProfile?
   buyerProfile        BuyerProfile?
   opportunityCards    OpportunityCard[]
+  sourcingInquiries   SourcingInquiry[]
+  interactions        OpportunityInteraction[]
   invite              Invite? // the ACCOUNT invite this account was created from
 
   @@index([firebaseUid])
   @@index([role])
+}
+
+// ── Privacy-policy versions ────────────────────────────────────────────────
+// A monotonically increasing record of published privacy-policy versions. The
+// prose itself lives in the app's static policy page; this table only tracks
+// the version number + effective date so we can capture consent and re-prompt
+// users when a newer version is published.
+
+model PrivacyPolicyVersion {
+  id           Int      @id @default(autoincrement())
+  version      Int      @unique
+  effectiveDate DateTime @default(now())
+  note         String? // short admin note describing what changed
+  createdAt    DateTime @default(now())
+
+  @@index([version])
 }
 
 enum OpportunitySide {
@@ -295,12 +317,15 @@ model OpportunityCard {
   title          String
   summary        String?
   category       String?
+  territory      String? // target geography / markets for the card
+  channels       String[]         @default([]) // distribution / sales channels
   attributes     Json             @default("{}") // free-form, domain-specific fields
   publishedAt    DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   matchSuggestions MatchSuggestion[] @relation("cardA")
   matchSuggestionsB MatchSuggestion[] @relation("cardB")
+  interactions OpportunityInteraction[]
 
   @@index([ownerAccountId])
   @@index([status])
@@ -330,6 +355,53 @@ model MatchSuggestion {
 
   @@index([cardAId])
   @@index([cardBId])
+}
+
+// ── Opportunity interactions (buyer interest + manufacturer engagement) ─────
+// A single table records how each buyer has interacted with a given marketplace
+// card: viewed / saved / expressed interest / declined / referred. Powers the
+// buyer's "your activity" filters and the manufacturer's "Buyer engagement" feed.
+
+enum OpportunityInteractionStatus {
+  NEW // no stated interest yet
+  VIEWED
+  SAVED
+  INTERESTED
+  DECLINED
+  REFERRED
+}
+
+model OpportunityInteraction {
+  id               String                     @id @default(cuid())
+  cardId           String
+  card             OpportunityCard            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  accountId        String // the buyer viewing / acting
+  account          Account                    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  status           OpportunityInteractionStatus @default(NEW)
+  viewedAt         DateTime?
+  lastActivityAt    DateTime?
+  linkedInquiryId  String? // SourcingInquiry this interest was expressed from
+  referralNote     String?
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  @@unique([cardId, accountId])
+  @@index([cardId])
+  @@index([accountId])
+  @@index([status])
+}
+
+// ── Activity feed (Overview "Recent activity" / "Recent buyer activity") ────
+
+model ActivityEvent {
+  id             String   @id @default(cuid())
+  accountId      String // owner whose dashboard shows it
+  actorAccountId String? // the account that triggered it (e.g. a buyer)
+  type           String // inquiry_created | card_published | interest_expressed | viewed | shared | proposal_received
+  payload        Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  @@index([accountId, createdAt])
 }
 
 // ── Access requests (public "request a user creation" queue) ────────────────
@@ -416,10 +488,40 @@ model ManufacturerProfile {
   companyInfo   String?
   logoFileId    String?
 
+  // Expanded profile (reference prototype)
+  exportCount        Int? // number of export markets
+  topMarkets        String? // conditional on exportCount > 0
+  knownFor           String?
+  pictures           String?
+  logistics          String?
+  usp               String?
+  branding           String? // "brandLed" | "shared" | "tradeSupport" | "priceLed"
+  privateLabel       String? // "yes" | "no" | "considering"
+  certs             String[] @default([]) // Halal | BRCGS | IFS | FSSC | ISO | HACCP | Organic | Other | None
+  catalogueCoverage  Json? // { products: bool, prices: bool, ... }
+  catalogueFileId    String? // → ManufacturerFile (uploaded catalogue / price list)
+
+  // Back-relation to uploaded catalogue / price-list documents.
+  files             ManufacturerFile[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([accountId])
+}
+
+// Manufacturer catalogue / price-list document (mirrors BuyerFile).
+model ManufacturerFile {
+  id                  String            @id @default(cuid())
+  manufacturerProfileId String
+  manufacturerProfile  ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Cascade)
+  storageKey          String
+  originalName        String
+  contentType          String
+  sizeBytes            Int
+  createdAt            DateTime          @default(now())
+
+  @@index([manufacturerProfileId])
 }
 
 // ── Buyer profile (self-service) ───────────────────────────────────────────
@@ -452,10 +554,124 @@ model BuyerProfile {
   contacts         Json? // ContactPerson[]: { name, position?, phone?, email? }
   logoFileId       String?
 
+  // Expanded profile (reference prototype) — Company subsection
+  tradingName        String?
+  hqCountry          String?
+  hqCity             String?
+  operatingCountries  String[] @default([])
+  roles              String[] @default([]) // RETAILER | IMPORTER_DISTRIBUTOR (selectable; complements buyerType)
+  // Portfolio
+  portfolioProducts  String?
+  privateLabel       String? // "yes" | "no"
+  privateLabelName   String?
+  privateLabelCategories String?
+  portfolioFiles     BuyerFile[]
+  // Importer & distributor profile
+  distributionRole       String?
+  warehouse              String?
+  warehouseArrangement   String?
+  storage                String[] @default([])
+  vehicles               String?
+  vehicleArrangement     String?
+  channels               String[] @default([])
+  channelPercentages      Json?
+  channelBasis           String?
+  salesPoints            Int?
+  salesReachMode         String?
+  distributionGeography   String?
+  expandPortfolio         String?
+  expansionProducts       String?
+  distributionProductType String?
+  // Retailer profile
+  retailFormats           String[] @default([])
+  storeCount              Int?
+  retailGeography         String?
+  purchasingStructure     String?
+  purchasingOffice        String?
+  purchasingOutsourced    String?
+  purchasingSubsidiary    String?
+  purchasingSubsidiaryName String?
+  retailSupply            String? // "directImport" | "localSupplier" | "both"
+  directImportPercent     Float?
+  localSupplierPercent    Float?
+  retailMixBasis          String?
+  assortmentPlan          String?
+  retailExpansionProducts String?
+  retailProductType       String?
+  retailDelivery          String?
+  // catch-all for deep conditional fields
+  details                Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([accountId])
+}
+
+// Buyer portfolio / assortment documents (mirrors CustomerFile).
+model BuyerFile {
+  id           String       @id @default(cuid())
+  buyerProfileId String
+  buyerProfile  BuyerProfile @relation(fields: [buyerProfileId], references: [id], onDelete: Cascade)
+  storageKey   String
+  originalName String
+  contentType  String
+  sizeBytes    Int
+  createdAt    DateTime     @default(now())
+
+  @@index([buyerProfileId])
+}
+
+// ── Sourcing inquiries (buyer-authored sourcing needs) ──────────────────────
+// Distinct from the marketplace `OpportunityCard` (side=BUY). A SourcingInquiry
+// is the buyer's richer "buying brief" that the dashboards surface and the
+// matchmaking agent pairs against manufacturer SELL cards.
+
+enum SourcingInquiryStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  CLOSED
+}
+
+model SourcingInquiry {
+  id          String   @id @default(cuid())
+  accountId   String
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  title       String
+  products    String
+  productType String // BRANDED | PRIVATE_LABEL | EITHER
+  market      String? // target country / territory
+  channels    String[] @default([])
+  priceTier   String?
+  targetPrice  String?
+  timeframe   String?
+  quantity    String?
+  essential   String?
+  negotiable  String?
+  status      SourcingInquiryStatus @default(DRAFT)
+  attributes  Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  briefs      SourcingInquiryFile[]
+
+  @@index([accountId])
+  @@index([status])
+  @@index([market])
+}
+
+// Buying-brief attachments (mirrors SubmissionFile / CustomerFile).
+model SourcingInquiryFile {
+  id           String          @id @default(cuid())
+  inquiryId    String
+  inquiry      SourcingInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  storageKey   String
+  originalName String
+  contentType  String
+  sizeBytes    Int
+  createdAt    DateTime       @default(now())
+
+  @@index([inquiryId])
 }
 
 // ── Report access requests (public "Request a Report" form) ──────────────

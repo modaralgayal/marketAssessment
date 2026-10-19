@@ -79,6 +79,18 @@ export const manufacturerProfileSchema = z.object({
     .optional(),
   productCategory: optionalText,
   companyInfo: optionalText,
+
+  // Expanded profile (reference prototype)
+  exportCount: z.number().int().nonnegative().optional(),
+  topMarkets: optionalText,
+  knownFor: optionalText,
+  pictures: optionalText,
+  logistics: optionalText,
+  usp: optionalText,
+  branding: optionalText, // "brandLed" | "shared" | "tradeSupport" | "priceLed"
+  privateLabel: optionalText, // "yes" | "no" | "considering"
+  certs: z.array(z.string().trim().min(1).max(100)).default([]), // Halal | BRCGS | IFS | FSSC | ISO | HACCP | Organic | Other | None
+  catalogueCoverage: z.record(z.boolean()).optional(), // { products, prices, ... }
 });
 
 export type ManufacturerProfileInput = z.infer<typeof manufacturerProfileSchema>;
@@ -87,6 +99,7 @@ export interface ManufacturerProfileDto extends ManufacturerProfileInput {
   id: string;
   accountId: string;
   contacts?: ContactPerson[];
+  catalogueFileId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

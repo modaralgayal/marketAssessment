@@ -1,9 +1,24 @@
 import { Router } from "express";
-import { verifyIdToken } from "../lib/firebaseAdmin.js";
+import type { UserRecord } from "firebase-admin/auth";
+import {
+  verifyIdToken,
+  deleteFirebaseUser,
+  getFirebaseUser,
+  generatePasswordResetLink,
+  generateEmailVerificationLink,
+} from "../lib/firebaseAdmin.js";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { requireAdmin } from "../middleware/requireAdmin.js";
-import { bootstrapAccountSchema, type AccountDto, type AccountListDto } from "@mea/shared";
+import { auditLog } from "../middleware/auditLog.js";
+import { webBaseUrl } from "../env.js";
+import { sendMail } from "../lib/mailer.js";
+import {
+  bootstrapAccountSchema,
+  acceptPrivacySchema,
+  type AccountDto,
+  type AccountListDto,
+} from "@mea/shared";
 
 export const accountsRouter = Router();
 
@@ -13,6 +28,8 @@ function toDto(a: {
   role: string;
   status: string;
   inviteToken?: string | null;
+  privacyAcceptedVersion?: number | null;
+  privacyAcceptedAt?: Date | null;
   createdAt: Date;
 }): AccountDto {
   return {
@@ -21,8 +38,19 @@ function toDto(a: {
     role: a.role as AccountDto["role"],
     status: a.status as AccountDto["status"],
     inviteToken: a.inviteToken ?? null,
+    privacyAcceptedVersion: a.privacyAcceptedVersion ?? null,
+    privacyAcceptedAt: a.privacyAcceptedAt ? a.privacyAcceptedAt.toISOString() : null,
     createdAt: a.createdAt.toISOString(),
   };
+}
+
+/** The latest published privacy-policy version (0 if none). */
+async function currentPrivacyVersion(): Promise<number> {
+  const latest = await prisma.privacyPolicyVersion.findFirst({
+    orderBy: { version: "desc" },
+    select: { version: true },
+  });
+  return latest?.version ?? 0;
 }
 
 /** Get the authenticated account. */
@@ -37,9 +65,100 @@ accountsRouter.get("/me", requireAuth, async (req, res, next) => {
 });
 
 /**
+ * Self-service: accept the latest published privacy-policy version (GDPR
+ * Art. 7 — recorded consent). No-op if already on the latest version.
+ */
+accountsRouter.post("/me/privacy", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = acceptPrivacySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request" });
+    }
+    const latest = await currentPrivacyVersion();
+    const account = await prisma.account.update({
+      where: { id: req.account!.id },
+      data: { privacyAcceptedVersion: latest, privacyAcceptedAt: new Date() },
+    });
+    return res.json(toDto(account));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Self-service: export the user's own data (GDPR Art. 20 — portability) as a
+ * single JSON document. No secrets; the Firebase uid is excluded.
+ */
+accountsRouter.get("/me/export", requireAuth, async (req, res, next) => {
+  try {
+    const account = await prisma.account.findUnique({
+      where: { id: req.account!.id },
+      include: {
+        manufacturerProfile: true,
+        buyerProfile: true,
+        opportunityCards: { include: { matchSuggestions: true, matchSuggestionsB: true } },
+      },
+    });
+    if (!account) return res.status(404).json({ error: "Account not found" });
+    const latest = await currentPrivacyVersion();
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      account: {
+        id: account.id,
+        email: account.email,
+        role: account.role,
+        status: account.status,
+        privacyAcceptedVersion: account.privacyAcceptedVersion ?? null,
+        privacyAcceptedAt: account.privacyAcceptedAt ?? null,
+        createdAt: account.createdAt.toISOString(),
+        updatedAt: account.updatedAt.toISOString(),
+      },
+      manufacturerProfile: account.manufacturerProfile ?? null,
+      buyerProfile: account.buyerProfile ?? null,
+      opportunityCards: account.opportunityCards,
+      privacyPolicyVersion: latest,
+    };
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="tradelomacy-data-${account.id}.json"`,
+    );
+    return res.status(200).json(payload);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Self-service: delete the user's own account (GDPR Art. 17 — erasure).
+ * Irreversible: deletes the Firebase user and the Prisma Account row, which
+ * cascades to the profile, opportunity cards, and match suggestions. The
+ * Firebase user is deleted first; if that fails we still remove the Prisma row
+ * (avoiding an orphaned auth user), and we rethrow only on Prisma failure.
+ */
+accountsRouter.delete("/me", requireAuth, auditLog, async (req, res, next) => {
+  try {
+    const account = await prisma.account.findUnique({ where: { id: req.account!.id } });
+    if (!account) return res.status(404).json({ error: "Account not found" });
+    const firebaseUid = account.firebaseUid;
+    try {
+      await deleteFirebaseUser(firebaseUid);
+    } catch (e) {
+      // user-not-found is fine (already gone); anything else we still prune Prisma.
+      console.error("[accounts] Firebase delete failed for", firebaseUid, e);
+    }
+    await prisma.account.delete({ where: { id: account.id } });
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * Create the Account after a successful Firebase sign-in. Idempotent: if an
  * Account already exists for this Firebase user it is returned. Otherwise the
- * role comes from a valid ACCOUNT invite, which is then consumed.
+ * role comes from a valid ACCOUNT invite, which is then consumed. If the invite
+ * is accepted and `acceptPrivacy` is set, the current policy version is recorded.
  */
 accountsRouter.post("/bootstrap", async (req, res, next) => {
   try {
@@ -56,7 +175,7 @@ accountsRouter.post("/bootstrap", async (req, res, next) => {
     const existing = await prisma.account.findUnique({ where: { firebaseUid: decoded.uid } });
     if (existing) return res.json(toDto(existing));
 
-    const { inviteToken } = bootstrapAccountSchema.parse(req.body ?? {});
+    const { inviteToken, acceptPrivacy } = bootstrapAccountSchema.parse(req.body ?? {});
     if (!inviteToken) {
       return res
         .status(400)
@@ -73,6 +192,9 @@ accountsRouter.post("/bootstrap", async (req, res, next) => {
       return res.status(400).json({ error: "This invite is invalid or has already been used." });
     }
 
+    const latest = await currentPrivacyVersion();
+    const acceptedVersion = acceptPrivacy ? latest : null;
+
     const account = await prisma.$transaction(async (tx) => {
       const acc = await tx.account.create({
         data: {
@@ -81,6 +203,8 @@ accountsRouter.post("/bootstrap", async (req, res, next) => {
           role: invite.role as AccountDto["role"],
           status: "ACTIVE",
           inviteToken,
+          privacyAcceptedVersion: acceptedVersion,
+          privacyAcceptedAt: acceptedVersion ? new Date() : null,
         },
       });
       await tx.invite.update({
@@ -118,3 +242,131 @@ accountsRouter.get("/", requireAdmin, async (_req, res, next) => {
     next(err);
   }
 });
+
+/** Admin: load an account (by Prisma id) together with its Firebase user. */
+async function loadAccountWithFirebase(id: string): Promise<
+  { account: { id: string; email: string; firebaseUid: string }; firebaseUser: UserRecord | null } | null
+> {
+  const account = await prisma.account.findUnique({ where: { id } });
+  if (!account) return null;
+  let firebaseUser: UserRecord | null = null;
+  try {
+    firebaseUser = await getFirebaseUser(account.firebaseUid);
+  } catch {
+    /* Firebase user may be missing; the Prisma row still exists */
+  }
+  return { account, firebaseUser };
+}
+
+/** Admin: disable an account (rejected at sign-in via requireAuth). */
+accountsRouter.post("/:id/disable", requireAdmin, auditLog, async (req, res, next) => {
+  try {
+    const account = await prisma.account.findUnique({ where: { id: req.params.id } });
+    if (!account) return res.status(404).json({ error: "Account not found" });
+    const updated = await prisma.account.update({
+      where: { id: account.id },
+      data: { status: "DISABLED" },
+    });
+    return res.json(toDto(updated));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Admin: re-enable a disabled account. */
+accountsRouter.post("/:id/enable", requireAdmin, auditLog, async (req, res, next) => {
+  try {
+    const account = await prisma.account.findUnique({ where: { id: req.params.id } });
+    if (!account) return res.status(404).json({ error: "Account not found" });
+    const updated = await prisma.account.update({
+      where: { id: account.id },
+      data: { status: "ACTIVE" },
+    });
+    return res.json(toDto(updated));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Admin: email the user a Firebase password-reset link. Google-only accounts
+ * have no password, so this is rejected with a clear message.
+ */
+accountsRouter.post(
+  "/:id/reset-password",
+  requireAdmin,
+  auditLog,
+  async (req, res, next) => {
+    try {
+      const loaded = await loadAccountWithFirebase(req.params.id);
+      if (!loaded) return res.status(404).json({ error: "Account not found" });
+      const { account, firebaseUser } = loaded;
+      const hasPassword = firebaseUser?.providerData?.some((p) => p.providerId === "password");
+      if (!hasPassword) {
+        return res
+          .status(400)
+          .json({ error: "This account signs in with Google — password reset doesn't apply." });
+      }
+      const link = await generatePasswordResetLink(account.email, `${webBaseUrl}/login`);
+      let emailSent = false;
+      try {
+        await sendMail({
+          to: account.email,
+          subject: "Reset your Tradelomacy password",
+          text:
+            `Hi,\n\n` +
+            `An administrator reset was requested for your Tradelomacy account. ` +
+            `Set a new password here:\n\n${link}\n\n` +
+            `If you didn't request this, you can ignore this email.`,
+        });
+        emailSent = true;
+      } catch (mailErr) {
+        console.error("[accounts] reset-password email failed:", mailErr);
+      }
+      return res.json({ emailSent });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/**
+ * Admin: email the user a Firebase email-verification link. Only meaningful for
+ * email/password accounts; Google-only accounts are rejected.
+ */
+accountsRouter.post(
+  "/:id/resend-verification",
+  requireAdmin,
+  auditLog,
+  async (req, res, next) => {
+    try {
+      const loaded = await loadAccountWithFirebase(req.params.id);
+      if (!loaded) return res.status(404).json({ error: "Account not found" });
+      const { account, firebaseUser } = loaded;
+      const hasPassword = firebaseUser?.providerData?.some((p) => p.providerId === "password");
+      if (!hasPassword) {
+        return res
+          .status(400)
+          .json({ error: "This account signs in with Google — verification email doesn't apply." });
+      }
+      const link = await generateEmailVerificationLink(account.email, `${webBaseUrl}/login`);
+      let emailSent = false;
+      try {
+        await sendMail({
+          to: account.email,
+          subject: "Verify your Tradelomacy email",
+          text:
+            `Hi,\n\n` +
+            `Please verify your email address for your Tradelomacy account:\n\n${link}\n\n` +
+            `If you didn't request this, you can ignore this email.`,
+        });
+        emailSent = true;
+      } catch (mailErr) {
+        console.error("[accounts] resend-verification email failed:", mailErr);
+      }
+      return res.json({ emailSent });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
