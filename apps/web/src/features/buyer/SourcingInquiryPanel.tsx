@@ -200,7 +200,7 @@ function InquiryForm({
 }
 
 function ViewInquiry({ inquiry, onClose }: { inquiry: SourcingInquiryDto; onClose: () => void }) {
-  const Row = ({ label, value }: { label: string; value?: string }) =>
+  const Row = ({ label, value }: { label: string; value?: string | null }) =>
     value ? (
       <div className="space-y-0.5">
         <p className="text-xs font-medium text-brand-muted">{label}</p>
