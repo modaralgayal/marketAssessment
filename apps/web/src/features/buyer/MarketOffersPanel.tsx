@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
 import { Badge } from "../../components/ui/badge";
 import {
   fetchMarketOpportunityCards,
@@ -20,7 +22,13 @@ const ACTIVITY_FILTERS = [
   { value: "DECLINED", label: "Declined" },
 ];
 
-function OfferCard({ card }: { card: MarketCardDto }) {
+function OfferCard({
+  card,
+  onExpressInterest,
+}: {
+  card: MarketCardDto;
+  onExpressInterest?: () => void;
+}) {
   const qc = useQueryClient();
   const { data: inquiries = [] } = useQuery({
     queryKey: ["sourcing-inquiries"],
@@ -28,15 +36,23 @@ function OfferCard({ card }: { card: MarketCardDto }) {
   });
   const status = card.interaction?.status ?? "NEW";
 
+  const [composing, setComposing] = useState(false);
+  const [note, setNote] = useState(card.interaction?.referralNote ?? "");
+  const [linkedInquiryId, setLinkedInquiryId] = useState(card.interaction?.linkedInquiryId ?? "");
+
   const act = useMutation({
-    mutationFn: (s: OpportunityInteractionStatus) => setCardInteraction(card.id, s),
-    onSuccess: () => {
+    mutationFn: (s: OpportunityInteractionStatus) =>
+      setCardInteraction(card.id, s, {
+        linkedInquiryId: linkedInquiryId || undefined,
+        referralNote: note.trim() || undefined,
+      }),
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["market-opportunity-cards"] });
       qc.invalidateQueries({ queryKey: ["activity"] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      if (res.conversationId) onExpressInterest?.();
     },
   });
-
-  const isStrong = status === "INTERESTED" || status === "SAVED";
 
   return (
     <Card>
@@ -68,66 +84,94 @@ function OfferCard({ card }: { card: MarketCardDto }) {
         {card.summary && <p className="line-clamp-3 text-sm text-brand-muted">{card.summary}</p>}
         {card.category && <p className="text-xs text-brand-muted">Category: {card.category}</p>}
 
-        {isStrong && (
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-brand-muted">Link to a sourcing inquiry</label>
-            <select
-              defaultValue={card.interaction?.linkedInquiryId ?? ""}
-              onChange={(e) =>
-                act.mutateAsync(e.target.value ? "INTERESTED" : "INTERESTED")
-              }
-              className="flex h-9 w-full rounded-lg border border-brand-line bg-white px-2 text-sm text-brand-ink outline-none focus:border-brand-teal"
+        {composing ? (
+          <div className="space-y-2 rounded-xl border border-brand-line bg-brand-bg-alt/50 p-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Your interest note (becomes the first message)</Label>
+              <Textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Tell the supplier what you're interested in…"
+                className="min-h-[64px]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Link to a sourcing inquiry (optional)</Label>
+              <select
+                value={linkedInquiryId}
+                onChange={(e) => setLinkedInquiryId(e.target.value)}
+                className="flex h-9 w-full rounded-lg border border-brand-line bg-white px-2 text-sm text-brand-ink outline-none focus:border-brand-teal"
+              >
+                <option value="">— Not linked —</option>
+                {inquiries.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setComposing(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={act.isPending}
+                onClick={() => act.mutate("INTERESTED")}
+              >
+                {act.isPending ? "Sending…" : "Send interest"}
+              </Button>
+            </div>
+            {act.isError && (
+              <p className="text-xs text-red-600">{(act.error as Error).message}</p>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button
+              size="sm"
+              variant={status === "SAVED" ? "default" : "outline"}
+              onClick={() => act.mutate("SAVED")}
+              disabled={act.isPending}
             >
-              <option value="">— Not linked —</option>
-              {inquiries.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.title}
-                </option>
-              ))}
-            </select>
+              {status === "SAVED" ? "Saved" : "Save"}
+            </Button>
+            <Button
+              size="sm"
+              variant={status === "INTERESTED" ? "default" : "outline"}
+              onClick={() => setComposing(true)}
+              disabled={act.isPending}
+            >
+              {status === "INTERESTED" ? "Interested" : "Express interest"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => act.mutate("DECLINED")}
+              disabled={act.isPending}
+            >
+              Decline
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => act.mutate("REFERRED")}
+              disabled={act.isPending}
+            >
+              Refer
+            </Button>
           </div>
         )}
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button
-            size="sm"
-            variant={status === "SAVED" ? "default" : "outline"}
-            onClick={() => act.mutate("SAVED")}
-            disabled={act.isPending}
-          >
-            {status === "SAVED" ? "Saved" : "Save"}
-          </Button>
-          <Button
-            size="sm"
-            variant={status === "INTERESTED" ? "default" : "outline"}
-            onClick={() => act.mutate("INTERESTED")}
-            disabled={act.isPending}
-          >
-            {status === "INTERESTED" ? "Interested" : "Express interest"}
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => act.mutate("DECLINED")}
-            disabled={act.isPending}
-          >
-            Decline
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => act.mutate("REFERRED")}
-            disabled={act.isPending}
-          >
-            Refer
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
 }
 
-export default function MarketOffersPanel() {
+export default function MarketOffersPanel({
+  onExpressInterest,
+}: {
+  onExpressInterest?: () => void;
+}) {
   const [search, setSearch] = useState("");
   const [activity, setActivity] = useState("");
 
@@ -156,7 +200,9 @@ export default function MarketOffersPanel() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-bold text-brand-ink">Manufacturer offers</h2>
-        <p className="text-sm text-brand-muted">Browse what manufacturers are selling. Save, express interest, or decline.</p>
+        <p className="text-sm text-brand-muted">
+          Browse what manufacturers are selling. Save, express interest, or decline.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -191,7 +237,7 @@ export default function MarketOffersPanel() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {filtered.map((c) => (
-            <OfferCard key={c.id} card={c} />
+            <OfferCard key={c.id} card={c} onExpressInterest={onExpressInterest} />
           ))}
         </div>
       )}

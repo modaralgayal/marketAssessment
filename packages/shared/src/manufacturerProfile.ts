@@ -95,11 +95,26 @@ export const manufacturerProfileSchema = z.object({
 
 export type ManufacturerProfileInput = z.infer<typeof manufacturerProfileSchema>;
 
+/** A single catalogue / price-list document attached to the manufacturer profile.
+ *  `kind` is "pdf" (an uploaded file, fetched via a signed URL) or "link". */
+export interface ManufacturerFileInfo {
+  id: string;
+  manufacturerProfileId: string;
+  originalName: string;
+  contentType: string;
+  sizeBytes: number;
+  kind: string; // "pdf" | "link"
+  url?: string | null;
+  createdAt: string;
+}
+
 export interface ManufacturerProfileDto extends ManufacturerProfileInput {
   id: string;
   accountId: string;
   contacts?: ContactPerson[];
   catalogueFileId?: string | null;
+  /** Uploaded catalogue / price-list documents (PDFs + links). */
+  files?: ManufacturerFileInfo[];
   createdAt: string;
   updatedAt: string;
 }

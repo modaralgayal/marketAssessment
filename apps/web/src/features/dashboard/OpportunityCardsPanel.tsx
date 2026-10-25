@@ -1,30 +1,29 @@
-import { useState } from "react";
+import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
-import { Separator } from "../../components/ui/separator";
 import {
-  deleteOpportunityCard,
+  fetchEngagement,
   fetchMyOpportunityCards,
   publishOpportunityCard,
   unpublishOpportunityCard,
+  type EngagementRowDto,
   type OpportunityCardDto,
 } from "../../lib/api";
 import OpportunityCardEditor from "./OpportunityCardEditor";
-
-const STATUS_STYLES: Record<string, string> = {
-  DRAFT: "bg-brand-bg-alt text-brand-muted",
-  POSTED: "bg-brand-teal/10 text-brand-teal",
-  ARCHIVED: "bg-brand-line text-brand-muted",
-};
+import OpportunityCard, { type CardEngagement } from "./OpportunityCard";
 
 export default function OpportunityCardsPanel({
   noun,
   emptyHint,
+  onViewEngagement,
+  onGoToCatalogue,
 }: {
   noun: string;
   emptyHint: string;
+  onViewEngagement?: (cardId: string) => void;
+  onGoToCatalogue?: () => void;
 }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<OpportunityCardDto | null>(null);
@@ -34,21 +33,34 @@ export default function OpportunityCardsPanel({
     queryKey: ["my-opportunity-cards"],
     queryFn: () => fetchMyOpportunityCards(),
   });
+  const { data: engagement = [] } = useQuery({
+    queryKey: ["engagement"],
+    queryFn: fetchEngagement,
+  });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["my-opportunity-cards"] });
+  const engagementByCard = useMemo(() => {
+    const map = new Map<string, CardEngagement>();
+    for (const row of engagement as EngagementRowDto[]) {
+      const e = map.get(row.cardId) ?? { recipients: 0, engaged: 0, pending: 0 };
+      e.recipients += 1;
+      if (row.status === "INTERESTED" || row.status === "REFERRED") e.engaged += 1;
+      else if (row.status === "VIEWED" || row.status === "SAVED") e.pending += 1;
+      map.set(row.cardId, e);
+    }
+    return map;
+  }, [engagement]);
 
-  const publish = useMutation({
-    mutationFn: (id: string) => publishOpportunityCard(id),
-    onSuccess: invalidate,
-  });
-  const unpublish = useMutation({
-    mutationFn: (id: string) => unpublishOpportunityCard(id),
-    onSuccess: invalidate,
-  });
-  const remove = useMutation({
-    mutationFn: (id: string) => deleteOpportunityCard(id),
-    onSuccess: invalidate,
-  });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["my-opportunity-cards"] });
+    qc.invalidateQueries({ queryKey: ["engagement"] });
+  };
+
+  const publishCard = useMutation({ mutationFn: (id: string) => publishOpportunityCard(id), onSuccess: invalidate });
+  const unpublishCard = useMutation({ mutationFn: (id: string) => unpublishOpportunityCard(id), onSuccess: invalidate });
+
+  useEffect(() => {
+    if (editing || creating) window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [editing, creating]);
 
   if (creating || editing) {
     return (
@@ -60,6 +72,7 @@ export default function OpportunityCardsPanel({
           <OpportunityCardEditor
             initial={editing ?? undefined}
             noun={noun}
+            onGoToCatalogue={onGoToCatalogue}
             onSaved={() => {
               setEditing(null);
               setCreating(false);
@@ -80,7 +93,7 @@ export default function OpportunityCardsPanel({
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Your {noun}s</CardTitle>
         <Button size="sm" onClick={() => setCreating(true)}>
-          Create {noun}
+          + New {noun}
         </Button>
       </CardHeader>
       <CardContent>
@@ -89,63 +102,21 @@ export default function OpportunityCardsPanel({
         ) : cards.length === 0 ? (
           <p className="text-sm text-brand-muted">{emptyHint}</p>
         ) : (
-          <ul className="divide-y divide-brand-line">
+          <div className="grid gap-4 md:grid-cols-2">
             {cards.map((card) => (
-              <li key={card.id} className="py-4 first:pt-0 last:pb-0">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-semibold text-brand-ink">{card.title}</span>
-                      <Badge className={STATUS_STYLES[card.status]}>{card.status}</Badge>
-                    </div>
-                    {card.summary && (
-                      <p className="mt-1 line-clamp-2 text-sm text-brand-muted">{card.summary}</p>
-                    )}
-                    {card.category && (
-                      <p className="mt-1 text-xs text-brand-muted">Category: {card.category}</p>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    {card.status === "POSTED" ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => unpublish.mutate(card.id)}
-                        disabled={unpublish.isPending}
-                      >
-                        Unpublish
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => publish.mutate(card.id)}
-                        disabled={publish.isPending}
-                      >
-                        Publish
-                      </Button>
-                    )}
-                    <div className="flex gap-1">
-                      <button
-                        className="text-xs font-medium text-brand-teal hover:underline"
-                        onClick={() => setEditing(card)}
-                      >
-                        Edit
-                      </button>
-                      <Separator orientation="vertical" className="h-3" />
-                      <button
-                        className="text-xs font-medium text-red-600 hover:underline"
-                        onClick={() => remove.mutate(card.id)}
-                        disabled={remove.isPending}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </li>
+              <OpportunityCard
+                key={card.id}
+                card={card}
+                engagement={engagementByCard.get(card.id)}
+                onEdit={() => setEditing(card)}
+                onViewEngagement={
+                  onViewEngagement ? () => onViewEngagement(card.id) : undefined
+                }
+                onPublish={() => publishCard.mutate(card.id)}
+                onUnpublish={() => unpublishCard.mutate(card.id)}
+              />
             ))}
-          </ul>
+          </div>
         )}
       </CardContent>
     </Card>

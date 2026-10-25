@@ -10,6 +10,7 @@ import ManufacturerOverview from "./ManufacturerOverview";
 import ManufacturerProfileForm from "./ManufacturerProfileForm";
 import BuyerEngagementPanel from "./BuyerEngagementPanel";
 import OpportunityCardsPanel from "../dashboard/OpportunityCardsPanel";
+import ConversationsPanel from "../conversation/ConversationsPanel";
 
 function computeCompletion(p: ManufacturerProfileDto): number {
   const checks: boolean[] = [
@@ -43,6 +44,7 @@ export default function ManufacturerDashboard() {
     { key: "overview", label: "Overview" },
     { key: "cards", label: "Opportunity cards", count: cardsLoading ? undefined : cards.length },
     { key: "engagement", label: "Buyer engagement" },
+    { key: "conversations", label: "Conversations" },
     { key: "profile", label: "Company profile" },
   ];
 
@@ -59,9 +61,17 @@ export default function ManufacturerDashboard() {
         <OpportunityCardsPanel
           noun="opportunity"
           emptyHint="No opportunity cards yet. Create one to start getting matched with buyers."
+          onViewEngagement={() => setView("engagement")}
+          onGoToCatalogue={() => {
+            setView("profile");
+            setTimeout(() => {
+              document.getElementById("operations")?.scrollIntoView({ behavior: "smooth" });
+            }, 350);
+          }}
         />
       )}
       {view === "engagement" && <BuyerEngagementPanel />}
+      {view === "conversations" && <ConversationsPanel />}
       {view === "profile" && <ManufacturerProfileForm />}
     </DashboardLayout>
   );

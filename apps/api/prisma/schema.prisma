@@ -272,6 +272,8 @@ model Account {
   opportunityCards    OpportunityCard[]
   sourcingInquiries   SourcingInquiry[]
   interactions        OpportunityInteraction[]
+  conversationParticipants ConversationParticipant[]
+  sentMessages            Message[]
   invite              Invite? // the ACCOUNT invite this account was created from
 
   @@index([firebaseUid])
@@ -319,7 +321,20 @@ model OpportunityCard {
   category       String?
   territory      String? // target geography / markets for the card
   channels       String[]         @default([]) // distribution / sales channels
-  attributes     Json             @default("{}") // free-form, domain-specific fields
+  // Structured offer fields (mirror the model opportunity-card prototype).
+  partner        String? // partner type the offer targets (e.g. Distributor, Retailer)
+  timing         String? // proposed timing (e.g. "Within six months")
+  objective      String? // what the manufacturer is trying to achieve with the card
+  moq            String? // initial order / minimum order quantity
+  payment        String? // payment terms
+  delivery       String? // delivery terms / dispatch location
+  rights         String? // distribution rights / exclusivity
+  validUntil     String? // proposed terms valid until (ISO date)
+  support        String? // marketing / launch support
+  version        Int              @default(1) // bumps on every edit (v1, v2, …)
+  sources        Json? // catalogue references [{ id?, name }]
+  assets         Json? // commercial attachments [{ id?, name }]
+  attributes     Json             @default("{}") // legacy free-form fields (kept for old rows)
   publishedAt    DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -371,6 +386,22 @@ enum OpportunityInteractionStatus {
   REFERRED
 }
 
+// ── Conversations (buyer ⇄ manufacturer messaging) ─────────────────────────
+// A conversation is seeded when a buyer expresses interest in a manufacturer's
+// opportunity card. Its first message is the buyer's "interest note"; the two
+// parties then keep talking on-platform.
+
+enum ConversationType {
+  INTEREST // seeded from an interest expression on a card
+  DIRECT // started manually (future)
+}
+
+enum MessageKind {
+  INTEREST_NOTE // the seeded first message (buyer's interest note)
+  MESSAGE // normal two-way text
+  SYSTEM // system event
+}
+
 model OpportunityInteraction {
   id               String                     @id @default(cuid())
   cardId           String
@@ -389,6 +420,67 @@ model OpportunityInteraction {
   @@index([cardId])
   @@index([accountId])
   @@index([status])
+}
+
+// ── Conversations (buyer ⇄ manufacturer messaging) ───────────────────────────
+// Seeded when a buyer expresses interest in a manufacturer's opportunity card;
+// the first message is the buyer's "interest note". Parties continue on-platform.
+
+model Conversation {
+  id            String           @id @default(cuid())
+  type          ConversationType @default(INTEREST)
+  subject       String?
+  // Linkage back to the entity that seeded the conversation (for dedup + context)
+  seedCardId    String?
+  seedInquiryId String?
+  lastMessageAt DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  participants  ConversationParticipant[]
+  messages      Message[]
+
+  @@index([updatedAt])
+  @@index([seedCardId])
+}
+
+model ConversationParticipant {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  role           AccountRole
+  createdAt      DateTime       @default(now())
+
+  @@unique([conversationId, accountId])
+  @@index([accountId])
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderAccountId String?
+  sender          Account?     @relation(fields: [senderAccountId], references: [id], onDelete: SetNull)
+  kind            MessageKind  @default(MESSAGE)
+  body            String
+  createdAt       DateTime     @default(now())
+  attachments     MessageFile[]
+
+  @@index([conversationId, createdAt])
+}
+
+model MessageFile {
+  id           String   @id @default(cuid())
+  messageId    String
+  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  storageKey   String
+  originalName String
+  contentType  String
+  sizeBytes    Int
+  createdAt    DateTime @default(now())
+
+  @@index([messageId])
 }
 
 // ── Activity feed (Overview "Recent activity" / "Recent buyer activity") ────
@@ -515,7 +607,10 @@ model ManufacturerFile {
   id                  String            @id @default(cuid())
   manufacturerProfileId String
   manufacturerProfile  ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Cascade)
-  storageKey          String
+  // kind: "pdf" = uploaded file (storageKey set); "link" = external URL (url set).
+  kind                String            @default("pdf")
+  storageKey          String? // present for kind = "pdf"
+  url                 String? // present for kind = "link"
   originalName        String
   contentType          String
   sizeBytes            Int

@@ -12,6 +12,7 @@ import type {
   AccountDto,
   ManufacturerProfileDto,
   ManufacturerProfileInput,
+  ManufacturerFileInfo,
   BuyerProfileDto,
   BuyerProfileInput,
   OpportunityCardDto,
@@ -26,6 +27,8 @@ import type {
   AccessRequestDto,
   AccountListDto,
   PrivacyPolicyVersionDto,
+  ConversationDto,
+  MessageDto,
 } from "@mea/shared";
 
 // Re-export shared types so feature components can import DTOs / input types
@@ -35,10 +38,13 @@ export type {
   AccountRole,
   ManufacturerProfileDto,
   ManufacturerProfileInput,
+  ManufacturerFileInfo,
   BuyerProfileDto,
   BuyerProfileInput,
   OpportunityCardDto,
   OpportunityCardInput,
+  OpportunityStatus,
+  OpportunityRef,
   MarketCardDto,
   EngagementRowDto,
   SourcingInquiryDto,
@@ -50,6 +56,8 @@ export type {
   AccessRequestDto,
   AccountListDto,
   PrivacyPolicyVersionDto,
+  ConversationDto,
+  MessageDto,
 } from "@mea/shared";
 
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -722,6 +730,17 @@ export async function rejectAccessRequest(id: string): Promise<AccessRequestDto>
   return res.json();
 }
 
+// Carries field-level validation errors (`{ field: string[] }`) from the API so
+// forms can highlight the exact missing/invalid fields instead of a generic message.
+export class ApiError extends Error {
+  fields?: Record<string, string[]>;
+  constructor(message: string, fields?: Record<string, string[]>) {
+    super(message);
+    this.name = "ApiError";
+    this.fields = fields;
+  }
+}
+
 // ── Manufacturer profile ────────────────────────────────────────────────
 
 export async function fetchManufacturerProfile(): Promise<ManufacturerProfileDto> {
@@ -744,6 +763,7 @@ export async function upsertManufacturerProfile(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+    if (body.fields) throw new ApiError(body.error ?? "Failed to save profile", body.fields);
     throw new Error(body.error ?? "Failed to save profile");
   }
   return res.json();
@@ -751,17 +771,10 @@ export async function upsertManufacturerProfile(
 
 // ── Manufacturer catalogue / price-list ─────────────────────────────────
 
-export interface ManufacturerFileDto {
-  id: string;
-  manufacturerProfileId: string;
-  storageKey: string;
-  originalName: string;
-  contentType: string;
-  sizeBytes: number;
-  createdAt: string;
-}
+export type ManufacturerFileDto = ManufacturerFileInfo;
 
-export async function uploadManufacturerCatalogue(file: File): Promise<ManufacturerFileDto> {
+/** Upload a catalogue / price-list PDF (kind "pdf"). */
+export async function uploadManufacturerCatalogue(file: File): Promise<ManufacturerFileInfo> {
   const form = new FormData();
   form.append("catalogue", file);
   const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue`, {
@@ -776,25 +789,128 @@ export async function uploadManufacturerCatalogue(file: File): Promise<Manufactu
   return res.json();
 }
 
-export async function fetchManufacturerCatalogueUrl(): Promise<{ url: string; originalName: string }> {
-  const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue/download`, { headers: await authHeader() });
+/** Add a catalogue / price-list link (kind "link"). */
+export async function addManufacturerCatalogueLink(url: string, name?: string): Promise<ManufacturerFileInfo> {
+  const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue/link`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ url, name }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to add catalogue link");
+  }
+  return res.json();
+}
+
+/** Download a specific catalogue file (signed URL). */
+export async function fetchManufacturerCatalogueFileUrl(
+  fileId: string,
+): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue/${fileId}/download`, {
+    headers: await authHeader(),
+  });
   if (!res.ok) throw new Error("Failed to get catalogue link");
   return res.json();
 }
 
-export async function deleteManufacturerCatalogue(): Promise<void> {
-  const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue`, {
+/** Remove a specific catalogue file. */
+export async function deleteManufacturerCatalogueFile(fileId: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/manufacturer-profile/catalogue/${fileId}`, {
     method: "DELETE",
     headers: await authHeader(),
   });
   if (!res.ok) throw new Error("Failed to remove catalogue");
 }
 
+// ── Opportunity-card attachments (catalogue refs + price list / terms) ──
+
+/** A saved attachment descriptor for an opportunity card's `sources` / `assets`. */
+export interface OpportunityAsset {
+  id?: string;
+  name: string;
+  kind?: "pdf" | "link";
+  url?: string;
+  contentType?: string;
+  sizeBytes?: number;
+}
+
+/** Upload an opportunity-specific price list / terms PDF. Returns the descriptor
+ *  to store in the card's `assets`. */
+export async function uploadOpportunityCardAsset(cardId: string, file: File): Promise<OpportunityAsset> {
+  const form = new FormData();
+  form.append("asset", file);
+  const res = await fetch(`${BASE}/api/opportunity-cards/${cardId}/assets`, {
+    method: "POST",
+    headers: await authHeader(),
+    body: form,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to upload price list");
+  }
+  return res.json();
+}
+
+/** Add an opportunity-specific price list / terms link. Returns the descriptor
+ *  to store in the card's `assets`. */
+export async function addOpportunityCardAssetLink(
+  cardId: string,
+  url: string,
+  name?: string,
+): Promise<OpportunityAsset> {
+  const res = await fetch(`${BASE}/api/opportunity-cards/${cardId}/assets/link`, {
+    method: "POST",
+    headers: { ...(await authHeader()), "Content-Type": "application/json" },
+    body: JSON.stringify({ url, name }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to add price list link");
+  }
+  return res.json();
+}
+
+/** Best-effort delete of an uploaded asset's storage object. */
+export async function deleteOpportunityCardAsset(cardId: string, assetId: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/opportunity-cards/${cardId}/assets/${assetId}`, {
+    method: "DELETE",
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to remove attachment");
+}
+
+/** Download an opportunity-specific asset (price list / terms PDF). */
+export async function fetchOpportunityCardAssetUrl(
+  cardId: string,
+  assetId: string,
+): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/opportunity-cards/${cardId}/assets/${assetId}/download`, {
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to get attachment");
+  return res.json();
+}
+
+/** Download a catalogue reference attached to the manufacturer's profile. */
+export async function fetchOpportunityCardSourceUrl(
+  cardId: string,
+  sourceId: string,
+): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/opportunity-cards/${cardId}/sources/${sourceId}/download`, {
+    headers: await authHeader(),
+  });
+  if (!res.ok) throw new Error("Failed to get catalogue reference");
+  return res.json();
+}
+
 // ── Buyer profile ───────────────────────────────────────────────────────
 
-export async function fetchBuyerProfile(): Promise<BuyerProfileDto> {
+export async function fetchBuyerProfile(): Promise<BuyerProfileDto | null> {
   const res = await fetch(`${BASE}/api/buyer-profile`, { headers: await authHeader() });
-  if (res.status === 404) throw new Error("NO_PROFILE");
+  // 404 = no profile created yet. That's an expected state (the buyer is about to
+  // fill the form for the first time), so return null rather than throwing.
+  if (res.status === 404) return null;
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to load profile");
@@ -810,6 +926,7 @@ export async function upsertBuyerProfile(data: BuyerProfileInput): Promise<Buyer
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+    if (body.fields) throw new ApiError(body.error ?? "Failed to save profile", body.fields);
     throw new Error(body.error ?? "Failed to save profile");
   }
   return res.json();
@@ -1061,6 +1178,7 @@ export interface CardInteractionResult {
   status: OpportunityInteractionStatus;
   linkedInquiryId?: string | null;
   referralNote?: string | null;
+  conversationId?: string | null;
   lastActivityAt?: string | null;
 }
 
@@ -1118,6 +1236,66 @@ export async function fetchActivity(): Promise<ActivityEventDto[]> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to load activity");
+  }
+  return res.json();
+}
+
+// ── Conversations (buyer ⇄ manufacturer messaging) ───────────────────────────
+
+export async function fetchConversations(): Promise<ConversationDto[]> {
+  const res = await fetch(`${BASE}/api/conversations`, { headers: await authHeader() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load conversations");
+  }
+  return res.json();
+}
+
+export interface ConversationThread {
+  conversation: ConversationDto;
+  messages: MessageDto[];
+}
+
+export async function fetchConversation(id: string): Promise<ConversationThread> {
+  const res = await fetch(`${BASE}/api/conversations/${id}`, { headers: await authHeader() });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load conversation");
+  }
+  return res.json();
+}
+
+/** Post a message (with optional inline attachments) to a conversation. */
+export async function sendConversationMessage(
+  conversationId: string,
+  body: string,
+  files?: File[],
+): Promise<MessageDto> {
+  const form = new FormData();
+  form.append("body", body);
+  for (const f of files ?? []) form.append("attachments", f);
+  const res = await fetch(`${BASE}/api/conversations/${conversationId}/messages`, {
+    method: "POST",
+    headers: await authHeader(),
+    body: form,
+  });
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+    throw new Error(b.error ?? "Failed to send message");
+  }
+  return res.json();
+}
+
+/** Get a short-lived signed download URL for a message attachment. */
+export async function fetchConversationAttachmentUrl(
+  fileId: string,
+): Promise<{ url: string; originalName: string }> {
+  const res = await fetch(`${BASE}/api/conversations/attachments/${fileId}/download`, {
+    headers: await authHeader(),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to get attachment");
   }
   return res.json();
 }

@@ -2,34 +2,42 @@ import { Router } from "express";
 import multer from "multer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { storage } from "../storage/index.js";
 import { requireRole } from "../middleware/requireAuth.js";
-import { manufacturerProfileSchema, type ManufacturerProfileDto } from "@mea/shared";
+import { manufacturerProfileSchema, type ManufacturerProfileDto, type ManufacturerFileInfo } from "@mea/shared";
 
 export const manufacturerProfilesRouter = Router();
 
 // Catalogue / price-list upload: common office + image types, max 10 MB.
 const catalogueUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const ok = [
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "text/csv",
-      "image/png",
-      "image/jpeg",
-      "image/webp",
-    ].includes(file.mimetype);
-    if (ok) cb(null, true);
-    else cb(new Error("Unsupported catalogue file type"));
+    // Accept any PDF: some operating systems/browsers report PDFs with a
+    // generic mimetype (e.g. "application/octet-stream"), so check the
+    // extension as well as the mimetype.
+    const isPdfByName = file.originalname.toLowerCase().endsWith(".pdf");
+    const isPdfByType = file.mimetype === "application/pdf" || file.mimetype.includes("pdf");
+    if (isPdfByName || isPdfByType) return cb(null, true);
+    cb(new Error("Please attach a PDF catalogue or price list."));
   },
 });
+
+function toFileInfo(f: any): ManufacturerFileInfo {
+  return {
+    id: f.id,
+    manufacturerProfileId: f.manufacturerProfileId,
+    originalName: f.originalName,
+    contentType: f.contentType,
+    sizeBytes: f.sizeBytes,
+    kind: f.kind ?? "pdf",
+    url: f.url ?? null,
+    createdAt: f.createdAt.toISOString(),
+  };
+}
 
 function toDto(p: any): ManufacturerProfileDto {
   return {
@@ -83,6 +91,7 @@ function toDto(p: any): ManufacturerProfileDto {
     certs: p.certs ?? [],
     catalogueCoverage: p.catalogueCoverage ?? undefined,
     catalogueFileId: p.catalogueFileId ?? null,
+    files: (p.files ?? []).map(toFileInfo),
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
@@ -93,6 +102,7 @@ manufacturerProfilesRouter.get("/", requireRole("MANUFACTURER"), async (req, res
   try {
     const profile = await prisma.manufacturerProfile.findUnique({
       where: { accountId: req.account!.id },
+      include: { files: true },
     });
     if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
     return res.json(toDto(profile));
@@ -109,15 +119,15 @@ manufacturerProfilesRouter.put("/", requireRole("MANUFACTURER"), async (req, res
     const contacts = data.contacts as unknown as Prisma.InputJsonValue | undefined;
     const existing = await prisma.manufacturerProfile.findUnique({ where: { accountId } });
     const profile = existing
-      ? await prisma.manufacturerProfile.update({ where: { accountId }, data: { ...data, contacts } })
-      : await prisma.manufacturerProfile.create({ data: { accountId, ...data, contacts } });
+      ? await prisma.manufacturerProfile.update({ where: { accountId }, data: { ...data, contacts }, include: { files: true } })
+      : await prisma.manufacturerProfile.create({ data: { accountId, ...data, contacts }, include: { files: true } });
     return res.json(toDto(profile));
   } catch (err) {
     next(err);
   }
 });
 
-/** Upload a catalogue / price list (creates a ManufacturerFile, points profile at it). */
+/** Upload a catalogue / price list PDF (appends a ManufacturerFile of kind "pdf"). */
 manufacturerProfilesRouter.post(
   "/catalogue",
   requireRole("MANUFACTURER"),
@@ -135,6 +145,7 @@ manufacturerProfilesRouter.post(
       const created = await prisma.manufacturerFile.create({
         data: {
           manufacturerProfileId: profile.id,
+          kind: "pdf",
           storageKey: key,
           originalName: file.originalname,
           contentType: file.mimetype,
@@ -145,48 +156,86 @@ manufacturerProfilesRouter.post(
         where: { accountId },
         data: { catalogueFileId: created.id },
       });
-      return res.status(201).json({
-        id: created.id,
-        manufacturerProfileId: created.manufacturerProfileId,
-        storageKey: created.storageKey,
-        originalName: created.originalName,
-        contentType: created.contentType,
-        sizeBytes: created.sizeBytes,
-        createdAt: created.createdAt.toISOString(),
-      });
+      return res.status(201).json(toFileInfo(created));
     } catch (err) {
       next(err);
     }
   },
 );
 
-/** Download the manufacturer's catalogue / price list. */
-manufacturerProfilesRouter.get("/catalogue/download", requireRole("MANUFACTURER"), async (req, res, next) => {
+/** Add a catalogue / price-list link (appends a ManufacturerFile of kind "link"). */
+manufacturerProfilesRouter.post("/catalogue/link", requireRole("MANUFACTURER"), async (req, res, next) => {
   try {
-    const profile = await prisma.manufacturerProfile.findUnique({ where: { accountId: req.account!.id } });
-    if (!profile || !profile.catalogueFileId) return res.status(404).json({ error: "No catalogue uploaded" });
-    const file = await prisma.manufacturerFile.findUnique({ where: { id: profile.catalogueFileId } });
-    if (!file) return res.status(404).json({ error: "File not found" });
-    const url = await storage.getSignedUrl(file.storageKey, 300);
-    return res.json({ url, originalName: file.originalName });
+    const accountId = req.account!.id;
+    const profile = await prisma.manufacturerProfile.findUnique({ where: { accountId } });
+    if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
+    const { url, name } = z
+      .object({
+        url: z.string().trim().url(),
+        name: z.string().trim().max(300).optional(),
+      })
+      .parse(req.body);
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return res.status(400).json({ error: "Only http(s) links are allowed" });
+    }
+    const created = await prisma.manufacturerFile.create({
+      data: {
+        manufacturerProfileId: profile.id,
+        kind: "link",
+        url,
+        originalName: name?.trim() || parsed.hostname,
+        contentType: "text/uri-list",
+        sizeBytes: 0,
+      },
+    });
+    return res.status(201).json(toFileInfo(created));
   } catch (err) {
     next(err);
   }
 });
 
-/** Remove the manufacturer's catalogue / price list. */
-manufacturerProfilesRouter.delete("/catalogue", requireRole("MANUFACTURER"), async (req, res, next) => {
-  try {
-    const profile = await prisma.manufacturerProfile.findUnique({ where: { accountId: req.account!.id } });
-    if (!profile || !profile.catalogueFileId) return res.status(204).send();
-    const file = await prisma.manufacturerFile.findUnique({ where: { id: profile.catalogueFileId } });
-    if (file) {
-      await storage.delete(file.storageKey).catch(() => {});
-      await prisma.manufacturerFile.delete({ where: { id: file.id } });
+/** Download one of the manufacturer's catalogue files (owner only). */
+manufacturerProfilesRouter.get(
+  "/catalogue/:fileId/download",
+  requireRole("MANUFACTURER"),
+  async (req, res, next) => {
+    try {
+      const profile = await prisma.manufacturerProfile.findUnique({ where: { accountId: req.account!.id } });
+      if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
+      const file = await prisma.manufacturerFile.findFirst({
+        where: { id: req.params.fileId, manufacturerProfileId: profile.id },
+      });
+      if (!file || !file.storageKey) return res.status(404).json({ error: "File not found" });
+      const url = await storage.getSignedUrl(file.storageKey, 300);
+      return res.json({ url, originalName: file.originalName });
+    } catch (err) {
+      next(err);
     }
-    await prisma.manufacturerProfile.update({ where: { accountId: req.account!.id }, data: { catalogueFileId: null } });
-    return res.status(204).send();
-  } catch (err) {
-    next(err);
-  }
-});
+  },
+);
+
+/** Remove one of the manufacturer's catalogue files (owner only). */
+manufacturerProfilesRouter.delete(
+  "/catalogue/:fileId",
+  requireRole("MANUFACTURER"),
+  async (req, res, next) => {
+    try {
+      const profile = await prisma.manufacturerProfile.findUnique({ where: { accountId: req.account!.id } });
+      if (!profile) return res.status(204).send();
+      const file = await prisma.manufacturerFile.findFirst({
+        where: { id: req.params.fileId, manufacturerProfileId: profile.id },
+      });
+      if (file) {
+        if (file.storageKey) await storage.delete(file.storageKey).catch(() => {});
+        await prisma.manufacturerFile.delete({ where: { id: file.id } });
+        if (profile.catalogueFileId === file.id) {
+          await prisma.manufacturerProfile.update({ where: { accountId: req.account!.id }, data: { catalogueFileId: null } });
+        }
+      }
+      return res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  },
+);

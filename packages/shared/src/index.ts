@@ -10,3 +10,4 @@ export * from "./accessRequest";
 export * from "./opportunityCard";
 export * from "./sourcingInquiry";
 export * from "./matchSuggestion";
+export * from "./conversation";

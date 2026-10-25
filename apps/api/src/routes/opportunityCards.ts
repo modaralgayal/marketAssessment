@@ -1,7 +1,11 @@
 import { Router } from "express";
+import multer from "multer";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
+import { storage } from "../storage/index.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { requireAgent } from "../middleware/requireAgent.js";
 import {
@@ -15,6 +19,33 @@ import {
 
 export const opportunityCardsRouter = Router();
 
+// Opportunity-specific price list / terms upload: PDFs + common office types, 15 MB.
+const assetUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "text/csv",
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+    ].includes(file.mimetype);
+    if (ok) cb(null, true);
+    else cb(new Error("Unsupported file type"));
+  },
+});
+
+/** True if the caller may open a posted card's attachments (owner, or a posted card
+ *  which is publicly browsable on the marketplace). */
+function canViewCardAssets(card: { ownerAccountId: string; status: string }, accountId: string): boolean {
+  return card.ownerAccountId === accountId || card.status === "POSTED";
+}
+
 function toDto(c: any): OpportunityCardDto {
   return {
     id: c.id,
@@ -26,6 +57,18 @@ function toDto(c: any): OpportunityCardDto {
     category: c.category ?? undefined,
     territory: c.territory ?? undefined,
     channels: c.channels ?? [],
+    partner: c.partner ?? undefined,
+    timing: c.timing ?? undefined,
+    objective: c.objective ?? undefined,
+    moq: c.moq ?? undefined,
+    payment: c.payment ?? undefined,
+    delivery: c.delivery ?? undefined,
+    rights: c.rights ?? undefined,
+    validUntil: c.validUntil ?? undefined,
+    support: c.support ?? undefined,
+    version: c.version ?? 1,
+    sources: c.sources ?? null,
+    assets: c.assets ?? null,
     attributes: c.attributes ?? undefined,
     publishedAt: c.publishedAt ? c.publishedAt.toISOString() : null,
     createdAt: c.createdAt.toISOString(),
@@ -112,6 +155,59 @@ opportunityCardsRouter.get("/feed", requireAgent, async (req, res, next) => {
   }
 });
 
+/**
+ * Seed (idempotently) a conversation when a buyer expresses interest in a
+ * manufacturer's opportunity card. The conversation's first message is the
+ * buyer's "interest note", composed from the card + linked inquiry + note.
+ * Returns the conversation id. One INTEREST conversation per (buyer, card).
+ */
+async function seedInterestConversation(opts: {
+  buyerAccountId: string;
+  manufacturerAccountId: string;
+  card: { id: string; title: string };
+  linkedInquiryId?: string | null;
+  referralNote?: string | null;
+}): Promise<string> {
+  const existing = await prisma.conversation.findFirst({
+    where: {
+      type: "INTEREST",
+      seedCardId: opts.card.id,
+      participants: { some: { accountId: opts.buyerAccountId } },
+    },
+    select: { id: true },
+  });
+  if (existing) return existing.id;
+
+  const lines: string[] = [`Interest in "${opts.card.title}"`];
+  if (opts.linkedInquiryId) {
+    const inquiry = await prisma.sourcingInquiry.findUnique({ where: { id: opts.linkedInquiryId } });
+    if (inquiry) {
+      lines.push(`Linked sourcing inquiry: ${inquiry.title}`);
+      if (inquiry.products) lines.push(inquiry.products.slice(0, 500));
+    }
+  }
+  if (opts.referralNote) lines.push(opts.referralNote);
+
+  const conv = await prisma.conversation.create({
+    data: {
+      type: "INTEREST",
+      subject: opts.card.title,
+      seedCardId: opts.card.id,
+      seedInquiryId: opts.linkedInquiryId ?? null,
+      participants: {
+        create: [
+          { accountId: opts.buyerAccountId, role: "BUYER" },
+          { accountId: opts.manufacturerAccountId, role: "MANUFACTURER" },
+        ],
+      },
+      messages: {
+        create: [{ kind: "INTEREST_NOTE", senderAccountId: null, body: lines.join("\n\n") }],
+      },
+    },
+  });
+  return conv.id;
+}
+
 /** Manufacturer: per-buyer engagement across the manufacturer's posted cards. */
 opportunityCardsRouter.get("/engagement", requireAuth, async (req, res, next) => {
   try {
@@ -156,11 +252,19 @@ opportunityCardsRouter.get("/:id", requireAuth, async (req, res, next) => {
   }
 });
 
+/** Map the model's card-status label to the internal enum + visibility. */
+function mapCardStatus(label?: string): { status: "DRAFT" | "POSTED" | "ARCHIVED"; publishedAt: Date | null } {
+  if (label === "Open for buyer engagement") return { status: "POSTED", publishedAt: new Date() };
+  if (label === "Closed") return { status: "ARCHIVED", publishedAt: null };
+  return { status: "DRAFT", publishedAt: null };
+}
+
 /** Owner-scoped: create (side is derived from the account role). */
 opportunityCardsRouter.post("/", requireAuth, async (req, res, next) => {
   try {
     const data = opportunityCardSchema.parse(req.body);
     const side: OpportunitySide = req.account!.role === "MANUFACTURER" ? "SELL" : "BUY";
+    const { status, publishedAt } = mapCardStatus(data.status);
     const card = await prisma.opportunityCard.create({
       data: {
         ownerAccountId: req.account!.id,
@@ -170,7 +274,21 @@ opportunityCardsRouter.post("/", requireAuth, async (req, res, next) => {
         category: data.category ?? null,
         territory: data.territory ?? null,
         channels: data.channels ?? [],
+        partner: data.partner ?? null,
+        timing: data.timing ?? null,
+        objective: data.objective ?? null,
+        moq: data.moq ?? null,
+        payment: data.payment ?? null,
+        delivery: data.delivery ?? null,
+        rights: data.rights ?? null,
+        validUntil: data.validUntil ?? null,
+        support: data.support ?? null,
+        version: 1,
+        sources: (data.sources ?? []) as any,
+        assets: (data.assets ?? []) as any,
         attributes: (data.attributes ?? {}) as any,
+        status,
+        publishedAt,
       },
     });
     return res.status(201).json(toDto(card));
@@ -186,6 +304,7 @@ opportunityCardsRouter.put("/:id", requireAuth, async (req, res, next) => {
     const card = await prisma.opportunityCard.findUnique({ where: { id: req.params.id } });
     if (!card) return res.status(404).json({ error: "Not found" });
     if (card.ownerAccountId !== req.account!.id) return res.status(403).json({ error: "Not authorized" });
+    const { status, publishedAt } = mapCardStatus(data.status);
     const updated = await prisma.opportunityCard.update({
       where: { id: req.params.id },
       data: {
@@ -194,7 +313,21 @@ opportunityCardsRouter.put("/:id", requireAuth, async (req, res, next) => {
         category: data.category ?? null,
         territory: data.territory ?? null,
         channels: data.channels ?? [],
+        partner: data.partner ?? null,
+        timing: data.timing ?? null,
+        objective: data.objective ?? null,
+        moq: data.moq ?? null,
+        payment: data.payment ?? null,
+        delivery: data.delivery ?? null,
+        rights: data.rights ?? null,
+        validUntil: data.validUntil ?? null,
+        support: data.support ?? null,
+        version: { increment: 1 },
+        sources: (data.sources ?? []) as any,
+        assets: (data.assets ?? []) as any,
         attributes: (data.attributes ?? {}) as any,
+        status,
+        publishedAt,
       },
     });
     return res.json(toDto(updated));
@@ -211,6 +344,113 @@ opportunityCardsRouter.delete("/:id", requireAuth, async (req, res, next) => {
     if (card.ownerAccountId !== req.account!.id) return res.status(403).json({ error: "Not authorized" });
     await prisma.opportunityCard.delete({ where: { id: req.params.id } });
     return res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Owner-scoped: upload an opportunity-specific price list / terms PDF. Returns the
+ *  storage key to store in the card's `assets` JSON. */
+opportunityCardsRouter.post(
+  "/:id/assets",
+  requireAuth,
+  assetUpload.single("asset"),
+  async (req, res, next) => {
+    try {
+      const card = await prisma.opportunityCard.findUnique({ where: { id: req.params.id } });
+      if (!card) return res.status(404).json({ error: "Not found" });
+      if (card.ownerAccountId !== req.account!.id) return res.status(403).json({ error: "Not authorized" });
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No file provided" });
+      const ext = path.extname(file.originalname).toLowerCase() || "";
+      const key = `opportunity-cards/${card.id}/assets/${randomUUID()}${ext}`;
+      await storage.put(key, file.buffer, file.mimetype);
+      return res.status(201).json({
+        id: key,
+        name: file.originalname,
+        kind: "pdf",
+        contentType: file.mimetype,
+        sizeBytes: file.size,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/** Owner-scoped: add an opportunity-specific price list / terms link. Returns the
+ *  descriptor to store in the card's `assets` JSON. */
+opportunityCardsRouter.post("/:id/assets/link", requireAuth, async (req, res, next) => {
+  try {
+    const card = await prisma.opportunityCard.findUnique({ where: { id: req.params.id } });
+    if (!card) return res.status(404).json({ error: "Not found" });
+    if (card.ownerAccountId !== req.account!.id) return res.status(403).json({ error: "Not authorized" });
+    const { url, name } = z
+      .object({ url: z.string().trim().url(), name: z.string().trim().max(300).optional() })
+      .parse(req.body);
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return res.status(400).json({ error: "Only http(s) links are allowed" });
+    }
+    return res.status(201).json({
+      id: randomUUID(),
+      name: name?.trim() || parsed.hostname,
+      kind: "link",
+      url,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Owner-scoped: best-effort delete of an uploaded asset's R2 object. The caller
+ *  then removes the entry from the card's `assets` JSON and saves the card. */
+opportunityCardsRouter.delete("/:id/assets/:assetId", requireAuth, async (req, res, next) => {
+  try {
+    const card = await prisma.opportunityCard.findUnique({ where: { id: req.params.id } });
+    if (!card) return res.status(404).json({ error: "Not found" });
+    if (card.ownerAccountId !== req.account!.id) return res.status(403).json({ error: "Not authorized" });
+    const assetId = req.params.assetId;
+    // Only delete R2 objects we created for this card (storage-key ids).
+    if (assetId.startsWith(`opportunity-cards/${card.id}/assets/`)) {
+      await storage.delete(assetId).catch(() => {});
+    }
+    return res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Download an opportunity-specific asset (owner, or any viewer of a posted card). */
+opportunityCardsRouter.get("/:id/assets/:assetId/download", requireAuth, async (req, res, next) => {
+  try {
+    const card = await prisma.opportunityCard.findUnique({ where: { id: req.params.id } });
+    if (!card) return res.status(404).json({ error: "Not found" });
+    if (!canViewCardAssets(card, req.account!.id)) return res.status(403).json({ error: "Not authorized" });
+    const asset = (card.assets as any[] | null)?.find((a) => a?.id === req.params.assetId);
+    if (!asset || asset.kind !== "pdf" || !asset.id) return res.status(404).json({ error: "Asset not found" });
+    const url = await storage.getSignedUrl(asset.id, 300);
+    return res.json({ url, originalName: asset.name ?? "document" });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Download a catalogue reference attached to the manufacturer's profile (owner, or
+ *  any viewer of a posted card). */
+opportunityCardsRouter.get("/:id/sources/:sourceId/download", requireAuth, async (req, res, next) => {
+  try {
+    const card = await prisma.opportunityCard.findUnique({ where: { id: req.params.id } });
+    if (!card) return res.status(404).json({ error: "Not found" });
+    if (!canViewCardAssets(card, req.account!.id)) return res.status(403).json({ error: "Not authorized" });
+    const profile = await prisma.manufacturerProfile.findUnique({
+      where: { accountId: card.ownerAccountId },
+      include: { files: true },
+    });
+    const file = profile?.files.find((f) => f.id === req.params.sourceId);
+    if (!file || !file.storageKey) return res.status(404).json({ error: "File not found" });
+    const url = await storage.getSignedUrl(file.storageKey, 300);
+    return res.json({ url, originalName: file.originalName });
   } catch (err) {
     next(err);
   }
@@ -310,12 +550,24 @@ opportunityCardsRouter.post("/:id/interactions", requireAuth, async (req, res, n
         },
       });
     }
+    // Seed a conversation from the interest note (idempotent per buyer+card).
+    let conversationId: string | null = null;
+    if (parsed.status === "INTERESTED") {
+      conversationId = await seedInterestConversation({
+        buyerAccountId: accountId,
+        manufacturerAccountId: card.ownerAccountId,
+        card: { id: card.id, title: card.title },
+        linkedInquiryId: interaction.linkedInquiryId,
+        referralNote: interaction.referralNote,
+      });
+    }
     return res.json({
       cardId: interaction.cardId,
       accountId: interaction.accountId,
       status: interaction.status,
       linkedInquiryId: interaction.linkedInquiryId ?? null,
       referralNote: interaction.referralNote ?? null,
+      conversationId,
       lastActivityAt: interaction.lastActivityAt ? interaction.lastActivityAt.toISOString() : null,
     });
   } catch (err) {

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
@@ -7,6 +7,7 @@ import {
   fetchMyOpportunityCards,
   fetchEngagement,
   fetchActivity,
+  publishOpportunityCard,
   type EngagementRowDto,
 } from "../../lib/api";
 import ActivityList from "../dashboard/ActivityList";
@@ -30,6 +31,15 @@ export default function ManufacturerOverview({ onGoTo }: { onGoTo: (key: string)
     queryFn: fetchEngagement,
   });
   const { data: activity = [] } = useQuery({ queryKey: ["activity"], queryFn: fetchActivity });
+
+  const qc = useQueryClient();
+  const publishCard = useMutation({
+    mutationFn: (id: string) => publishOpportunityCard(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-opportunity-cards"] });
+      qc.invalidateQueries({ queryKey: ["engagement"] });
+    },
+  });
 
   const published = cards.filter((c) => c.status === "POSTED").length;
 
@@ -114,8 +124,13 @@ export default function ManufacturerOverview({ onGoTo }: { onGoTo: (key: string)
                               Engage
                             </Button>
                           ) : (
-                            <Button size="sm" variant="outline" onClick={() => onGoTo("cards")}>
-                              Publish
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={publishCard.isPending}
+                              onClick={() => publishCard.mutate(c.id)}
+                            >
+                              {publishCard.isPending ? "Publishing…" : "Publish"}
                             </Button>
                           )}
                         </td>

@@ -21,6 +21,7 @@ import { matchSuggestionsRouter } from "./routes/matchSuggestions.js";
 import { accessRequestsRouter } from "./routes/accessRequests.js";
 import { sourcingInquiriesRouter } from "./routes/sourcingInquiries.js";
 import { activityRouter } from "./routes/activity.js";
+import { conversationsRouter } from "./routes/conversations.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { isOriginAllowed } from "./lib/corsOrigin.js";
@@ -74,6 +75,7 @@ app.use("/api/match-suggestions", matchSuggestionsRouter);
 app.use("/api/access-requests", accessRequestsRouter);
 app.use("/api/sourcing-inquiries", sourcingInquiriesRouter);
 app.use("/api/activity", activityRouter);
+app.use("/api/conversations", conversationsRouter);
 
 app.use(errorHandler);
 

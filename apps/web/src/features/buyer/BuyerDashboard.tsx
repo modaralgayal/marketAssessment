@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import DashboardLayout, { type NavItem } from "../dashboard/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { fetchSourcingInquiries, fetchBuyerProfile, type BuyerProfileDto } from "../../lib/api";
 import BuyerOverview from "./BuyerOverview";
 import SourcingInquiryPanel from "./SourcingInquiryPanel";
 import MarketOffersPanel from "./MarketOffersPanel";
 import BuyerProfileForm from "./BuyerProfileForm";
+import ConversationsPanel from "../conversation/ConversationsPanel";
 
 function computeCompletion(p: BuyerProfileDto): number {
   const checks: boolean[] = [
@@ -20,22 +20,6 @@ function computeCompletion(p: BuyerProfileDto): number {
     Boolean(p.portfolioInfo || p.portfolioProducts),
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-}
-
-function ComingSoon({ title }: { title: string }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-brand-muted">
-          Conversations and proposals between buyers and manufacturers are coming in the next release.
-          For now you can save and express interest in manufacturer offers from the Opportunity cards tab.
-        </p>
-      </CardContent>
-    </Card>
-  );
 }
 
 export default function BuyerDashboard() {
@@ -69,8 +53,10 @@ export default function BuyerDashboard() {
     >
       {view === "overview" && <BuyerOverview onGoTo={setView} />}
       {view === "inquiries" && <SourcingInquiryPanel />}
-      {view === "market" && <MarketOffersPanel />}
-      {view === "conversations" && <ComingSoon title="Conversations" />}
+      {view === "market" && (
+        <MarketOffersPanel onExpressInterest={() => setView("conversations")} />
+      )}
+      {view === "conversations" && <ConversationsPanel />}
       {view === "profile" && <BuyerProfileForm />}
     </DashboardLayout>
   );
