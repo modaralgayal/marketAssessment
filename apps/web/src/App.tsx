@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
 import FormPage from "./features/form/FormPage";
 import AdminLogin from "./features/admin/AdminLogin";
 import DistributorList from "./features/admin/DistributorList";
@@ -12,6 +13,7 @@ import ProtectedRoute from "./features/admin/ProtectedRoute";
 import Signup from "./features/auth/Signup";
 import Login from "./features/auth/Login";
 import RequireRole from "./features/auth/RequireRole";
+import ResetPassword from "./features/auth/ResetPassword";
 import AccessRequests from "./features/admin/AccessRequests";
 import AccountsList from "./features/admin/AccountsList";
 import ManufacturerDashboard from "./features/manufacturer/ManufacturerDashboard";
@@ -19,6 +21,8 @@ import BuyerDashboard from "./features/buyer/BuyerDashboard";
 import AccountSettings from "./features/settings/AccountSettings";
 import { MarketingLayout } from "./features/marketing/MarketingLayout";
 import { MarketingPage } from "./features/marketing/pages";
+import { useAuth } from "./lib/auth";
+import { setUnauthorizedHandler } from "./lib/api";
 
 function MarketingPageFromSlug() {
   const { slug } = useParams();
@@ -26,6 +30,18 @@ function MarketingPageFromSlug() {
 }
 
 export default function App() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  // When any authenticated request returns 401 (expired / invalid token), sign
+  // the user out app-wide and return them to the sign-in page instead of
+  // surfacing raw "Missing bearer token" errors.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void logout().finally(() => navigate("/login", { replace: true }));
+    });
+  }, [logout, navigate]);
+
   return (
       <Routes>
         {/* Legacy standalone assessment form. Reached only at its own path via a
@@ -39,6 +55,9 @@ export default function App() {
 
         {/* Self-service sign-in for existing buyer/manufacturer accounts. */}
         <Route path="/login" element={<Login />} />
+
+        {/* Complete a password reset from the emailed link. */}
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Buyer & Manufacturer dashboards (separate, role-gated). */}
         <Route

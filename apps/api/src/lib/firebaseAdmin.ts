@@ -45,8 +45,9 @@ export async function getFirebaseUser(uid: string): Promise<UserRecord> {
 }
 
 /**
- * Build a password-reset action link. The link resolves via Firebase's hosted
- * action handler; `continueUrl` is where the user lands afterwards.
+ * Build a password-reset action link. With handleCodeInApp:true Firebase
+ * redirects back to `continueUrl` (our in-app reset page) carrying the oobCode
+ * in the query string, which the SPA consumes to complete the reset.
  */
 export async function generatePasswordResetLink(
   email: string,
@@ -54,7 +55,7 @@ export async function generatePasswordResetLink(
 ): Promise<string> {
   return adminAuth().generatePasswordResetLink(email, {
     url: continueUrl,
-    handleCodeInApp: false,
+    handleCodeInApp: true,
   });
 }
 

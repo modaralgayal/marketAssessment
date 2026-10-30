@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../lib/auth";
+import { useAuth, authErrorMessage } from "../../lib/auth";
 import { requestAccess } from "../../lib/api";
+import { PasswordInput } from "../../components/ui/PasswordInput";
 
 /**
  * Self-service sign-in for buyers/manufacturers who already completed
@@ -40,8 +41,8 @@ export default function Login() {
     try {
       await signIn();
       // auth.tsx resolves the Account on user change; the effect above navigates.
-    } catch {
-      setError("Sign-in failed. Please try again.");
+    } catch (err) {
+      setError(authErrorMessage(err));
       setBusy(false);
     } finally {
       setBusy(false);
@@ -56,11 +57,7 @@ export default function Login() {
       await signInWithEmail(email, password);
       // The account effect above resolves the Account and navigates.
     } catch (err) {
-      setEmailError(
-        err instanceof Error && err.message
-          ? err.message
-          : "Sign-in failed. Check your email and password.",
-      );
+      setEmailError(authErrorMessage(err));
       setEmailBusy(false);
     }
   };
@@ -133,14 +130,13 @@ export default function Login() {
                 autoComplete="email"
                 className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
               />
-              <input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 required
                 autoComplete="current-password"
-                className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
+                label="Password"
               />
               <button
                 type="submit"

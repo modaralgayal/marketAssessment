@@ -9,8 +9,11 @@ import { Badge } from "../../components/ui/badge";
 import {
   fetchMarketOpportunityCards,
   fetchSourcingInquiries,
+  fetchOpportunityCardSourceUrl,
+  fetchOpportunityCardAssetUrl,
   setCardInteraction,
   type MarketCardDto,
+  type OpportunityRef,
   type OpportunityInteractionStatus,
 } from "../../lib/api";
 
@@ -21,6 +24,88 @@ const ACTIVITY_FILTERS = [
   { value: "INTERESTED", label: "Interested" },
   { value: "DECLINED", label: "Declined" },
 ];
+
+const STATUS_BADGE: Record<string, string> = {
+  INTERESTED: "bg-brand-teal/15 text-brand-teal-dark",
+  SAVED: "bg-brand-bg-alt text-brand-ink",
+  DECLINED: "bg-brand-line text-brand-muted",
+  REFERRED: "bg-brand-bg-alt text-brand-ink",
+  VIEWED: "bg-brand-bg-alt text-brand-muted",
+  NEW: "bg-brand-bg-alt text-brand-muted",
+};
+
+/** A labelled detail row. Empty optional fields are hidden, while the core
+ *  commercial terms fall back to "To be discussed" so the buyer knows the
+ *  supplier simply hasn't specified that part of the deal yet. */
+function Field({
+  label,
+  value,
+  fallback = false,
+}: {
+  label: string;
+  value?: string | null;
+  fallback?: boolean;
+}) {
+  if (!value && !fallback) return null;
+  return (
+    <div>
+      <dt className="text-[10px] uppercase tracking-wide text-brand-muted">{label}</dt>
+      <dd className={value ? "text-sm text-brand-ink" : "text-sm italic text-brand-muted"}>
+        {value || "To be discussed"}
+      </dd>
+    </div>
+  );
+}
+
+function formatValidUntil(value?: string | null): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function AttachmentChip({
+  cardId,
+  item,
+  kind,
+}: {
+  cardId: string;
+  item: OpportunityRef;
+  kind: "source" | "asset";
+}) {
+  const [busy, setBusy] = useState(false);
+  const open = async () => {
+    try {
+      setBusy(true);
+      if (item.kind === "link" && item.url) {
+        window.open(item.url, "_blank", "noopener,noreferrer");
+        return;
+      }
+      if (!item.id) return;
+      const { url } =
+        kind === "source"
+          ? await fetchOpportunityCardSourceUrl(cardId, item.id)
+          : await fetchOpportunityCardAssetUrl(cardId, item.id);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      /* not viewable */
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={open}
+      disabled={busy}
+      title={item.name}
+      className="inline-flex max-w-[14rem] items-center gap-1.5 truncate rounded-full border border-brand-line bg-white px-2.5 py-1 text-[11px] text-brand-ink transition hover:border-brand-teal hover:text-brand-teal disabled:opacity-50"
+    >
+      <span aria-hidden="true">{item.kind === "link" ? "🔗" : "📄"}</span>
+      <span className="truncate">{item.name}</span>
+    </button>
+  );
+}
 
 function OfferCard({
   card,
@@ -36,6 +121,7 @@ function OfferCard({
   });
   const status = card.interaction?.status ?? "NEW";
 
+  const [expanded, setExpanded] = useState(false);
   const [composing, setComposing] = useState(false);
   const [note, setNote] = useState(card.interaction?.referralNote ?? "");
   const [linkedInquiryId, setLinkedInquiryId] = useState(card.interaction?.linkedInquiryId ?? "");
@@ -54,40 +140,110 @@ function OfferCard({
     },
   });
 
+  const startComposing = () => {
+    setExpanded(true); // reveal the details so the buyer can reference them
+    setComposing(true);
+  };
+
+  const highlights = [card.category, card.territory, card.partner].filter(Boolean) as string[];
+  const sources = card.sources ?? [];
+  const assets = card.assets ?? [];
+
   return (
-    <Card>
-      <CardContent className="space-y-3 p-4">
+    <Card className="flex flex-col overflow-hidden rounded-2xl border border-brand-line shadow-sm">
+      <CardContent className="flex flex-1 flex-col gap-3 p-5">
+        {/* Header: status + offer type */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-semibold text-brand-ink">{card.title}</p>
+            <p className="font-semibold leading-snug text-brand-ink">{card.title}</p>
             {card.owner && (
-              <p className="text-xs text-brand-muted">
+              <p className="mt-0.5 truncate text-xs text-brand-muted">
                 {card.owner.companyName}
                 {card.owner.country ? ` · ${card.owner.country}` : ""}
               </p>
             )}
           </div>
           {status !== "NEW" && (
-            <Badge
-              className={
-                status === "INTERESTED"
-                  ? "bg-brand-teal/10 text-brand-teal"
-                  : status === "DECLINED"
-                    ? "bg-brand-line text-brand-muted"
-                    : "bg-brand-bg-alt text-brand-muted"
-              }
-            >
-              {status}
-            </Badge>
+            <Badge className={STATUS_BADGE[status] ?? STATUS_BADGE.NEW}>{status}</Badge>
           )}
         </div>
-        {card.summary && <p className="line-clamp-3 text-sm text-brand-muted">{card.summary}</p>}
-        {card.category && <p className="text-xs text-brand-muted">Category: {card.category}</p>}
 
+        {/* At-a-glance chips */}
+        {highlights.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {highlights.map((h) => (
+              <span
+                key={h}
+                className="rounded-full bg-brand-bg-alt px-2 py-0.5 text-[11px] font-medium text-brand-muted"
+              >
+                {h}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Summary (always visible) */}
+        {card.summary && (
+          <p className="text-sm leading-relaxed text-brand-muted">{card.summary}</p>
+        )}
+
+        {/* Expand / collapse details */}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="flex items-center gap-1 self-start text-xs font-medium text-brand-teal hover:underline"
+        >
+          {expanded ? "Hide details" : "View full offer details"}
+          <span aria-hidden="true" className={expanded ? "rotate-180 transition" : "transition"}>
+            ⌄
+          </span>
+        </button>
+
+        {expanded && (
+          <div className="space-y-4 border-t border-brand-line pt-4">
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+              <Field label="Commercial objective" value={card.objective} />
+              <Field label="Target country / territory" value={card.territory} />
+              <Field label="Partner type" value={card.partner} />
+              <Field
+                label="Target sales channels"
+                value={card.channels?.length ? card.channels.join(", ") : null}
+              />
+              <Field label="Target launch / timing" value={card.timing} fallback />
+              <Field label="Initial order / MOQ" value={card.moq} fallback />
+              <Field label="Payment terms" value={card.payment} fallback />
+              <Field label="Delivery terms / dispatch" value={card.delivery} fallback />
+              <Field label="Distribution rights / exclusivity" value={card.rights} fallback />
+              <Field label="Valid until" value={formatValidUntil(card.validUntil)} />
+              <Field label="Marketing / launch support" value={card.support} fallback />
+            </dl>
+
+            {(sources.length > 0 || assets.length > 0) && (
+              <div>
+                <p className="mb-2 text-[10px] uppercase tracking-wide text-brand-muted">
+                  Attachments
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {sources.map((s, i) => (
+                    <AttachmentChip key={`s-${i}`} cardId={card.id} item={s} kind="source" />
+                  ))}
+                  {assets.map((a, i) => (
+                    <AttachmentChip key={`a-${i}`} cardId={card.id} item={a} kind="asset" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Interest composer */}
         {composing ? (
           <div className="space-y-2 rounded-xl border border-brand-line bg-brand-bg-alt/50 p-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Your interest note (becomes the first message)</Label>
+              <Label className="text-xs">
+                Your interest note (becomes the first message to the supplier)
+              </Label>
               <Textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -114,11 +270,7 @@ function OfferCard({
               <Button variant="ghost" size="sm" onClick={() => setComposing(false)}>
                 Cancel
               </Button>
-              <Button
-                size="sm"
-                disabled={act.isPending}
-                onClick={() => act.mutate("INTERESTED")}
-              >
+              <Button size="sm" disabled={act.isPending} onClick={() => act.mutate("INTERESTED")}>
                 {act.isPending ? "Sending…" : "Send interest"}
               </Button>
             </div>
@@ -127,23 +279,24 @@ function OfferCard({
             )}
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="mt-auto flex flex-wrap gap-2 border-t border-brand-line pt-3">
             <Button
               size="sm"
-              variant={status === "SAVED" ? "default" : "outline"}
+              variant="default"
+              onClick={startComposing}
+              disabled={act.isPending || status === "INTERESTED"}
+            >
+              {status === "INTERESTED" ? "Interested" : "Express interest"}
+            </Button>
+            <Button
+              size="sm"
+              variant={status === "SAVED" ? "secondary" : "outline"}
               onClick={() => act.mutate("SAVED")}
               disabled={act.isPending}
             >
               {status === "SAVED" ? "Saved" : "Save"}
             </Button>
-            <Button
-              size="sm"
-              variant={status === "INTERESTED" ? "default" : "outline"}
-              onClick={() => setComposing(true)}
-              disabled={act.isPending}
-            >
-              {status === "INTERESTED" ? "Interested" : "Express interest"}
-            </Button>
+            <div className="flex-1" />
             <Button
               size="sm"
               variant="ghost"
@@ -201,7 +354,8 @@ export default function MarketOffersPanel({
       <div>
         <h2 className="text-lg font-bold text-brand-ink">Manufacturer offers</h2>
         <p className="text-sm text-brand-muted">
-          Browse what manufacturers are selling. Save, express interest, or decline.
+          Browse what manufacturers are selling. Expand a card to see the full offer — terms,
+          volumes, attachments — then save it or express interest.
         </p>
       </div>
 

@@ -8,6 +8,7 @@ import {
   exportMyData,
   deleteMyAccount,
 } from "../../lib/api";
+import { PasswordInput } from "../../components/ui/PasswordInput";
 import DashboardLayout from "../dashboard/DashboardLayout";
 
 function Section({
@@ -164,24 +165,22 @@ export default function AccountSettings() {
             <div className="space-y-6">
               <form onSubmit={handleChangePassword} className="space-y-3">
                 <h3 className="text-sm font-semibold text-brand-ink">Change password</h3>
-                <input
-                  type="password"
+                <PasswordInput
                   value={curPw}
                   onChange={(e) => setCurPw(e.target.value)}
                   placeholder="Current password"
                   required
                   autoComplete="current-password"
-                  className={inputCls}
+                  label="Current password"
                 />
-                <input
-                  type="password"
+                <PasswordInput
                   value={newPw}
                   onChange={(e) => setNewPw(e.target.value)}
                   placeholder="New password (min 6 characters)"
                   required
                   minLength={6}
                   autoComplete="new-password"
-                  className={inputCls}
+                  label="New password"
                 />
                 <button type="submit" disabled={pwBusy} className={btnCls}>
                   {pwBusy ? "Updating…" : "Update password"}
@@ -192,14 +191,13 @@ export default function AccountSettings() {
 
               <form onSubmit={handleChangeEmail} className="space-y-3 border-t border-brand-line pt-5">
                 <h3 className="text-sm font-semibold text-brand-ink">Change email</h3>
-                <input
-                  type="password"
+                <PasswordInput
                   value={emailCurPw}
                   onChange={(e) => setEmailCurPw(e.target.value)}
                   placeholder="Current password"
                   required
                   autoComplete="current-password"
-                  className={inputCls}
+                  label="Current password"
                 />
                 <input
                   type="email"
@@ -271,14 +269,13 @@ export default function AccountSettings() {
             </p>
           ) : null}
           <div className="space-y-3">
-            <input
-              type="password"
+            <PasswordInput
               value={delPw}
               onChange={(e) => setDelPw(e.target.value)}
               placeholder="Enter your password to confirm"
               required
               autoComplete="current-password"
-              className={inputCls}
+              label="Confirm password"
             />
             <button
               onClick={handleDelete}

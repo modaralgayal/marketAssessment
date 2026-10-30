@@ -243,6 +243,31 @@ accountsRouter.get("/", requireAdmin, async (_req, res, next) => {
   }
 });
 
+/**
+ * Admin: permanently delete an account by Prisma id (GDPR Art. 17 — erasure,
+ * admin-initiated). Irreversible: deletes the Firebase user and the Prisma
+ * Account row, which cascades to the profile, opportunity cards, match
+ * suggestions and related records. The Firebase user is deleted first; if that
+ * fails we still remove the Prisma row (avoiding an orphaned auth user), and we
+ * rethrow only on Prisma failure.
+ */
+accountsRouter.delete("/:id", requireAdmin, auditLog, async (req, res, next) => {
+  try {
+    const account = await prisma.account.findUnique({ where: { id: req.params.id } });
+    if (!account) return res.status(404).json({ error: "Account not found" });
+    try {
+      await deleteFirebaseUser(account.firebaseUid);
+    } catch (e) {
+      // user-not-found is fine (already gone); anything else we still prune Prisma.
+      console.error("[accounts] Firebase delete failed for", account.firebaseUid, e);
+    }
+    await prisma.account.delete({ where: { id: account.id } });
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /** Admin: load an account (by Prisma id) together with its Firebase user. */
 async function loadAccountWithFirebase(id: string): Promise<
   { account: { id: string; email: string; firebaseUid: string }; firebaseUser: UserRecord | null } | null
@@ -307,7 +332,7 @@ accountsRouter.post(
           .status(400)
           .json({ error: "This account signs in with Google — password reset doesn't apply." });
       }
-      const link = await generatePasswordResetLink(account.email, `${webBaseUrl}/login`);
+      const link = await generatePasswordResetLink(account.email, `${webBaseUrl}/reset-password`);
       let emailSent = false;
       try {
         await sendMail({

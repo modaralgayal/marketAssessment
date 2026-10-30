@@ -51,7 +51,7 @@ export default function DashboardLayout({ role, navItems, active, onSelect, comp
 
   return (
     <div className="min-h-screen bg-brand-bg-alt">
-      <div className="mx-auto flex max-w-[1420px] gap-0">
+      <div className="flex w-full gap-0">
         {/* ── Sidebar ── */}
         <aside className="sticky top-0 hidden h-screen w-[246px] shrink-0 flex-col border-r border-brand-line bg-white px-4 py-5 md:flex">
           <div className="flex items-center gap-2 px-1">

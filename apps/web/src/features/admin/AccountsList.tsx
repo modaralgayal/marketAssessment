@@ -6,9 +6,13 @@ import {
   enableAccount,
   adminResetPassword,
   adminResendVerification,
+  deleteAccount,
   type AccountListDto,
 } from "../../lib/api";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import AdminLayout from "./AdminLayout";
+
+type PendingConfirm = { type: "delete" | "disable"; id: string; email: string } | null;
 
 function roleLabel(role: string): string {
   return role === "BUYER" ? "Buyer" : role === "MANUFACTURER" ? "Manufacturer" : role;
@@ -38,6 +42,7 @@ export default function AccountsList() {
   const [filter, setFilter] = useState<Filter>("ALL");
   const [search, setSearch] = useState("");
   const [feedback, setFeedback] = useState<Record<string, string>>({});
+  const [confirm, setConfirm] = useState<PendingConfirm>(null);
 
   const setMsg = (id: string, msg: string) =>
     setFeedback((f) => ({ ...f, [id]: msg }));
@@ -47,6 +52,7 @@ export default function AccountsList() {
   const disableMut = useMutation({
     mutationFn: (id: string) => disableAccount(id),
     onSuccess: () => invalidate(),
+    onSettled: () => setConfirm(null),
     onError: (e: Error, id) => setMsg(id, e.message),
   });
   const enableMut = useMutation({
@@ -64,6 +70,12 @@ export default function AccountsList() {
     mutationFn: (id: string) => adminResendVerification(id),
     onSuccess: (r, id) =>
       setMsg(id, r.emailSent ? "Verification email sent." : "Verification email not sent (SMTP not configured)."),
+    onError: (e: Error, id) => setMsg(id, e.message),
+  });
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteAccount(id),
+    onSuccess: () => invalidate(),
+    onSettled: () => setConfirm(null),
     onError: (e: Error, id) => setMsg(id, e.message),
   });
 
@@ -141,11 +153,7 @@ export default function AccountsList() {
                     <div className="flex flex-wrap gap-2">
                       {a.status === "ACTIVE" ? (
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Disable ${a.email}? They won't be able to sign in.`)) {
-                              disableMut.mutate(a.id);
-                            }
-                          }}
+                          onClick={() => setConfirm({ type: "disable", id: a.id, email: a.email })}
                           disabled={disableMut.isPending}
                           className="rounded border border-brand-line px-2.5 py-1 text-xs font-medium text-brand-muted hover:border-red-400 hover:text-red-600"
                         >
@@ -174,6 +182,13 @@ export default function AccountsList() {
                       >
                         Verify
                       </button>
+                      <button
+                        onClick={() => setConfirm({ type: "delete", id: a.id, email: a.email })}
+                        disabled={deleteMut.isPending}
+                        className="rounded border border-red-300 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
                     </div>
                     {feedback[a.id] && (
                       <p className="mt-1.5 text-xs text-brand-muted">{feedback[a.id]}</p>
@@ -192,6 +207,33 @@ export default function AccountsList() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirm !== null}
+        title={confirm?.type === "delete" ? "Delete account" : "Disable account"}
+        description={
+          confirm?.type === "delete" ? (
+            <>
+              Permanently delete <span className="font-semibold text-brand-ink">{confirm?.email}</span>?
+              This erases the account, its profile, and all related data, and cannot be undone.
+            </>
+          ) : (
+            <>
+              Disable <span className="font-semibold text-brand-ink">{confirm?.email}</span>? They
+              won&apos;t be able to sign in until you re-enable them.
+            </>
+          )
+        }
+        confirmLabel={confirm?.type === "delete" ? "Delete" : "Disable"}
+        destructive={confirm?.type === "delete"}
+        pending={confirm?.type === "delete" ? deleteMut.isPending : disableMut.isPending}
+        onConfirm={() => {
+          if (!confirm) return;
+          if (confirm.type === "delete") deleteMut.mutate(confirm.id);
+          else disableMut.mutate(confirm.id);
+        }}
+        onClose={() => setConfirm(null)}
+      />
     </AdminLayout>
   );
 }

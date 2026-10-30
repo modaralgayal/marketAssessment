@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { validateInvite } from "../../lib/api";
+import { PasswordInput } from "../../components/ui/PasswordInput";
 
 const ROLE_LABEL: Record<string, string> = {
   BUYER: "Buyer",
@@ -24,6 +25,7 @@ export default function Signup() {
   // Email / password fields.
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
 
@@ -73,6 +75,10 @@ export default function Signup() {
   const handleEmailSignUp = async (e: FormEvent) => {
     e.preventDefault();
     setEmailError(null);
+    if (password !== confirmPassword) {
+      setEmailError("Passwords don't match.");
+      return;
+    }
     setEmailBusy(true);
     try {
       // If not already signed in, create the Firebase account first; otherwise
@@ -143,15 +149,23 @@ export default function Signup() {
                 autoComplete="email"
                 className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
               />
-              <input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create a password"
                 required
                 minLength={6}
                 autoComplete="new-password"
-                className="w-full rounded border border-brand-line px-3 py-2.5 text-sm outline-none focus:border-brand-teal"
+                label="Create password"
+              />
+              <PasswordInput
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                required
+                minLength={6}
+                autoComplete="new-password"
+                label="Confirm password"
               />
               <button
                 type="submit"

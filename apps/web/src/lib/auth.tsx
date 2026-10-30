@@ -7,15 +7,47 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
   verifyBeforeUpdateEmail,
   type User,
 } from "firebase/auth";
+import { type FirebaseError } from "firebase/app";
 import { auth, googleProvider } from "./firebase";
 import { bootstrapAccount, fetchAccountMe } from "./api";
 import type { AccountDto } from "@mea/shared";
+
+/** Map a Firebase auth error code to a human-readable message. Keeps sign-in /
+ *  sign-up feedback clear instead of surfacing raw Firebase strings. */
+export function authErrorMessage(err: unknown): string {
+  if (err && typeof err === "object" && "code" in err) {
+    const code = (err as FirebaseError).code;
+    switch (code) {
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found":
+      case "auth/invalid-email":
+        return "Incorrect email or password.";
+      case "auth/too-many-requests":
+        return "Too many attempts. Please wait a moment and try again.";
+      case "auth/user-disabled":
+        return "This account has been disabled.";
+      case "auth/email-already-in-use":
+        return "An account with this email already exists.";
+      case "auth/weak-password":
+        return "Password is too weak (use at least 6 characters).";
+      case "auth/expired-action-code":
+      case "auth/invalid-action-code":
+        return "This reset link is invalid or has expired. Please request a new one.";
+      default:
+        return (err as FirebaseError).message ?? "Something went wrong. Please try again.";
+    }
+  }
+  return err instanceof Error ? err.message : "Something went wrong. Please try again.";
+}
 
 interface AuthContextValue {
   user: User | null;
@@ -35,6 +67,10 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   /** Send a Firebase password-reset email (self-service "forgot password"). */
   resetPassword: (email: string) => Promise<void>;
+  /** Check a password-reset code from the emailed link is still valid. */
+  verifyResetCode: (code: string) => Promise<string>;
+  /** Finish a password reset using the code from the emailed link. */
+  confirmResetPassword: (code: string, newPassword: string) => Promise<void>;
   /** Re-authenticate the current email/password user (required before sensitive changes). */
   reauthenticate: (password: string) => Promise<void>;
   /** Change the signed-in user's password (re-auth required). */
@@ -119,9 +155,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     await sendPasswordResetEmail(auth, email, {
-      url: `${window.location.origin}/login`,
-      handleCodeInApp: false,
+      // handleCodeInApp:true makes Firebase redirect back to our page WITH the
+      // oobCode in the query string, so ResetPassword.tsx can complete it.
+      url: `${window.location.origin}/reset-password`,
+      handleCodeInApp: true,
     });
+  };
+
+  const verifyResetCode = async (code: string) => {
+    return verifyPasswordResetCode(auth, code);
+  };
+
+  const confirmResetPassword = async (code: string, newPassword: string) => {
+    await confirmPasswordReset(auth, code, newPassword);
   };
 
   const reauthenticate = async (password: string) => {
@@ -147,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, account, accountLoading, signIn, signInWithEmail, signUpWithEmail, bootstrap, logout, resetPassword, reauthenticate, changePassword, changeEmail }}
+      value={{ user, loading, account, accountLoading, signIn, signInWithEmail, signUpWithEmail, bootstrap, logout, resetPassword, verifyResetCode, confirmResetPassword, reauthenticate, changePassword, changeEmail }}
     >
       {children}
     </AuthContext.Provider>
