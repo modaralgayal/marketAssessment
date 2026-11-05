@@ -13,13 +13,24 @@ import ProtectedRoute from "./features/admin/ProtectedRoute";
 import Signup from "./features/auth/Signup";
 import Login from "./features/auth/Login";
 import RequireRole from "./features/auth/RequireRole";
+import PublicOnlyRoute from "./features/auth/PublicOnlyRoute";
 import ResetPassword from "./features/auth/ResetPassword";
 import AccessRequests from "./features/admin/AccessRequests";
 import AccountsList from "./features/admin/AccountsList";
-import ManufacturerDashboard from "./features/manufacturer/ManufacturerDashboard";
-import BuyerDashboard from "./features/buyer/BuyerDashboard";
+import ManufacturerDashboard, {
+  ManufacturerOverviewRoute,
+  ManufacturerCardsRoute,
+} from "./features/manufacturer/ManufacturerDashboard";
+import BuyerDashboard, {
+  BuyerOverviewRoute,
+  BuyerMarketRoute,
+} from "./features/buyer/BuyerDashboard";
 import AccountSettings from "./features/settings/AccountSettings";
-import { MarketingLayout } from "./features/marketing/MarketingLayout";
+import ConversationsPanel from "./features/conversation/ConversationsPanel";
+import BuyerEngagementPanel from "./features/manufacturer/BuyerEngagementPanel";
+import SourcingInquiryPanel from "./features/buyer/SourcingInquiryPanel";
+import ManufacturerProfileForm from "./features/manufacturer/ManufacturerProfileForm";
+import BuyerProfileForm from "./features/buyer/BuyerProfileForm";
 import { MarketingPage } from "./features/marketing/pages";
 import { useAuth } from "./lib/auth";
 import { setUnauthorizedHandler } from "./lib/api";
@@ -59,7 +70,8 @@ export default function App() {
         {/* Complete a password reset from the emailed link. */}
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Buyer & Manufacturer dashboards (separate, role-gated). */}
+        {/* Buyer & Manufacturer dashboards (separate, role-gated). Tabs are
+            real nested routes so the browser Back/Forward moves between them. */}
         <Route
           path="/manufacturer"
           element={
@@ -67,7 +79,14 @@ export default function App() {
               <ManufacturerDashboard />
             </RequireRole>
           }
-        />
+        >
+          <Route index element={<ManufacturerOverviewRoute />} />
+          <Route path="cards" element={<ManufacturerCardsRoute />} />
+          <Route path="engagement" element={<BuyerEngagementPanel />} />
+          <Route path="conversations" element={<ConversationsPanel />} />
+          <Route path="profile" element={<ManufacturerProfileForm />} />
+          <Route path="*" element={<Navigate to="/manufacturer" replace />} />
+        </Route>
         <Route
           path="/buyer"
           element={
@@ -75,7 +94,14 @@ export default function App() {
               <BuyerDashboard />
             </RequireRole>
           }
-        />
+        >
+          <Route index element={<BuyerOverviewRoute />} />
+          <Route path="inquiries" element={<SourcingInquiryPanel />} />
+          <Route path="market" element={<BuyerMarketRoute />} />
+          <Route path="conversations" element={<ConversationsPanel />} />
+          <Route path="profile" element={<BuyerProfileForm />} />
+          <Route path="*" element={<Navigate to="/buyer" replace />} />
+        </Route>
 
         {/* Self-service account settings (change password/email, privacy, export, delete). */}
         <Route
@@ -186,8 +212,9 @@ export default function App() {
           }
         />
 
-        {/* Renewed marketing site (HTML prototype port) inside the shared shell. */}
-        <Route element={<MarketingLayout />}>
+        {/* Renewed marketing site (HTML prototype port) inside the shared shell.
+            Guarded: signed-in account holders are sent to their workspace. */}
+        <Route element={<PublicOnlyRoute />}>
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/home" element={<MarketingPage route="home" />} />
           <Route path="/for-exporting" element={<MarketingPage route="for-exporting" />} />

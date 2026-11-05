@@ -42,7 +42,9 @@ export default function Signup() {
         if (!result.valid) {
           setInviteError("This invite link is no longer valid.");
         } else if (result.purpose !== "ACCOUNT") {
-          setInviteError("This invite is for the assessment form, not account sign-up.");
+          setInviteError(
+            "This invite is for the assessment form, not account sign-up.",
+          );
         } else {
           setInviteRole(result.role ?? null);
         }
@@ -65,7 +67,7 @@ export default function Signup() {
       // complete account bootstrap with the invite token.
       if (!user) await signIn();
       const account = await bootstrap(invite ?? undefined, acceptPrivacy);
-      navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer", { replace: true });
+      navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer");
     } catch {
       setError("Sign-in failed. Please try again.");
       setBusy(false);
@@ -85,7 +87,7 @@ export default function Signup() {
       // (bounced back here while signed in) just complete bootstrap.
       if (!user) await signUpWithEmail(email, password);
       const account = await bootstrap(invite ?? undefined, acceptPrivacy);
-      navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer", { replace: true });
+      navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer");
     } catch (err) {
       setEmailError(
         err instanceof Error && err.message
@@ -102,16 +104,23 @@ export default function Signup() {
         <div className="mb-3 flex items-center justify-center">
           <img src="/logo.svg" alt="Tradelomacy" className="h-7 w-auto" />
         </div>
-        <h1 className="mb-1 text-lg font-bold text-brand-ink">Create your account</h1>
+        <h1 className="mb-1 text-lg font-bold text-brand-ink">
+          Create your account
+        </h1>
 
         {validating && (
-          <p className="mb-6 text-sm text-brand-muted">Checking your invite link…</p>
+          <p className="mb-6 text-sm text-brand-muted">
+            Checking your invite link…
+          </p>
         )}
 
         {!validating && inviteError && (
           <>
             <p className="mb-6 text-sm text-red-600">{inviteError}</p>
-            <a href="/" className="text-sm font-medium text-brand-teal hover:underline">
+            <a
+              href="/"
+              className="text-sm font-medium text-brand-teal hover:underline"
+            >
               Back to home
             </a>
           </>
@@ -174,7 +183,9 @@ export default function Signup() {
               >
                 {emailBusy ? "Creating account…" : "Create account"}
               </button>
-              {emailError && <p className="text-xs text-red-600">{emailError}</p>}
+              {emailError && (
+                <p className="text-xs text-red-600">{emailError}</p>
+              )}
             </form>
 
             <label className="mt-4 flex items-start gap-2 text-left text-xs text-brand-muted">

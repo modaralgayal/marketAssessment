@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import DashboardLayout, { type NavItem } from "../dashboard/DashboardLayout";
 import { fetchSourcingInquiries, fetchBuyerProfile, type BuyerProfileDto } from "../../lib/api";
 import BuyerOverview from "./BuyerOverview";
-import SourcingInquiryPanel from "./SourcingInquiryPanel";
 import MarketOffersPanel from "./MarketOffersPanel";
-import BuyerProfileForm from "./BuyerProfileForm";
-import ConversationsPanel from "../conversation/ConversationsPanel";
+
+const TABS = ["inquiries", "market", "conversations", "profile"] as const;
 
 function computeCompletion(p: BuyerProfileDto): number {
   const checks: boolean[] = [
@@ -22,8 +21,28 @@ function computeCompletion(p: BuyerProfileDto): number {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
+/** Overview tab — injects cross-tab navigation as a route-aware callback. */
+export function BuyerOverviewRoute() {
+  const nav = useNavigate();
+  return (
+    <BuyerOverview onGoTo={(k) => nav(k === "overview" ? "/buyer" : `/buyer/${k}`)} />
+  );
+}
+
+/** Opportunity-cards (market) tab. */
+export function BuyerMarketRoute() {
+  const nav = useNavigate();
+  return <MarketOffersPanel onExpressInterest={() => nav("/buyer/conversations")} />;
+}
+
 export default function BuyerDashboard() {
-  const [view, setView] = useState("overview");
+  const { pathname } = useLocation();
+  const seg = pathname.split("/")[2];
+  const active = seg && (TABS as readonly string[]).includes(seg) ? seg : "overview";
+
+  const nav = useNavigate();
+  const go = (key: string) => nav(key === "overview" ? "/buyer" : `/buyer/${key}`);
+
   const { data: inquiries = [] } = useQuery({
     queryKey: ["sourcing-inquiries"],
     queryFn: fetchSourcingInquiries,
@@ -47,17 +66,11 @@ export default function BuyerDashboard() {
     <DashboardLayout
       role="BUYER"
       navItems={navItems}
-      active={view}
-      onSelect={setView}
+      active={active}
+      onSelect={go}
       completion={completion}
     >
-      {view === "overview" && <BuyerOverview onGoTo={setView} />}
-      {view === "inquiries" && <SourcingInquiryPanel />}
-      {view === "market" && (
-        <MarketOffersPanel onExpressInterest={() => setView("conversations")} />
-      )}
-      {view === "conversations" && <ConversationsPanel />}
-      {view === "profile" && <BuyerProfileForm />}
+      <Outlet />
     </DashboardLayout>
   );
 }

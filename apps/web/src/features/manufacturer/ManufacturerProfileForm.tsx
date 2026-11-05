@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -391,12 +392,22 @@ function Panel({
 }
 
 export default function ManufacturerProfileForm() {
+  const location = useLocation();
   const qc = useQueryClient();
   const { data: existing, isLoading } = useQuery({
     queryKey: ["manufacturer-profile"],
     queryFn: () => fetchManufacturerProfile(),
     retry: false,
   });
+
+  // When arriving from the opportunity-cards panel, scroll to the operations
+  // section (carried via navigation state).
+  useEffect(() => {
+    const state = location.state as { scrollTo?: string } | null;
+    if (state?.scrollTo === "operations") {
+      document.getElementById("operations")?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [location.state]);
 
   const [form, setForm] = useState<ManufacturerProfileInput>({
     companyName: "",

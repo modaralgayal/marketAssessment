@@ -31,7 +31,7 @@ export default function Login() {
 
   useEffect(() => {
     if (account) {
-      navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer", { replace: true });
+      navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer");
     }
   }, [account, navigate]);
 

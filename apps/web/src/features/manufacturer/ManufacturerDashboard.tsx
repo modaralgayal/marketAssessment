@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import DashboardLayout, { type NavItem } from "../dashboard/DashboardLayout";
 import {
@@ -7,10 +7,9 @@ import {
   type ManufacturerProfileDto,
 } from "../../lib/api";
 import ManufacturerOverview from "./ManufacturerOverview";
-import ManufacturerProfileForm from "./ManufacturerProfileForm";
-import BuyerEngagementPanel from "./BuyerEngagementPanel";
 import OpportunityCardsPanel from "../dashboard/OpportunityCardsPanel";
-import ConversationsPanel from "../conversation/ConversationsPanel";
+
+const TABS = ["cards", "engagement", "conversations", "profile"] as const;
 
 function computeCompletion(p: ManufacturerProfileDto): number {
   const checks: boolean[] = [
@@ -26,8 +25,39 @@ function computeCompletion(p: ManufacturerProfileDto): number {
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
+/** Overview tab — injects cross-tab navigation as a route-aware callback. */
+export function ManufacturerOverviewRoute() {
+  const nav = useNavigate();
+  return (
+    <ManufacturerOverview
+      onGoTo={(k) => nav(k === "overview" ? "/manufacturer" : `/manufacturer/${k}`)}
+    />
+  );
+}
+
+/** Opportunity-cards tab. */
+export function ManufacturerCardsRoute() {
+  const nav = useNavigate();
+  return (
+    <OpportunityCardsPanel
+      noun="opportunity"
+      emptyHint="No opportunity cards yet. Create one to start getting matched with buyers."
+      onViewEngagement={() => nav("/manufacturer/engagement")}
+      onGoToCatalogue={() =>
+        nav("/manufacturer/profile", { state: { scrollTo: "operations" } })
+      }
+    />
+  );
+}
+
 export default function ManufacturerDashboard() {
-  const [view, setView] = useState("overview");
+  const { pathname } = useLocation();
+  const seg = pathname.split("/")[2];
+  const active = seg && (TABS as readonly string[]).includes(seg) ? seg : "overview";
+
+  const nav = useNavigate();
+  const go = (key: string) =>
+    nav(key === "overview" ? "/manufacturer" : `/manufacturer/${key}`);
 
   const { data: cards = [], isLoading: cardsLoading } = useQuery({
     queryKey: ["my-opportunity-cards"],
@@ -52,27 +82,11 @@ export default function ManufacturerDashboard() {
     <DashboardLayout
       role="MANUFACTURER"
       navItems={navItems}
-      active={view}
-      onSelect={setView}
+      active={active}
+      onSelect={go}
       completion={completion}
     >
-      {view === "overview" && <ManufacturerOverview onGoTo={setView} />}
-      {view === "cards" && (
-        <OpportunityCardsPanel
-          noun="opportunity"
-          emptyHint="No opportunity cards yet. Create one to start getting matched with buyers."
-          onViewEngagement={() => setView("engagement")}
-          onGoToCatalogue={() => {
-            setView("profile");
-            setTimeout(() => {
-              document.getElementById("operations")?.scrollIntoView({ behavior: "smooth" });
-            }, 350);
-          }}
-        />
-      )}
-      {view === "engagement" && <BuyerEngagementPanel />}
-      {view === "conversations" && <ConversationsPanel />}
-      {view === "profile" && <ManufacturerProfileForm />}
+      <Outlet />
     </DashboardLayout>
   );
 }
