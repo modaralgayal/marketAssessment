@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -32,6 +33,31 @@ function initials(name?: string | null): string {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+/** Build the link to the other party's public profile from their role + account id. */
+function profileLink(role?: string, accountId?: string): string | null {
+  if (!accountId) return null;
+  if (role === "MANUFACTURER") return `/manufacturer/${accountId}/profile`;
+  if (role === "BUYER") return `/buyer/${accountId}/profile`;
+  return null;
+}
+
+function PartyAvatar({ logoUrl, companyName }: { logoUrl?: string | null; companyName?: string | null }) {
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt={`${companyName ?? "party"} logo`}
+        className="h-9 w-9 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-teal/15 text-xs font-semibold text-brand-teal">
+      {initials(companyName)}
+    </div>
+  );
 }
 
 export default function ConversationsPanel() {
@@ -86,19 +112,35 @@ export default function ConversationsPanel() {
                 const active = c.id === selectedId;
                 return (
                   <li key={c.id}>
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setSelectedId(c.id)}
-                      className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedId(c.id);
+                        }
+                      }}
+                      className={`flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition-colors ${
                         active ? "bg-brand-teal/10" : "hover:bg-brand-bg-alt"
                       }`}
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-teal/15 text-xs font-semibold text-brand-teal">
-                        {initials(other?.companyName)}
-                      </div>
+                      <PartyAvatar logoUrl={other?.logoUrl} companyName={other?.companyName} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-brand-ink">
-                          {other?.companyName ?? "Conversation"}
-                        </p>
+                        {profileLink(other?.role, other?.accountId) ? (
+                          <Link
+                            to={profileLink(other!.role, other!.accountId)!}
+                            onClick={(e) => e.stopPropagation()}
+                            className="block truncate text-sm font-medium text-brand-ink hover:text-brand-teal hover:underline"
+                          >
+                            {other?.companyName ?? "Conversation"}
+                          </Link>
+                        ) : (
+                          <p className="truncate text-sm font-medium text-brand-ink">
+                            {other?.companyName ?? "Conversation"}
+                          </p>
+                        )}
                         <p className="truncate text-xs text-brand-muted">
                           {c.lastMessagePreview ?? "No messages yet"}
                         </p>
@@ -106,7 +148,7 @@ export default function ConversationsPanel() {
                       <span className="shrink-0 text-[11px] text-brand-muted">
                         {timeAgo(c.lastMessageAt)}
                       </span>
-                    </button>
+                    </div>
                   </li>
                 );
               })}
@@ -128,13 +170,32 @@ export default function ConversationsPanel() {
             <p className="p-4 text-sm text-brand-muted">Conversation not found.</p>
           ) : (
             <>
-              <div className="border-b border-brand-line px-4 py-3">
-                <p className="text-sm font-semibold text-brand-ink">
-                  {thread.data.conversation.otherParty?.companyName ?? "Conversation"}
-                </p>
-                {thread.data.conversation.subject && (
-                  <p className="text-xs text-brand-muted">{thread.data.conversation.subject}</p>
-                )}
+              <div className="flex items-center gap-3 border-b border-brand-line px-4 py-3">
+                {(() => {
+                  const other = thread.data.conversation.otherParty;
+                  return (
+                    <>
+                      <PartyAvatar logoUrl={other?.logoUrl} companyName={other?.companyName} />
+                      <div className="min-w-0">
+                        {profileLink(other?.role, other?.accountId) ? (
+                          <Link
+                            to={profileLink(other!.role, other!.accountId)!}
+                            className="block truncate text-sm font-semibold text-brand-ink hover:text-brand-teal hover:underline"
+                          >
+                            {other?.companyName ?? "Conversation"}
+                          </Link>
+                        ) : (
+                          <p className="truncate text-sm font-semibold text-brand-ink">
+                            {other?.companyName ?? "Conversation"}
+                          </p>
+                        )}
+                        {thread.data.conversation.subject && (
+                          <p className="truncate text-xs text-brand-muted">{thread.data.conversation.subject}</p>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               <ThreadMessages messages={thread.data.messages} viewerId={account?.id} />

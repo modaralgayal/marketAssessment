@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -205,7 +206,12 @@ export default function BuyerEngagementPanel() {
                   {filtered.map((r: EngagementRowDto, i) => (
                     <tr key={`${r.cardId}-${r.buyerAccountId}-${i}`} className="border-b border-brand-line last:border-0">
                       <td className="px-4 py-3">
-                        <span className="font-medium text-brand-ink">{r.buyerName}</span>
+                        <Link
+                          to={`/buyer/${r.buyerAccountId}/profile`}
+                          className="font-medium text-brand-ink hover:text-brand-teal hover:underline"
+                        >
+                          {r.buyerName}
+                        </Link>
                         <span className="block text-xs text-brand-muted">{r.buyerEmail}</span>
                       </td>
                       <td className="px-4 py-3 text-brand-ink">{r.cardTitle}</td>

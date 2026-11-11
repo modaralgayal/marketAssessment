@@ -12,6 +12,8 @@ export interface ConversationParticipantDto {
   role: "BUYER" | "MANUFACTURER" | "ADMIN";
   companyName?: string | null;
   email?: string;
+  /** Short-lived signed URL to the participant's profile logo, if any. */
+  logoUrl?: string | null;
 }
 
 export interface MessageAttachmentDto {

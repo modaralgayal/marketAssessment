@@ -33,13 +33,26 @@ async function assertParticipant(conversationId: string, accountId: string) {
   });
 }
 
-function participantDto(p: any): ConversationParticipantDto {
+async function participantDto(p: any): Promise<ConversationParticipantDto> {
+  const mp = p.account?.manufacturerProfile;
+  const bp = p.account?.buyerProfile;
+  const logoStorageKey = mp
+    ? mp.files?.find((f: any) => f.id === mp.logoFileId && f.storageKey)?.storageKey
+    : bp?.portfolioFiles?.find((f: any) => f.id === bp.logoFileId && f.storageKey)?.storageKey;
+  let logoUrl: string | null = null;
+  if (logoStorageKey) {
+    try {
+      logoUrl = await storage.getSignedUrl(logoStorageKey, 300);
+    } catch {
+      logoUrl = null;
+    }
+  }
   return {
     accountId: p.accountId,
     role: p.role,
-    companyName:
-      p.account?.manufacturerProfile?.companyName ?? p.account?.buyerProfile?.companyName ?? null,
+    companyName: mp?.companyName ?? bp?.companyName ?? null,
     email: p.account?.email ?? undefined,
+    logoUrl,
   };
 }
 
@@ -81,7 +94,7 @@ async function toConversationDto(
   viewerAccountId: string,
   messageCount?: number,
 ): Promise<ConversationDto> {
-  const participants: ConversationParticipantDto[] = c.participants.map(participantDto);
+  const participants: ConversationParticipantDto[] = await Promise.all(c.participants.map(participantDto));
   const other = participants.find((p) => p.accountId !== viewerAccountId) ?? null;
   const last = c.messages?.[0];
   return {
@@ -107,7 +120,14 @@ conversationsRouter.get("/", requireAuth, async (req, res, next) => {
       orderBy: [{ lastMessageAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }],
       include: {
         participants: {
-          include: { account: { include: { manufacturerProfile: true, buyerProfile: true } } },
+          include: {
+            account: {
+              include: {
+                manufacturerProfile: { include: { files: true } },
+                buyerProfile: { include: { portfolioFiles: true } },
+              },
+            },
+          },
         },
         messages: { orderBy: { createdAt: "desc" }, take: 1 },
         _count: { select: { messages: true } },
@@ -128,7 +148,14 @@ conversationsRouter.get("/:id", requireAuth, async (req, res, next) => {
       where: { id: req.params.id },
       include: {
         participants: {
-          include: { account: { include: { manufacturerProfile: true, buyerProfile: true } } },
+          include: {
+            account: {
+              include: {
+                manufacturerProfile: { include: { files: true } },
+                buyerProfile: { include: { portfolioFiles: true } },
+              },
+            },
+          },
         },
         messages: {
           orderBy: { createdAt: "asc" },

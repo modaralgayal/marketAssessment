@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -12,6 +12,7 @@ import {
   deleteOpportunityCardAsset,
   createOpportunityCard,
   updateOpportunityCard,
+  deleteOpportunityCard,
   type ManufacturerFileInfo,
   type OpportunityAsset,
   type OpportunityCardDto,
@@ -40,24 +41,24 @@ const OPP_CHANNELS = [
 
 const CARD_STATUS_OPTIONS = [
   "Draft",
-  "Ready for internal review",
-  "Open for buyer engagement",
-  "Paused",
-  "Closed",
+  "Internal review",
+  "Publish",
+  "Pause",
 ];
 
-/** The status labels the editor exposes — these match the shared schema's `status` enum. */
+/** The status labels the editor exposes — these match the shared schema's `status` enum.
+ *  "Delete" is a separate destructive action, not a persisted status. */
 type CardStatusLabel =
   | "Draft"
-  | "Ready for internal review"
-  | "Open for buyer engagement"
-  | "Paused"
-  | "Closed";
+  | "Internal review"
+  | "Publish"
+  | "Pause";
 
-/** Map the internal enum back to the model's status label for the editor. */
+/** Map the internal enum back to the editor's status label. */
 function statusToLabel(status?: OpportunityStatus): CardStatusLabel {
-  if (status === "POSTED") return "Open for buyer engagement";
-  if (status === "ARCHIVED") return "Closed";
+  if (status === "POSTED") return "Publish";
+  if (status === "IN_REVIEW") return "Internal review";
+  if (status === "PAUSED") return "Pause";
   return "Draft";
 }
 
@@ -67,11 +68,14 @@ interface Props {
   noun: string;
   onSaved: (card: OpportunityCardDto) => void;
   onCancel: () => void;
+  /** Called after a successful delete (e.g. to return to the list). */
+  onDeleted?: () => void;
   /** Navigate to the manufacturer profile's catalogue section (empty-state helper). */
   onGoToCatalogue?: () => void;
 }
 
-export default function OpportunityCardEditor({ initial, noun, onSaved, onCancel, onGoToCatalogue }: Props) {
+export default function OpportunityCardEditor({ initial, noun, onSaved, onCancel, onDeleted, onGoToCatalogue }: Props) {
+  const qc = useQueryClient();
   const isEdit = Boolean(initial);
   const [title, setTitle] = useState(initial?.title ?? "");
   const [territory, setTerritory] = useState(initial?.territory ?? "");
@@ -105,6 +109,7 @@ export default function OpportunityCardEditor({ initial, noun, onSaved, onCancel
   const [linkUrl, setLinkUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["manufacturer-profile"],
@@ -216,6 +221,25 @@ export default function OpportunityCardEditor({ initial, noun, onSaved, onCancel
     }
   };
 
+  /** Prefill the card from the manufacturer's saved profile + attach every catalogue file. */
+  const importFromProfile = () => {
+    if (profile) {
+      setTitle((t) => t.trim() || profile.companyName || "");
+      setTerritory((t) => t.trim() || profile.country || "");
+      setObjective((o) => o.trim() || profile.publicDescription || profile.companyInfo || "");
+      setSelectedSources(profileFiles.map((f) => f.id));
+    }
+  };
+
+  const deleteCard = useMutation({
+    mutationFn: () => (initial ? deleteOpportunityCard(initial.id) : Promise.resolve()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-opportunity-cards"] });
+      onDeleted?.();
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Failed to delete."),
+  });
+
   const selectCls =
     "flex h-10 w-full rounded-xl border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none focus:border-brand-teal";
 
@@ -281,16 +305,6 @@ export default function OpportunityCardEditor({ initial, noun, onSaved, onCancel
             onChange={(e) => setTiming(e.target.value)}
             placeholder="e.g. Within six months"
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="oc-status">Card status</Label>
-          <select id="oc-status" value={status} onChange={(e) => setStatus(e.target.value as CardStatusLabel)} className={selectCls}>
-            {CARD_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="oc-objective">Commercial objective</Label>
@@ -389,7 +403,7 @@ export default function OpportunityCardEditor({ initial, noun, onSaved, onCancel
                 type="file"
                 accept=".pdf,application/pdf"
                 className="hidden"
-                disabled={busy || isEdit === false}
+                disabled={busy}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
                   if (!f) return;
@@ -488,6 +502,35 @@ export default function OpportunityCardEditor({ initial, noun, onSaved, onCancel
 
       {error && <p className="text-xs text-red-600">{error}</p>}
 
+      <div className="space-y-3 rounded-2xl border border-brand-line bg-brand-bg-alt/40 p-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="oc-status">Card status</Label>
+            <p className="text-xs text-brand-muted">
+              Draft saves privately · Internal review sends it to the administrator · Publish makes it
+              visible to buyers · Pause hides it.
+            </p>
+            <select
+              id="oc-status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as CardStatusLabel)}
+              className={selectCls}
+            >
+              {CARD_STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          {!isEdit && (
+            <Button type="button" variant="outline" size="sm" onClick={importFromProfile}>
+              Import from my profile
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <Button onClick={submit} disabled={busy}>
           {busy ? "Saving…" : initial ? "Save changes" : `Save ${noun}`}
@@ -495,6 +538,25 @@ export default function OpportunityCardEditor({ initial, noun, onSaved, onCancel
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
+        {isEdit && (
+          <div className="ml-auto">
+            {confirmDelete ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-brand-muted">Delete this card?</span>
+                <Button variant="destructive" size="sm" disabled={deleteCard.isPending} onClick={() => deleteCard.mutate()}>
+                  {deleteCard.isPending ? "Deleting…" : "Confirm"}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setConfirmDelete(true)}>
+                Delete
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

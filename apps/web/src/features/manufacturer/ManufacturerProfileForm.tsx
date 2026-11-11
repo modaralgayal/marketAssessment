@@ -12,21 +12,43 @@ import {
   addManufacturerCatalogueLink,
   fetchManufacturerCatalogueFileUrl,
   deleteManufacturerCatalogueFile,
+  uploadManufacturerLogo,
+  deleteManufacturerLogo,
+  ApiError,
   type ManufacturerProfileInput,
   type ManufacturerFileInfo,
 } from "../../lib/api";
 import {
-  REVENUE_OPTIONS,
   YES_NO_UNSURE_OPTIONS,
-  OTHER_CERT_OPTIONS,
   GCC_MARKET_OPTIONS,
-  SALES_CHANNEL_OPTIONS,
-  FROZEN_STORAGE_OPTIONS,
   TARGET_POTENTIAL_OPTIONS,
-  CAPACITY_OPTIONS,
   SFDA_OPTIONS,
-  ADAPTABILITY_OPTIONS,
 } from "@mea/shared";
+
+function Field({
+  label,
+  required,
+  error,
+  id,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  id?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5" id={id} data-field-error={error ? "" : undefined}>
+      <Label>
+        {label}
+        {required && <span className="text-brand-teal"> *</span>}
+      </Label>
+      {children}
+      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
+    </div>
+  );
+}
 
 function TextField({
   label,
@@ -34,21 +56,26 @@ function TextField({
   onChange,
   placeholder,
   required,
+  error,
+  id,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   required?: boolean;
+  error?: string;
+  id?: string;
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label>
-        {label}
-        {required && <span className="text-brand-teal"> *</span>}
-      </Label>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
-    </div>
+    <Field label={label} required={required} error={error} id={id}>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={error ? "border-red-500 focus:border-red-500" : undefined}
+      />
+    </Field>
   );
 }
 
@@ -59,6 +86,8 @@ function SelectField({
   options,
   placeholder = "Select…",
   required,
+  error,
+  id,
 }: {
   label: string;
   value: string | undefined;
@@ -66,13 +95,11 @@ function SelectField({
   options: ReadonlyArray<{ value: string; label: string }>;
   placeholder?: string;
   required?: boolean;
+  error?: string;
+  id?: string;
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label>
-        {label}
-        {required && <span className="text-brand-teal"> *</span>}
-      </Label>
+    <Field label={label} required={required} error={error} id={id}>
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
@@ -85,7 +112,7 @@ function SelectField({
           </option>
         ))}
       </select>
-    </div>
+    </Field>
   );
 }
 
@@ -337,29 +364,80 @@ function CatalogueUpload({ files }: { files: ManufacturerFileInfo[] }) {
   );
 }
 
-const CERT_OPTIONS = [
+// Reference-prototype option sets (mirror the manufacturer dashboard spec exactly).
+// These are intentionally local so the public assessment form's shared option sets stay untouched.
+const REVENUE_PROFILE_OPTIONS = [
+  { value: "UNDER_1M", label: "Under $1 million" },
+  { value: "1_5M", label: "$1M – $5M" },
+  { value: "5_10M", label: "$5M – $10M" },
+  { value: "10_50M", label: "$10M – $50M" },
+  { value: "50_100M", label: "$50M – $100M" },
+  { value: "OVER_100M", label: "Over $100 million" },
+  { value: "PREFER_NOT", label: "Prefer not to disclose" },
+];
+
+const FROZEN_STORAGE_PROFILE_OPTIONS = [
+  { value: "ALL", label: "Yes, all products" },
+  { value: "SOME", label: "Yes, only some products" },
+  { value: "NO", label: "No" },
+  { value: "CONFIRM", label: "Confirm from catalogue" },
+];
+
+const ADAPTABILITY_PROFILE_OPTIONS = [
+  { value: "YES_FULL", label: "Yes – we adapt product specs, labels and packaging" },
+  { value: "LABELS_PACKAGING", label: "Labels and packaging only" },
+  { value: "CASE_BY_CASE", label: "Discuss it case by case" },
+  { value: "NO", label: "No – our product is sold as-is" },
+];
+
+const CAPACITY_PROFILE_OPTIONS = [
+  { value: "YES", label: "Yes" },
+  { value: "YES_VOLUMES", label: "Yes, subject to volumes" },
+  { value: "CASE_BY_CASE", label: "Assess case by case" },
+  { value: "NOT_CURRENT", label: "Not currently" },
+];
+
+const CERT_PROFILE_OPTIONS = [
   { value: "Halal", label: "Halal" },
   { value: "BRCGS", label: "BRCGS" },
   { value: "IFS", label: "IFS" },
-  { value: "FSSC", label: "FSSC" },
-  { value: "ISO", label: "ISO" },
+  { value: "FSSC 22000", label: "FSSC 22000" },
+  { value: "ISO 22000", label: "ISO 22000" },
+  { value: "ISO 9001", label: "ISO 9001" },
   { value: "HACCP", label: "HACCP" },
   { value: "Organic", label: "Organic" },
   { value: "Other", label: "Other" },
-  { value: "None", label: "None" },
+  { value: "None currently", label: "None currently" },
 ];
 
-const BRANDING_OPTIONS = [
+const BRANDING_PROFILE_OPTIONS = [
   { value: "brandLed", label: "Brand-led" },
   { value: "shared", label: "Shared investment" },
   { value: "tradeSupport", label: "Trade support" },
   { value: "priceLed", label: "Price-led" },
+  { value: "irrelevant", label: "This is irrelevant to our case." },
 ];
 
-const PRIVATE_LABEL_OPTIONS = [
-  { value: "yes", label: "Yes" },
-  { value: "no", label: "No" },
-  { value: "considering", label: "Considering" },
+const PRIVATE_LABEL_PROFILE_OPTIONS = [
+  { value: "yesAll", label: "Yes. We can produce all our products as private label." },
+  { value: "yesSpecific", label: "Yes. Only specific products can be produced as private label." },
+  { value: "noBranded", label: "No. We sell only branded products." },
+  { value: "noOpen", label: "No. But we are open to discuss it for certain clients/partners." },
+];
+
+const SALES_CHANNEL_PROFILE_OPTIONS = [
+  { value: "MODERN_RETAIL", label: "Modern retail / supermarkets" },
+  { value: "TRADITIONAL_RETAIL", label: "Traditional retail" },
+  { value: "WHOLESALE", label: "Wholesale" },
+  { value: "HORECA", label: "HoReCa / foodservice" },
+  { value: "ECOMMERCE", label: "E-commerce" },
+  { value: "INDUSTRIAL", label: "Industrial / ingredients" },
+];
+
+const TARGET_EXPORT_MARKET_OPTIONS = [
+  ...GCC_MARKET_OPTIONS,
+  { value: "WORLDWIDE", label: "Worldwide" },
+  { value: "OTHER", label: "Other" },
 ];
 
 function Panel({
@@ -433,6 +511,7 @@ export default function ManufacturerProfileForm() {
     gccSituation: undefined,
     targetMarketPotential: undefined,
     targetMarketPotentialOther: undefined,
+    targetExportMarket: undefined,
     salesChannels: [],
     channelStrategy: undefined,
     moq: undefined,
@@ -443,6 +522,7 @@ export default function ManufacturerProfileForm() {
     contactEmail: "",
     contactPhone: undefined,
     anythingElse: undefined,
+    exportContactDetails: undefined,
     contacts: undefined,
     productCategory: undefined,
     companyInfo: undefined,
@@ -456,17 +536,29 @@ export default function ManufacturerProfileForm() {
     privateLabel: undefined,
     certs: [],
     catalogueCoverage: undefined,
+    publicDescription: undefined,
   });
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState(false);
 
   useEffect(() => {
     if (existing && !loaded) {
       setForm(existing);
+      setLogoUrl(existing.logoUrl ?? null);
       setLoaded(true);
     }
   }, [existing, loaded]);
+
+  // After a failed save, scroll to the first highlighted field so the user lands
+  // on the earliest missing/invalid input.
+  useEffect(() => {
+    if (Object.keys(fieldErrors).length === 0) return;
+    const el = document.querySelector<HTMLElement>("[data-field-error]");
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [fieldErrors]);
 
   const save = useMutation({
     mutationFn: () => upsertManufacturerProfile(form),
@@ -474,12 +566,39 @@ export default function ManufacturerProfileForm() {
       qc.invalidateQueries({ queryKey: ["manufacturer-profile"] });
       setSavedMsg(true);
       setError(null);
+      setFieldErrors({});
     },
-    onError: (e) => setError(e instanceof Error ? e.message : "Failed to save."),
+    onError: (e) => {
+      if (e instanceof ApiError && e.fields) {
+        setFieldErrors(e.fields);
+        setError(null);
+      } else {
+        setFieldErrors({});
+        setError(e instanceof Error ? e.message : "Failed to save.");
+      }
+    },
   });
 
   const set = <K extends keyof ManufacturerProfileInput>(key: K, val: ManufacturerProfileInput[K]) =>
     setForm((f) => ({ ...f, [key]: val }));
+
+  // Profile logo (image) upload + removal.
+  const logoUp = useMutation({
+    mutationFn: (f: File) => uploadManufacturerLogo(f),
+    onSuccess: (dto) => {
+      setLogoUrl(dto.logoUrl ?? null);
+      qc.invalidateQueries({ queryKey: ["manufacturer-profile"] });
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Failed to upload logo."),
+  });
+  const logoDel = useMutation({
+    mutationFn: () => deleteManufacturerLogo(),
+    onSuccess: () => {
+      setLogoUrl(null);
+      qc.invalidateQueries({ queryKey: ["manufacturer-profile"] });
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Failed to remove logo."),
+  });
 
   if (isLoading && !loaded) return <p className="text-sm text-brand-muted">Loading…</p>;
 
@@ -491,8 +610,8 @@ export default function ManufacturerProfileForm() {
         subtitle="Basic information about your business. Fields marked * are required."
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextField label="Company name" required value={form.companyName} onChange={(v) => set("companyName", v)} />
-          <TextField label="Country" required value={form.country} onChange={(v) => set("country", v)} />
+          <TextField label="Company name" required value={form.companyName} onChange={(v) => set("companyName", v)} error={fieldErrors["companyName"]?.[0]} id="field-companyName" />
+          <TextField label="Country" required value={form.country} onChange={(v) => set("country", v)} error={fieldErrors["country"]?.[0]} id="field-country" />
           <TextField
             label="Website"
             required
@@ -504,13 +623,15 @@ export default function ManufacturerProfileForm() {
             required
             value={form.industryCategory}
             onChange={(v) => set("industryCategory", v)}
+            error={fieldErrors["industryCategory"]?.[0]}
+            id="field-industryCategory"
           />
           <SelectField
             label="Annual revenue"
             required
             value={form.annualRevenue}
             onChange={(v) => set("annualRevenue", (v || undefined) as ManufacturerProfileInput["annualRevenue"])}
-            options={REVENUE_OPTIONS}
+            options={REVENUE_PROFILE_OPTIONS}
           />
           <TextField
             label="Years in business"
@@ -562,7 +683,7 @@ export default function ManufacturerProfileForm() {
             required
             value={form.frozenStorage}
             onChange={(v) => set("frozenStorage", (v || undefined) as ManufacturerProfileInput["frozenStorage"])}
-            options={FROZEN_STORAGE_OPTIONS}
+            options={FROZEN_STORAGE_PROFILE_OPTIONS}
           />
           <TextField
             label="Label languages currently available"
@@ -571,25 +692,7 @@ export default function ManufacturerProfileForm() {
             onChange={(v) => set("labelLanguages", v || undefined)}
             placeholder="e.g. English, Arabic, French"
           />
-          <SelectField
-            label="Product adaptability"
-            required
-            value={form.productAdaptability}
-            onChange={(v) =>
-              set("productAdaptability", (v || undefined) as ManufacturerProfileInput["productAdaptability"])
-            }
-            options={ADAPTABILITY_OPTIONS}
-          />
           <TextField label="MOQ" required value={form.moq ?? ""} onChange={(v) => set("moq", v || undefined)} />
-          <SelectField
-            label="Production capacity available?"
-            required
-            value={form.productionCapacity}
-            onChange={(v) =>
-              set("productionCapacity", (v || undefined) as ManufacturerProfileInput["productionCapacity"])
-            }
-            options={CAPACITY_OPTIONS}
-          />
           <TextField
             label="Lead time"
             required
@@ -614,28 +717,51 @@ export default function ManufacturerProfileForm() {
           label="Valid certifications (select all that apply)"
           value={form.certs}
           onChange={(v) => set("certs", v)}
-          options={CERT_OPTIONS}
+          options={CERT_PROFILE_OPTIONS}
         />
-        <CheckboxGroup
-          label="Other certifications"
-          value={form.otherCerts}
-          onChange={(v) => set("otherCerts", v as ManufacturerProfileInput["otherCerts"])}
-          options={OTHER_CERT_OPTIONS}
-        />
+        {form.certs.includes("Other") && (
+          <Field label="Other certifications">
+            <Input
+              value={form.otherCertsCustom ?? ""}
+              onChange={(e) => set("otherCertsCustom", e.target.value || undefined)}
+              placeholder="Please list any other certifications"
+            />
+          </Field>
+        )}
         <RadioGroup
           label="Branding & promotional approach"
           required
           value={form.branding}
           onChange={(v) => set("branding", v || undefined)}
-          options={BRANDING_OPTIONS}
+          options={BRANDING_PROFILE_OPTIONS}
         />
         <RadioGroup
           label="Do you offer private label manufacturing services?"
           required
           value={form.privateLabel}
           onChange={(v) => set("privateLabel", v || undefined)}
-          options={PRIVATE_LABEL_OPTIONS}
+          options={PRIVATE_LABEL_PROFILE_OPTIONS}
         />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SelectField
+            label="Product adaptability"
+            required
+            value={form.productAdaptability}
+            onChange={(v) =>
+              set("productAdaptability", (v || undefined) as ManufacturerProfileInput["productAdaptability"])
+            }
+            options={ADAPTABILITY_PROFILE_OPTIONS}
+          />
+          <SelectField
+            label="Production capacity available?"
+            required
+            value={form.productionCapacity}
+            onChange={(v) =>
+              set("productionCapacity", (v || undefined) as ManufacturerProfileInput["productionCapacity"])
+            }
+            options={CAPACITY_PROFILE_OPTIONS}
+          />
+        </div>
       </Panel>
 
       <Panel
@@ -643,6 +769,29 @@ export default function ManufacturerProfileForm() {
         title="Target market"
         subtitle="Your export ambitions and channel priorities."
       >
+        <SelectField
+          label="Target export market"
+          required
+          value={form.targetExportMarket}
+          onChange={(v) => set("targetExportMarket", v || undefined)}
+          options={TARGET_EXPORT_MARKET_OPTIONS}
+        />
+        <CheckboxGroup
+          label="Sales channels of interest (select all that apply)"
+          value={form.salesChannels}
+          onChange={(v) => set("salesChannels", v as ManufacturerProfileInput["salesChannels"])}
+          options={SALES_CHANNEL_PROFILE_OPTIONS}
+        />
+        <div className="space-y-1.5">
+          <Label>Channel strategy</Label>
+          <Textarea
+            value={form.channelStrategy ?? ""}
+            onChange={(e) => set("channelStrategy", e.target.value || undefined)}
+            placeholder="Describe your channel priorities and preferred approach to working with partners."
+          />
+        </div>
+
+        {/* GCC activity — retained profile extras */}
         <SelectField
           label="Currently active in GCC?"
           value={form.gccCurrentlyActive === true ? "YES" : form.gccCurrentlyActive === false ? "NO" : ""}
@@ -671,20 +820,6 @@ export default function ManufacturerProfileForm() {
           }
           options={TARGET_POTENTIAL_OPTIONS}
         />
-        <CheckboxGroup
-          label="Sales channels of interest (select all that apply)"
-          value={form.salesChannels}
-          onChange={(v) => set("salesChannels", v as ManufacturerProfileInput["salesChannels"])}
-          options={SALES_CHANNEL_OPTIONS}
-        />
-        <div className="space-y-1.5">
-          <Label>Channel strategy</Label>
-          <Textarea
-            value={form.channelStrategy ?? ""}
-            onChange={(e) => set("channelStrategy", e.target.value || undefined)}
-            placeholder="Describe your channel priorities and preferred approach to working with partners."
-          />
-        </div>
       </Panel>
 
       <Panel
@@ -693,9 +828,9 @@ export default function ManufacturerProfileForm() {
         subtitle="Who we'll speak with about the next steps."
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextField label="Full name" required value={form.contactFullName} onChange={(v) => set("contactFullName", v)} />
-          <TextField label="Title / position" required value={form.contactTitle} onChange={(v) => set("contactTitle", v)} />
-          <TextField label="Email address" required value={form.contactEmail} onChange={(v) => set("contactEmail", v)} />
+          <TextField label="Full name" required value={form.contactFullName} onChange={(v) => set("contactFullName", v)} error={fieldErrors["contactFullName"]?.[0]} id="field-contactFullName" />
+          <TextField label="Title / position" required value={form.contactTitle} onChange={(v) => set("contactTitle", v)} error={fieldErrors["contactTitle"]?.[0]} id="field-contactTitle" />
+          <TextField label="Email address" required value={form.contactEmail} onChange={(v) => set("contactEmail", v)} error={fieldErrors["contactEmail"]?.[0]} id="field-contactEmail" />
           <TextField
             label="Phone number"
             required
@@ -703,23 +838,85 @@ export default function ManufacturerProfileForm() {
             onChange={(v) => set("contactPhone", v || undefined)}
           />
           <SelectField
-            label="Dedicated export contact?"
+            label="Do you have a dedicated export contact?"
+            required
             value={form.exportContact === true ? "yes" : form.exportContact === false ? "no" : ""}
             onChange={(v) =>
               set("exportContact", v === "yes" ? true : v === "no" ? false : undefined)
             }
             options={[
               { value: "yes", label: "Yes, the person listed above" },
+              { value: "yesOther", label: "Yes, a different person" },
               { value: "no", label: "No, not currently" },
             ]}
           />
+          {form.exportContact === true && (
+            <Field label="Export contact details">
+              <Textarea
+                value={form.exportContactDetails ?? ""}
+                onChange={(e) => set("exportContactDetails", e.target.value || undefined)}
+                placeholder="Name, email and phone of the dedicated export contact."
+              />
+            </Field>
+          )}
         </div>
         <div className="space-y-1.5">
-          <Label>Anything else? (optional)</Label>
+          <Label>
+            Anything else we should know?<span className="text-brand-teal"> *</span>
+          </Label>
           <Textarea
             value={form.anythingElse ?? ""}
             onChange={(e) => set("anythingElse", e.target.value || undefined)}
             placeholder="Past export experience, ambitions, challenges or other useful context."
+          />
+        </div>
+      </Panel>
+
+      <Panel n="05" title="Public profile" subtitle="What buyers see when your opportunity card is published.">
+        <div className="flex items-center gap-4">
+          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl border border-brand-line bg-brand-bg-alt">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Company logo" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xs text-brand-muted">No logo</span>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="inline-block cursor-pointer rounded-lg border border-brand-line px-3 py-1.5 text-xs font-medium text-brand-ink hover:bg-brand-bg-alt">
+              {logoUp.isPending ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                disabled={logoUp.isPending}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) await logoUp.mutateAsync(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {logoUrl && (
+              <button
+                type="button"
+                className="block text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
+                disabled={logoDel.isPending}
+                onClick={() => logoDel.mutate()}
+              >
+                Remove logo
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Public description <span className="text-brand-teal">*</span></Label>
+          <p className="text-xs text-brand-muted">
+            A short, public blurb about your company shown on the marketplace and your profile page.
+          </p>
+          <Textarea
+            value={form.publicDescription ?? ""}
+            onChange={(e) => set("publicDescription", e.target.value || undefined)}
+            placeholder="e.g. Family-owned German biscuit manufacturer exporting to 12 markets since 1998."
           />
         </div>
       </Panel>

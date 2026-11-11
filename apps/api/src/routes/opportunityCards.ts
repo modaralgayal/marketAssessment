@@ -6,6 +6,8 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { storage } from "../storage/index.js";
+import { env } from "../env.js";
+import { sendMail } from "../lib/mailer.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { requireAgent } from "../middleware/requireAgent.js";
 import {
@@ -46,7 +48,7 @@ function canViewCardAssets(card: { ownerAccountId: string; status: string }, acc
   return card.ownerAccountId === accountId || card.status === "POSTED";
 }
 
-function toDto(c: any): OpportunityCardDto {
+export function toDto(c: any): OpportunityCardDto {
   return {
     id: c.id,
     ownerAccountId: c.ownerAccountId,
@@ -76,12 +78,22 @@ function toDto(c: any): OpportunityCardDto {
   };
 }
 
-/** Build a marketplace card DTO enriched with the viewer's interaction + owner name. */
-function toMarketDto(c: any): MarketCardDto {
+/** Build a marketplace card DTO enriched with the viewer's interaction + owner
+ *  identity (name, public description, and a short-lived signed logo URL). */
+async function toMarketDto(c: any): Promise<MarketCardDto> {
   const base = toDto(c);
   const interaction = c.interactions?.[0] ?? null;
   const ownerProfile =
     c.side === "SELL" ? c.owner?.manufacturerProfile : c.owner?.buyerProfile;
+  const owner = ownerProfile
+    ? {
+        companyName: ownerProfile.companyName,
+        country: ownerProfile.country ?? null,
+        publicDescription: ownerProfile.publicDescription ?? null,
+        accountId: c.owner?.id ?? null,
+        logoUrl: await ownerLogoUrl(ownerProfile),
+      }
+    : null;
   return {
     ...base,
     interaction: interaction
@@ -94,10 +106,60 @@ function toMarketDto(c: any): MarketCardDto {
           lastActivityAt: interaction.lastActivityAt ? interaction.lastActivityAt.toISOString() : null,
         }
       : null,
-    owner: ownerProfile
-      ? { companyName: ownerProfile.companyName, country: ownerProfile.country ?? null }
-      : null,
+    owner,
   };
+}
+
+/** Resolve a short-lived signed URL for the owner's profile logo (or null). */
+async function ownerLogoUrl(ownerProfile: any): Promise<string | null> {
+  const id = ownerProfile?.logoFileId;
+  const files: any[] = ownerProfile?.files ?? ownerProfile?.portfolioFiles ?? [];
+  const f = id ? files.find((x: any) => x.id === id) : null;
+  if (!f?.storageKey) return null;
+  try {
+    return await storage.getSignedUrl(f.storageKey, 300);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Notify the administrator(s) when a card is shared with them: POSTED (published
+ * to buyers + matchmaking) and IN_REVIEW (sent for internal review). Admin
+ * accounts are Firebase-gated (no self-service ADMIN Account rows exist), so we
+ * record ONE admin-wide ActivityEvent (accountId: null) that the admin review
+ * queue reads by type — plus, if SMTP + ADMIN_EMAILS are configured, email each
+ * admin. No-op for DRAFT / PAUSED / ARCHIVED.
+ */
+async function notifyAdminsOfCard(card: { id: string; ownerAccountId: string; title: string; status: string }) {
+  if (card.status !== "POSTED" && card.status !== "IN_REVIEW") return;
+  const type = card.status === "POSTED" ? "card_published" : "card_submitted_for_review";
+  await prisma.activityEvent.create({
+    data: {
+      accountId: null,
+      actorAccountId: card.ownerAccountId,
+      type,
+      payload: { cardId: card.id, title: card.title, status: card.status } as Prisma.InputJsonValue,
+    },
+  });
+  const emails = (env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const email of emails) {
+    try {
+      await sendMail({
+        to: email,
+        subject:
+          card.status === "POSTED"
+            ? `Opportunity card published: ${card.title}`
+            : `Opportunity card for review: ${card.title}`,
+        text: `A manufacturer submitted the opportunity card "${card.title}" (status: ${card.status}).`,
+      });
+    } catch {
+      /* SMTP is optional — ignore send failures */
+    }
+  }
 }
 
 /** Marketplace browse: posted cards on the OPPOSITE side from the viewer's
@@ -112,10 +174,15 @@ opportunityCardsRouter.get("/market", requireAuth, async (req, res, next) => {
       orderBy: { publishedAt: "desc" },
       include: {
         interactions: { where: { accountId: req.account!.id }, take: 1 },
-        owner: { include: { manufacturerProfile: true, buyerProfile: true } },
+        owner: {
+          include: {
+            manufacturerProfile: { include: { files: true } },
+            buyerProfile: { include: { portfolioFiles: true } },
+          },
+        },
       },
     });
-    return res.json(cards.map(toMarketDto));
+    return res.json(await Promise.all(cards.map(toMarketDto)));
   } catch (err) {
     next(err);
   }
@@ -252,11 +319,21 @@ opportunityCardsRouter.get("/:id", requireAuth, async (req, res, next) => {
   }
 });
 
-/** Map the model's card-status label to the internal enum + visibility. */
-function mapCardStatus(label?: string): { status: "DRAFT" | "POSTED" | "ARCHIVED"; publishedAt: Date | null } {
-  if (label === "Open for buyer engagement") return { status: "POSTED", publishedAt: new Date() };
-  if (label === "Closed") return { status: "ARCHIVED", publishedAt: null };
-  return { status: "DRAFT", publishedAt: null };
+/** Map the editor's status label to the internal enum + visibility.
+ *  Draft → DRAFT, Internal review → IN_REVIEW (sent to admin, not published),
+ *  Publish → POSTED (live to buyers), Pause → PAUSED. Anything else → DRAFT. */
+function mapCardStatus(label?: string): { status: "DRAFT" | "IN_REVIEW" | "POSTED" | "PAUSED"; publishedAt: Date | null } {
+  switch (label) {
+    case "Internal review":
+      return { status: "IN_REVIEW", publishedAt: null };
+    case "Publish":
+      return { status: "POSTED", publishedAt: new Date() };
+    case "Pause":
+      return { status: "PAUSED", publishedAt: null };
+    case "Draft":
+    default:
+      return { status: "DRAFT", publishedAt: null };
+  }
 }
 
 /** Owner-scoped: create (side is derived from the account role). */
@@ -291,6 +368,7 @@ opportunityCardsRouter.post("/", requireAuth, async (req, res, next) => {
         publishedAt,
       },
     });
+    await notifyAdminsOfCard({ id: card.id, ownerAccountId: card.ownerAccountId, title: card.title, status });
     return res.status(201).json(toDto(card));
   } catch (err) {
     next(err);
@@ -330,6 +408,14 @@ opportunityCardsRouter.put("/:id", requireAuth, async (req, res, next) => {
         publishedAt,
       },
     });
+    // Only notify the administrator when transitioning into a notification-worthy
+    // state (published or submitted for review), to avoid duplicate events.
+    if (
+      (status === "POSTED" || status === "IN_REVIEW") &&
+      card.status !== status
+    ) {
+      await notifyAdminsOfCard({ id: updated.id, ownerAccountId: updated.ownerAccountId, title: updated.title, status });
+    }
     return res.json(toDto(updated));
   } catch (err) {
     next(err);
@@ -466,14 +552,7 @@ opportunityCardsRouter.post("/:id/publish", requireAuth, async (req, res, next) 
       where: { id: req.params.id },
       data: { status: "POSTED", publishedAt: new Date() },
     });
-    await prisma.activityEvent.create({
-      data: {
-        accountId: req.account!.id,
-        actorAccountId: req.account!.id,
-        type: "card_published",
-        payload: { cardId: card.id, title: card.title } as Prisma.InputJsonValue,
-      },
-    });
+    await notifyAdminsOfCard({ id: updated.id, ownerAccountId: updated.ownerAccountId, title: updated.title, status: "POSTED" });
     return res.json(toDto(updated));
   } catch (err) {
     next(err);

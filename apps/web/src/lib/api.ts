@@ -797,6 +797,51 @@ export async function deleteManufacturerCatalogueFile(fileId: string): Promise<v
   if (!res.ok) throw new Error("Failed to remove catalogue");
 }
 
+/** Upload the manufacturer's profile logo / image (kind "logo"). */
+export async function uploadManufacturerLogo(file: File): Promise<ManufacturerProfileDto> {
+  const form = new FormData();
+  form.append("logo", file);
+  const res = await authedFetch(`${BASE}/api/manufacturer-profile/logo`, { method: "POST", body: form });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to upload logo");
+  }
+  return res.json();
+}
+
+/** Remove the manufacturer's profile logo. */
+export async function deleteManufacturerLogo(): Promise<void> {
+  const res = await authedFetch(`${BASE}/api/manufacturer-profile/logo`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to remove logo");
+}
+
+/** Fetch a manufacturer's public profile (buyer-visible) by account id. */
+export async function fetchManufacturerPublicProfile(
+  accountId: string,
+): Promise<{
+  accountId: string;
+  companyName: string;
+  country: string | null;
+  website: string | null;
+  publicDescription: string | null;
+  logoUrl: string | null;
+  industryCategory: string | null;
+  productCategory: string | null;
+  targetExportMarket: string | null;
+  salesChannels: string[];
+  certs: string[];
+  knownFor: string | null;
+  usp: string | null;
+  postedCards: OpportunityCardDto[];
+}> {
+  const res = await authedFetch(`${BASE}/api/manufacturer-profile/public/${encodeURIComponent(accountId)}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load manufacturer profile");
+  }
+  return res.json();
+}
+
 // ── Opportunity-card attachments (catalogue refs + price list / terms) ──
 
 /** A saved attachment descriptor for an opportunity card's `sources` / `assets`. */
@@ -891,6 +936,50 @@ export async function upsertBuyerProfile(data: BuyerProfileInput): Promise<Buyer
     const body = await res.json().catch(() => ({}));
     if (body.fields) throw new ApiError(body.error ?? "Failed to save profile", body.fields);
     throw new Error(body.error ?? "Failed to save profile");
+  }
+  return res.json();
+}
+
+/** Upload the buyer's profile logo / image. */
+export async function uploadBuyerLogo(file: File): Promise<BuyerProfileDto> {
+  const form = new FormData();
+  form.append("logo", file);
+  const res = await authedFetch(`${BASE}/api/buyer-profile/logo`, { method: "POST", body: form });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to upload logo");
+  }
+  return res.json();
+}
+
+/** Remove the buyer's profile logo. */
+export async function deleteBuyerLogo(): Promise<void> {
+  const res = await authedFetch(`${BASE}/api/buyer-profile/logo`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to remove logo");
+}
+
+/** Fetch a buyer's public profile (manufacturer-visible) by account id. */
+export async function fetchBuyerPublicProfile(
+  accountId: string,
+): Promise<{
+  accountId: string;
+  companyName: string;
+  country: string | null;
+  website: string | null;
+  publicDescription: string | null;
+  logoUrl: string | null;
+  buyerType: string | null;
+  roles: string[];
+  categories: string[];
+  operatingCountries: string[];
+  targetMarkets: string[];
+  channels: string[];
+  sourcingNeeds: string | null;
+}> {
+  const res = await authedFetch(`${BASE}/api/buyer-profile/public/${encodeURIComponent(accountId)}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load buyer profile");
   }
   return res.json();
 }
@@ -1172,6 +1261,17 @@ export async function fetchActivity(): Promise<ActivityEventDto[]> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "Failed to load activity");
+  }
+  return res.json();
+}
+
+/** Admin: every card-published / submitted-for-review event across all
+ *  manufacturers, for the "Received cards" review queue. */
+export async function fetchAdminCardActivity(): Promise<ActivityEventDto[]> {
+  const res = await authedFetch(`${BASE}/api/activity/admin`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load received cards");
   }
   return res.json();
 }

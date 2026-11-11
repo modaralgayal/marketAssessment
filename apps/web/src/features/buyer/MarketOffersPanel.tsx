@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -157,10 +158,24 @@ function OfferCard({
           <div className="min-w-0">
             <p className="font-semibold leading-snug text-brand-ink">{card.title}</p>
             {card.owner && (
-              <p className="mt-0.5 truncate text-xs text-brand-muted">
-                {card.owner.companyName}
-                {card.owner.country ? ` · ${card.owner.country}` : ""}
-              </p>
+              <Link
+                to={`/manufacturer/${card.owner.accountId}/profile`}
+                className="mt-0.5 flex items-center gap-2 truncate text-xs text-brand-muted hover:text-brand-teal hover:underline"
+              >
+                {card.owner.logoUrl ? (
+                  <img
+                    src={card.owner.logoUrl}
+                    alt={`${card.owner.companyName} logo`}
+                    className="h-5 w-5 shrink-0 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-teal/15 text-[9px] font-semibold text-brand-teal">
+                    {card.owner.companyName?.charAt(0)?.toUpperCase() ?? "?"}
+                  </span>
+                )}
+                <span className="truncate">{card.owner.companyName}</span>
+                {card.owner.country ? <span className="shrink-0">· {card.owner.country}</span> : null}
+              </Link>
             )}
           </div>
           {status !== "NEW" && (

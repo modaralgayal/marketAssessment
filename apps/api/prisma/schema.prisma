@@ -302,9 +302,11 @@ enum OpportunitySide {
 }
 
 enum OpportunityStatus {
-  DRAFT // created, not yet visible to the matchmaking agent
-  POSTED // published — visible to the matchmaking agent
-  ARCHIVED // taken down
+  DRAFT // authoring, not visible to anyone else
+  IN_REVIEW // sent to the administrator for review (NOT published to buyers)
+  POSTED // published — visible to buyers + the matchmaking agent
+  PAUSED // hidden from buyers, resumable
+  ARCHIVED // taken down / closed (legacy "Closed")
 }
 
 // A unit of intent: a manufacturer's offering (SELL) or a buyer's sourcing need
@@ -487,7 +489,7 @@ model MessageFile {
 
 model ActivityEvent {
   id             String   @id @default(cuid())
-  accountId      String // owner whose dashboard shows it
+  accountId      String? // owner whose dashboard shows it; null for admin-wide notifications
   actorAccountId String? // the account that triggered it (e.g. a buyer)
   type           String // inquiry_created | card_published | interest_expressed | viewed | shared | proposal_received
   payload        Json     @default("{}")
@@ -536,7 +538,7 @@ model ManufacturerProfile {
   country              String
   website              String?
   industryCategory     String
-  annualRevenue        RevenueBracket?
+  annualRevenue        String?
   annualRevenueCustom  String?
   yearsInBusiness      String?
   currentExportMarkets String?
@@ -544,13 +546,13 @@ model ManufacturerProfile {
   // Section 2 - Products and Operations
   halalCert            YesNoUnsure?
   sfdaStatus           SfdaStatus?
-  frozenStorage        FrozenStorage?
+  frozenStorage        String?
   shelfLife            ShelfLife?
   otherCerts           String[]
   otherCertsCustom     String?
   labelLanguages       String?
-  productAdaptability  Adaptability?
-  brandApproach        BrandApproach?
+  productAdaptability  String?
+  brandApproach        String?
   leadTimes            String?
 
   // Section 3 - Target Market
@@ -559,13 +561,14 @@ model ManufacturerProfile {
   gccSituation        String?
   targetMarketPotential TargetPotential?
   targetMarketPotentialOther String?
+  targetExportMarket  String? // reference prototype "Target export market"
   salesChannels       String[]
   channelStrategy     String?
 
   // Section 4 - Operational Readiness
   moq              String?
   exportContact    Boolean?
-  productionCapacity Capacity?
+  productionCapacity String?
 
   // Section 5 - Decision-Maker Contact
   contactFullName  String
@@ -573,12 +576,15 @@ model ManufacturerProfile {
   contactEmail     String
   contactPhone     String?
   anythingElse     String?
+  exportContactDetails String? // reference prototype: export-contact details
 
   // Profile (created directly, not via submission conversion)
   contacts      Json? // ContactPerson[]: { name, position?, phone?, email? }
   productCategory String?
   companyInfo   String?
   logoFileId    String?
+  /** Public, buyer-visible description shown on the marketplace + profile page. */
+  publicDescription String?
 
   // Expanded profile (reference prototype)
   exportCount        Int? // number of export markets
@@ -648,6 +654,8 @@ model BuyerProfile {
   contactPhone     String?
   contacts         Json? // ContactPerson[]: { name, position?, phone?, email? }
   logoFileId       String?
+  /** Public, manufacturer-visible description shown on the profile page + in messaging. */
+  publicDescription String?
 
   // Expanded profile (reference prototype) — Company subsection
   tradingName        String?

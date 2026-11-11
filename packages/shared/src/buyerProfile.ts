@@ -61,6 +61,8 @@ export const buyerProfileSchema = z.object({
   retailDelivery: optionalText,
   // Catch-all for deep conditional fields
   details: z.record(z.unknown()).optional(),
+  // Public profile (visible to manufacturers when messaging / on profile page)
+  publicDescription: optionalText,
   // Decision-maker contact
   contactFullName: z.string().trim().min(1, "Full name is required").max(500),
   contactTitle: z.string().trim().min(1, "Title / position is required").max(500),
@@ -89,6 +91,8 @@ export interface BuyerProfileDto extends BuyerProfileInput {
   id: string;
   accountId: string;
   contacts?: ContactPerson[];
+  /** Short-lived signed URL for the profile logo/image (null if none). */
+  logoUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }

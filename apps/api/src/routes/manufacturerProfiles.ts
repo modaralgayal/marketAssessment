@@ -6,8 +6,9 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { storage } from "../storage/index.js";
-import { requireRole } from "../middleware/requireAuth.js";
+import { requireRole, requireAuth } from "../middleware/requireAuth.js";
 import { manufacturerProfileSchema, type ManufacturerProfileDto, type ManufacturerFileInfo } from "@mea/shared";
+import { toDto as toOpportunityCardDto } from "./opportunityCards.js";
 
 export const manufacturerProfilesRouter = Router();
 
@@ -26,6 +27,22 @@ const catalogueUpload = multer({
   },
 });
 
+// Profile logo / image upload: images only, max 5 MB.
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok =
+      file.mimetype === "image/png" ||
+      file.mimetype === "image/jpeg" ||
+      file.mimetype === "image/webp" ||
+      file.mimetype === "image/gif" ||
+      /\.(png|jpe?g|webp|gif)$/i.test(file.originalname);
+    if (ok) return cb(null, true);
+    cb(new Error("Please attach a PNG, JPG, WEBP, or GIF image."));
+  },
+});
+
 function toFileInfo(f: any): ManufacturerFileInfo {
   return {
     id: f.id,
@@ -37,6 +54,28 @@ function toFileInfo(f: any): ManufacturerFileInfo {
     url: f.url ?? null,
     createdAt: f.createdAt.toISOString(),
   };
+}
+
+/**
+ * Fetch the signed-in manufacturer's profile, creating an empty stub on first
+ * use so that catalogue/price-list uploads work *before* the profile form has
+ * been saved. The required text columns accept empty strings; the user fills
+ * them in later via the profile form (validated on PUT).
+ */
+async function getOrCreateProfile(accountId: string) {
+  const existing = await prisma.manufacturerProfile.findUnique({ where: { accountId } });
+  if (existing) return existing;
+  return prisma.manufacturerProfile.create({
+    data: {
+      accountId,
+      companyName: "",
+      country: "",
+      industryCategory: "",
+      contactFullName: "",
+      contactTitle: "",
+      contactEmail: "",
+    },
+  });
 }
 
 function toDto(p: any): ManufacturerProfileDto {
@@ -66,6 +105,7 @@ function toDto(p: any): ManufacturerProfileDto {
     gccSituation: p.gccSituation ?? undefined,
     targetMarketPotential: p.targetMarketPotential ?? undefined,
     targetMarketPotentialOther: p.targetMarketPotentialOther ?? undefined,
+    targetExportMarket: p.targetExportMarket ?? undefined,
     salesChannels: p.salesChannels ?? [],
     channelStrategy: p.channelStrategy ?? undefined,
     moq: p.moq ?? undefined,
@@ -76,6 +116,7 @@ function toDto(p: any): ManufacturerProfileDto {
     contactEmail: p.contactEmail,
     contactPhone: p.contactPhone ?? undefined,
     anythingElse: p.anythingElse ?? undefined,
+    exportContactDetails: p.exportContactDetails ?? undefined,
     contacts: p.contacts ?? undefined,
     productCategory: p.productCategory ?? undefined,
     companyInfo: p.companyInfo ?? undefined,
@@ -97,6 +138,14 @@ function toDto(p: any): ManufacturerProfileDto {
   };
 }
 
+/** Like `toDto`, but also resolves a short-lived signed URL for the profile logo. */
+async function toDtoWithLogo(p: any): Promise<ManufacturerProfileDto> {
+  const base = toDto(p);
+  const logo = (p.files ?? []).find((f: any) => f.id === p.logoFileId && f.storageKey);
+  base.logoUrl = logo ? await storage.getSignedUrl(logo.storageKey, 300).catch(() => null) : null;
+  return base;
+}
+
 /** Get the signed-in manufacturer's own profile (404 if none yet). */
 manufacturerProfilesRouter.get("/", requireRole("MANUFACTURER"), async (req, res, next) => {
   try {
@@ -105,7 +154,7 @@ manufacturerProfilesRouter.get("/", requireRole("MANUFACTURER"), async (req, res
       include: { files: true },
     });
     if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
-    return res.json(toDto(profile));
+    return res.json(await toDtoWithLogo(profile));
   } catch (err) {
     next(err);
   }
@@ -121,7 +170,109 @@ manufacturerProfilesRouter.put("/", requireRole("MANUFACTURER"), async (req, res
     const profile = existing
       ? await prisma.manufacturerProfile.update({ where: { accountId }, data: { ...data, contacts }, include: { files: true } })
       : await prisma.manufacturerProfile.create({ data: { accountId, ...data, contacts }, include: { files: true } });
-    return res.json(toDto(profile));
+    return res.json(await toDtoWithLogo(profile));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Upload a profile logo / image. Stored as a ManufacturerFile (kind "logo"); the
+ *  file id is recorded on the profile's `logoFileId`. Replaces any prior logo. */
+manufacturerProfilesRouter.post(
+  "/logo",
+  requireRole("MANUFACTURER"),
+  logoUpload.single("logo"),
+  async (req, res, next) => {
+    try {
+      const accountId = req.account!.id;
+      const profile = await getOrCreateProfile(accountId);
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No image provided" });
+      const ext = path.extname(file.originalname).toLowerCase() || ".png";
+      const key = `manufacturers/${accountId}/logo-${randomUUID()}${ext}`;
+      await storage.put(key, file.buffer, file.mimetype);
+      const created = await prisma.manufacturerFile.create({
+        data: {
+          manufacturerProfileId: profile.id,
+          kind: "logo",
+          storageKey: key,
+          originalName: file.originalname,
+          contentType: file.mimetype,
+          sizeBytes: file.size,
+        },
+      });
+      // Best-effort delete of the previously linked logo.
+      if (profile.logoFileId) {
+        const prev = await prisma.manufacturerFile.findFirst({
+          where: { id: profile.logoFileId, manufacturerProfileId: profile.id },
+        });
+        if (prev?.storageKey) await storage.delete(prev.storageKey).catch(() => {});
+        await prisma.manufacturerFile.delete({ where: { id: prev!.id } }).catch(() => {});
+      }
+      const updated = await prisma.manufacturerProfile.update({
+        where: { accountId },
+        data: { logoFileId: created.id },
+        include: { files: true },
+      });
+      return res.status(201).json(await toDtoWithLogo(updated));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/** Remove the profile logo (clears `logoFileId`, deletes the underlying file). */
+manufacturerProfilesRouter.delete("/logo", requireRole("MANUFACTURER"), async (req, res, next) => {
+  try {
+    const accountId = req.account!.id;
+    const profile = await prisma.manufacturerProfile.findUnique({ where: { accountId }, include: { files: true } });
+    if (profile?.logoFileId) {
+      const logo = profile.files.find((f) => f.id === profile.logoFileId);
+      if (logo?.storageKey) await storage.delete(logo.storageKey).catch(() => {});
+      await prisma.manufacturerFile.delete({ where: { id: profile.logoFileId } }).catch(() => {});
+      await prisma.manufacturerProfile.update({ where: { accountId }, data: { logoFileId: null } });
+    }
+    return res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Public manufacturer profile: visible to any signed-in account (e.g. a buyer
+ *  viewing who is behind an opportunity card). Returns only buyer-safe fields plus
+ *  the manufacturer's currently POSTED cards. */
+manufacturerProfilesRouter.get("/public/:accountId", requireAuth, async (req, res, next) => {
+  try {
+    const accountId = req.params.accountId;
+    const profile = await prisma.manufacturerProfile.findUnique({
+      where: { accountId },
+      include: { files: true },
+    });
+    if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
+    const logo = (profile.files ?? []).find((f: any) => f.id === profile.logoFileId && f.storageKey);
+    const logoUrl = logo?.storageKey
+      ? await storage.getSignedUrl(logo.storageKey, 300).catch(() => null)
+      : null;
+    const cards = await prisma.opportunityCard.findMany({
+      where: { ownerAccountId: accountId, status: "POSTED", side: "SELL" },
+      orderBy: { publishedAt: "desc" },
+    });
+    return res.json({
+      accountId: profile.accountId,
+      companyName: profile.companyName,
+      country: profile.country ?? null,
+      website: profile.website ?? null,
+      publicDescription: profile.publicDescription ?? null,
+      logoUrl,
+      industryCategory: profile.industryCategory ?? null,
+      productCategory: profile.productCategory ?? null,
+      targetExportMarket: profile.targetExportMarket ?? null,
+      salesChannels: profile.salesChannels ?? [],
+      certs: profile.certs ?? [],
+      knownFor: profile.knownFor ?? null,
+      usp: profile.usp ?? null,
+      postedCards: cards.map(toOpportunityCardDto),
+    });
   } catch (err) {
     next(err);
   }
@@ -135,8 +286,7 @@ manufacturerProfilesRouter.post(
   async (req, res, next) => {
     try {
       const accountId = req.account!.id;
-      const profile = await prisma.manufacturerProfile.findUnique({ where: { accountId } });
-      if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
+      const profile = await getOrCreateProfile(accountId);
       const file = req.file;
       if (!file) return res.status(400).json({ error: "No catalogue file provided" });
       const ext = path.extname(file.originalname).toLowerCase() || "";
@@ -167,8 +317,7 @@ manufacturerProfilesRouter.post(
 manufacturerProfilesRouter.post("/catalogue/link", requireRole("MANUFACTURER"), async (req, res, next) => {
   try {
     const accountId = req.account!.id;
-    const profile = await prisma.manufacturerProfile.findUnique({ where: { accountId } });
-    if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
+    const profile = await getOrCreateProfile(accountId);
     const { url, name } = z
       .object({
         url: z.string().trim().url(),

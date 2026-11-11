@@ -11,8 +11,11 @@ import {
   uploadBuyerPortfolio,
   deleteBuyerPortfolio,
   fetchBuyerPortfolioUrl,
+  uploadBuyerLogo,
+  deleteBuyerLogo,
   ApiError,
   type BuyerProfileInput,
+  type BuyerProfileDto,
 } from "../../lib/api";
 import { GCC_MARKET_OPTIONS } from "@mea/shared";
 
@@ -227,6 +230,155 @@ function PortfolioDocs({ enabled }: { enabled: boolean }) {
   );
 }
 
+// Reference-prototype option sets (mirror the buyer dashboard spec exactly).
+const BUYER_CATEGORY_OPTIONS = [
+  { value: "Confectionery", label: "Confectionery" },
+  { value: "Biscuits & bakery", label: "Biscuits & bakery" },
+  { value: "Snacks", label: "Snacks" },
+  { value: "Beverages", label: "Beverages" },
+  { value: "Dairy", label: "Dairy" },
+  { value: "Frozen foods", label: "Frozen foods" },
+  { value: "Meat & seafood", label: "Meat & seafood" },
+  { value: "Fruit & vegetables", label: "Fruit & vegetables" },
+  { value: "Grocery & pantry", label: "Grocery & pantry" },
+  { value: "Ingredients", label: "Ingredients" },
+  { value: "Other", label: "Other" },
+];
+
+const STORAGE_OPTIONS = [
+  { value: "Ambient", label: "Ambient" },
+  { value: "Chilled", label: "Chilled" },
+  { value: "Frozen", label: "Frozen" },
+  { value: "Other", label: "Other" },
+];
+
+const CHANNEL_OPTIONS = [
+  { value: "Modern trade", label: "Modern trade" },
+  { value: "Traditional trade", label: "Traditional trade" },
+  { value: "Discount stores", label: "Discount stores" },
+  { value: "Wholesale", label: "Wholesale" },
+  { value: "E-commerce", label: "E-commerce" },
+  { value: "HORECA", label: "HORECA" },
+];
+
+const CHANNEL_BASIS_OPTIONS = [
+  { value: "Sales revenue", label: "Sales revenue" },
+  { value: "Sales volume", label: "Sales volume" },
+  { value: "Another basis", label: "Another basis" },
+  { value: "Not yet defined", label: "Not yet defined" },
+];
+
+const YES_NO_CONFIRM = [
+  { value: "YES", label: "Yes" },
+  { value: "NO", label: "No" },
+  { value: "TO_CONFIRM", label: "To be confirmed" },
+];
+
+const DISTRIBUTION_ROLE_OPTIONS = [
+  { value: "Importer", label: "Importer" },
+  { value: "Distributor", label: "Distributor" },
+  { value: "Both", label: "Both" },
+];
+
+const VEHICLE_ARRANGEMENT_OPTIONS = [
+  { value: "Owned", label: "Owned" },
+  { value: "Contracted", label: "Contracted" },
+  { value: "Combination", label: "Combination" },
+];
+
+const WAREHOUSE_ARRANGEMENT_OPTIONS = [
+  { value: "Owned", label: "Owned" },
+  { value: "Leased", label: "Leased" },
+  { value: "Logistics partner", label: "Logistics partner" },
+  { value: "Combination", label: "Combination" },
+];
+
+const REACH_MODE_OPTIONS = [
+  { value: "Directly", label: "Directly" },
+  { value: "Through other distributors", label: "Through other distributors" },
+  { value: "Both", label: "Both" },
+];
+
+const PRODUCT_TYPE_OPTIONS = [
+  { value: "Branded products", label: "Branded products" },
+  { value: "Private-label products", label: "Private-label products" },
+  { value: "Both", label: "Both" },
+];
+
+const RETAIL_FORMAT_OPTIONS = [
+  { value: "Supermarkets", label: "Supermarkets" },
+  { value: "Hypermarkets", label: "Hypermarkets" },
+  { value: "Convenience stores", label: "Convenience stores" },
+  { value: "Discount stores", label: "Discount stores" },
+  { value: "Specialist stores", label: "Specialist stores" },
+  { value: "E-commerce", label: "E-commerce" },
+  { value: "Other", label: "Other" },
+];
+
+const PURCHASING_STRUCTURE_OPTIONS = [
+  { value: "Centrally", label: "Centrally" },
+  { value: "By region", label: "By region" },
+  { value: "By store", label: "By store" },
+  { value: "Combination", label: "Combination" },
+];
+
+const RETAIL_SUPPLY_OPTIONS = [
+  { value: "Import directly", label: "Import directly" },
+  { value: "Purchase from local suppliers", label: "Purchase from local suppliers" },
+  { value: "Both", label: "Both" },
+];
+
+const RETAIL_MIX_BASIS_OPTIONS = [
+  { value: "Purchase value", label: "Purchase value" },
+  { value: "Purchase volume", label: "Purchase volume" },
+  { value: "Another basis", label: "Another basis" },
+  { value: "Not yet defined", label: "Not yet defined" },
+];
+
+const RETAIL_DELIVERY_OPTIONS = [
+  { value: "Distribution centres", label: "Distribution centres" },
+  { value: "Directly to stores", label: "Directly to stores" },
+  { value: "Combination", label: "Combination" },
+  { value: "Another arrangement", label: "Another arrangement" },
+];
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Select an option",
+  required,
+  error,
+  id,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (v: string) => void;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  placeholder?: string;
+  required?: boolean;
+  error?: string;
+  id?: string;
+}) {
+  return (
+    <Field label={label + (required ? " *" : "")} error={error} id={id}>
+      <select
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="flex h-10 w-full rounded-xl border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none focus:border-brand-teal"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}
+
 export default function BuyerProfileForm() {
   const qc = useQueryClient();
   const { data: existing, isLoading } = useQuery({
@@ -285,15 +437,18 @@ export default function BuyerProfileForm() {
     contacts: undefined,
     sourcingNeeds: undefined,
     targetMarkets: [],
+    publicDescription: undefined,
   });
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState(false);
 
   useEffect(() => {
     if (existing && !loaded) {
       setForm(existing);
+      setLogoUrl(existing.logoUrl ?? null);
       setLoaded(true);
     }
   }, [existing, loaded]);
@@ -328,15 +483,44 @@ export default function BuyerProfileForm() {
   const set = <K extends keyof BuyerProfileInput>(key: K, val: BuyerProfileInput[K]) =>
     setForm((f) => ({ ...f, [key]: val }));
 
+  // Profile logo (image) upload + removal.
+  const logoUp = useMutation({
+    mutationFn: (f: File) => uploadBuyerLogo(f),
+    onSuccess: (dto: BuyerProfileDto) => {
+      setLogoUrl(dto.logoUrl ?? null);
+      qc.invalidateQueries({ queryKey: ["buyer-profile"] });
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Failed to upload logo."),
+  });
+  const logoDel = useMutation({
+    mutationFn: () => deleteBuyerLogo(),
+    onSuccess: () => {
+      setLogoUrl(null);
+      qc.invalidateQueries({ queryKey: ["buyer-profile"] });
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : "Failed to remove logo."),
+  });
+
   const isRetailer = (form.roles ?? []).includes("RETAILER");
   const isImporter = (form.roles ?? []).includes("IMPORTER_DISTRIBUTOR");
+
+  // Section numbers are assigned from a running counter so the conditional
+  // Importer / Retailer panels don't leave gaps in the visible sequence.
+  let sectionNo = 0;
+  const nextSection = () => String(++sectionNo).padStart(2, "0");
+
+  // Catch-all record for deep conditional text fields (storageOther, retailOther,
+  // purchasingThirdParty, retailDeliveryOther, channelBasisOther).
+  const details = (form.details ?? {}) as Record<string, string | undefined>;
+  const setDetail = (key: string, val: string | undefined) =>
+    set("details", { ...details, [key]: val } as BuyerProfileInput["details"]);
 
   if (isLoading && !loaded) return <p className="text-sm text-brand-muted">Loading…</p>;
 
   return (
     <div className="space-y-4">
       <Panel
-        n="01"
+        n={nextSection()}
         title="Company information"
         subtitle="Shared information for both buyer types."
       >
@@ -361,7 +545,7 @@ export default function BuyerProfileForm() {
       </Panel>
 
       <Panel
-        n="02"
+        n={nextSection()}
         title="Your buyer type"
         subtitle="Select one or both. Each type has its own profile section."
       >
@@ -377,124 +561,150 @@ export default function BuyerProfileForm() {
       </Panel>
 
       <Panel
-        n="03"
+        n={nextSection()}
         title="Categories & portfolio"
         subtitle="Shared portfolio information for retailers and distributors."
       >
-        <ListField
+        <CheckboxGroup
           label="Which categories do you work with?"
           value={form.categories ?? []}
           onChange={(v) => set("categories", v)}
-          placeholder="Snacks, Beverages"
+          options={BUYER_CATEGORY_OPTIONS}
         />
         <Field label="What specific products does your portfolio consist of?">
           <Textarea value={form.portfolioProducts ?? ""} onChange={(e) => set("portfolioProducts", e.target.value || undefined)} />
         </Field>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Do you have your own private-label brand?">
-            <select
-              value={form.privateLabel ?? ""}
-              onChange={(e) => set("privateLabel", e.target.value || undefined)}
-              className="flex h-10 w-full rounded-xl border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none focus:border-brand-teal"
-            >
-              <option value="">Select an option</option>
-              <option value="YES">Yes</option>
-              <option value="NO">No</option>
-              <option value="TO_CONFIRM">To be confirmed</option>
-            </select>
-          </Field>
-          <TextField label="Private-label brand name" value={form.privateLabelName ?? ""} onChange={(v) => set("privateLabelName", v || undefined)} />
-          <TextField label="Private-label categories" value={form.privateLabelCategories ?? ""} onChange={(v) => set("privateLabelCategories", v || undefined)} />
+          <SelectField
+            label="Do you have your own private-label brand?"
+            value={form.privateLabel}
+            onChange={(v) => set("privateLabel", v || undefined)}
+            options={YES_NO_CONFIRM}
+          />
+          {form.privateLabel === "YES" && (
+            <>
+              <TextField label="Private-label brand name" value={form.privateLabelName ?? ""} onChange={(v) => set("privateLabelName", v || undefined)} />
+              <TextField label="Which categories does it cover?" value={form.privateLabelCategories ?? ""} onChange={(v) => set("privateLabelCategories", v || undefined)} />
+            </>
+          )}
         </div>
         <PortfolioDocs enabled={loaded} />
       </Panel>
 
       {isImporter && (
         <Panel
-          n="04"
+          n={nextSection()}
           title="Importer & distributor profile"
           subtitle="Describe your operations, channel coverage and portfolio development."
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextField label="Distribution role" value={form.distributionRole ?? ""} onChange={(v) => set("distributionRole", v || undefined)} />
-            <TextField label="Warehouse" value={form.warehouse ?? ""} onChange={(v) => set("warehouse", v || undefined)} />
-            <TextField label="Warehouse arrangement" value={form.warehouseArrangement ?? ""} onChange={(v) => set("warehouseArrangement", v || undefined)} />
-            <TextField label="Vehicles" value={form.vehicles ?? ""} onChange={(v) => set("vehicles", v || undefined)} />
-            <TextField label="Vehicle arrangement" value={form.vehicleArrangement ?? ""} onChange={(v) => set("vehicleArrangement", v || undefined)} />
-            <TextField label="Sales reach mode" value={form.salesReachMode ?? ""} onChange={(v) => set("salesReachMode", v || undefined)} />
-            <TextField label="Distribution geography" value={form.distributionGeography ?? ""} onChange={(v) => set("distributionGeography", v || undefined)} />
-            <TextField label="Distribution product type" value={form.distributionProductType ?? ""} onChange={(v) => set("distributionProductType", v || undefined)} />
-            <TextField label="Sales points" value={form.salesPoints?.toString() ?? ""} onChange={(v) => set("salesPoints", v ? Number(v) : undefined)} />
+            <SelectField label="Do you act as an importer, a distributor, or both?" value={form.distributionRole} onChange={(v) => set("distributionRole", v || undefined)} options={DISTRIBUTION_ROLE_OPTIONS} />
+            <SelectField label="Do you have warehousing?" value={form.warehouse} onChange={(v) => set("warehouse", v || undefined)} options={YES_NO_CONFIRM} />
+            {form.warehouse === "YES" && (
+              <SelectField label="Warehousing arrangement" value={form.warehouseArrangement} onChange={(v) => set("warehouseArrangement", v || undefined)} options={WAREHOUSE_ARRANGEMENT_OPTIONS} />
+            )}
+            <SelectField label="Do you have distribution vehicles?" value={form.vehicles} onChange={(v) => set("vehicles", v || undefined)} options={YES_NO_CONFIRM} />
+            {form.vehicles === "YES" && (
+              <SelectField label="Distribution vehicle arrangement" value={form.vehicleArrangement} onChange={(v) => set("vehicleArrangement", v || undefined)} options={VEHICLE_ARRANGEMENT_OPTIONS} />
+            )}
+            <TextField label="Total number of sales points you reach" value={form.salesPoints?.toString() ?? ""} onChange={(v) => set("salesPoints", v ? Number(v) : undefined)} />
+            <SelectField label="Do you reach sales points directly, through other distributors, or both?" value={form.salesReachMode} onChange={(v) => set("salesReachMode", v || undefined)} options={REACH_MODE_OPTIONS} />
           </div>
-          <ListField label="Storage" value={form.storage ?? []} onChange={(v) => set("storage", v)} placeholder="Ambient, Chilled, Frozen" />
-          <ListField label="Channels" value={form.channels ?? []} onChange={(v) => set("channels", v)} placeholder="Retail, HORECA, Online" />
-          <TextField label="Channel basis" value={form.channelBasis ?? ""} onChange={(v) => set("channelBasis", v || undefined)} />
-          <Field label="Expand portfolio?">
-            <select
-              value={form.expandPortfolio ?? ""}
-              onChange={(e) => set("expandPortfolio", e.target.value || undefined)}
-              className="flex h-10 w-full rounded-xl border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none focus:border-brand-teal"
-            >
-              <option value="">Select an option</option>
-              <option value="YES">Yes</option>
-              <option value="NO">No</option>
-            </select>
+          {form.warehouse === "YES" && (
+            <CheckboxGroup label="What storage conditions can you support?" value={form.storage ?? []} onChange={(v) => set("storage", v)} options={STORAGE_OPTIONS} />
+          )}
+          {form.warehouse === "YES" && (form.storage ?? []).includes("Other") && (
+            <TextField label="Other storage conditions" value={details.storageOther ?? ""} onChange={(v) => setDetail("storageOther", v || undefined)} />
+          )}
+          <CheckboxGroup label="Which channels do you cover?" value={form.channels ?? []} onChange={(v) => set("channels", v)} options={CHANNEL_OPTIONS} />
+          {(form.channels ?? []).length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(form.channels ?? []).map((ch) => (
+                <TextField
+                  key={ch}
+                  label={`${ch} (%)`}
+                  value={(form.channelPercentages?.[ch] ?? "")?.toString() ?? ""}
+                  onChange={(v) => {
+                    const next = { ...(form.channelPercentages ?? {}) };
+                    if (v) next[ch] = Number(v);
+                    else delete next[ch];
+                    set("channelPercentages", next);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectField label="Basis for your channel percentages" value={form.channelBasis} onChange={(v) => set("channelBasis", v || undefined)} options={CHANNEL_BASIS_OPTIONS} />
+            {form.channelBasis === "Another basis" && (
+              <TextField label="Other measurement basis" value={details.channelBasisOther ?? ""} onChange={(v) => setDetail("channelBasisOther", v || undefined)} />
+            )}
+            <SelectField label="Are you actively seeking to expand your portfolio?" value={form.expandPortfolio} onChange={(v) => set("expandPortfolio", v || undefined)} options={YES_NO_CONFIRM} />
+            <SelectField label="Are you seeking branded products, private-label products, or both?" value={form.distributionProductType} onChange={(v) => set("distributionProductType", v || undefined)} options={PRODUCT_TYPE_OPTIONS} />
+          </div>
+          {form.expandPortfolio === "YES" && (
+            <Field label="Which categories or products interest you?">
+              <Textarea value={form.expansionProducts ?? ""} onChange={(e) => set("expansionProducts", e.target.value || undefined)} />
+            </Field>
+          )}
+          <Field label="Geographical reach: countries, regions or cities">
+            <Textarea value={form.distributionGeography ?? ""} onChange={(e) => set("distributionGeography", e.target.value || undefined)} />
           </Field>
-          <TextField label="Expansion products" value={form.expansionProducts ?? ""} onChange={(v) => set("expansionProducts", v || undefined)} />
         </Panel>
       )}
 
       {isRetailer && (
         <Panel
-          n="05"
+          n={nextSection()}
           title="Retailer profile"
           subtitle="Describe your retail operation, purchasing office and assortment plans."
         >
+          <CheckboxGroup label="Which retail formats do you operate?" value={form.retailFormats ?? []} onChange={(v) => set("retailFormats", v)} options={RETAIL_FORMAT_OPTIONS} />
+          {form.retailFormats.includes("Other") && (
+            <TextField label="Other retail format" value={details.retailOther ?? ""} onChange={(v) => setDetail("retailOther", v || undefined)} />
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextField label="Retail geography" value={form.retailGeography ?? ""} onChange={(v) => set("retailGeography", v || undefined)} />
-            <TextField label="Store count" value={form.storeCount?.toString() ?? ""} onChange={(v) => set("storeCount", v ? Number(v) : undefined)} />
-            <TextField label="Retail mix basis" value={form.retailMixBasis ?? ""} onChange={(v) => set("retailMixBasis", v || undefined)} />
-            <TextField label="Assortment plan" value={form.assortmentPlan ?? ""} onChange={(v) => set("assortmentPlan", v || undefined)} />
-            <TextField label="Retail product type" value={form.retailProductType ?? ""} onChange={(v) => set("retailProductType", v || undefined)} />
-            <TextField label="Retail delivery" value={form.retailDelivery ?? ""} onChange={(v) => set("retailDelivery", v || undefined)} />
-            <TextField label="Purchasing subsidiary name" value={form.purchasingSubsidiaryName ?? ""} onChange={(v) => set("purchasingSubsidiaryName", v || undefined)} />
+            <TextField label="How many physical stores do you operate, if applicable?" value={form.storeCount?.toString() ?? ""} onChange={(v) => set("storeCount", v ? Number(v) : undefined)} />
+            <SelectField label="Do you purchase centrally, by region, by store, or through a combination?" value={form.purchasingStructure} onChange={(v) => set("purchasingStructure", v || undefined)} options={PURCHASING_STRUCTURE_OPTIONS} />
+            <SelectField label="Is your purchasing office contracted to a third party?" value={form.purchasingOutsourced} onChange={(v) => set("purchasingOutsourced", v || undefined)} options={YES_NO_CONFIRM} />
+            {form.purchasingOutsourced === "YES" && (
+              <TextField label="Third-party company / arrangement" value={details.purchasingThirdParty ?? ""} onChange={(v) => setDetail("purchasingThirdParty", v || undefined)} />
+            )}
+            <SelectField label="Is your purchasing office managed by a subsidiary company?" value={form.purchasingSubsidiary} onChange={(v) => set("purchasingSubsidiary", v || undefined)} options={YES_NO_CONFIRM} />
+            {form.purchasingSubsidiary === "YES" && (
+              <TextField label="Subsidiary company name" value={form.purchasingSubsidiaryName ?? ""} onChange={(v) => set("purchasingSubsidiaryName", v || undefined)} />
+            )}
+            <SelectField label="Do you import directly, purchase from local suppliers, or both?" value={form.retailSupply} onChange={(v) => set("retailSupply", v || undefined)} options={RETAIL_SUPPLY_OPTIONS} />
+            <SelectField label="Basis for the sourcing percentages" value={form.retailMixBasis} onChange={(v) => set("retailMixBasis", v || undefined)} options={RETAIL_MIX_BASIS_OPTIONS} />
+            <SelectField label="Are you planning to expand or change your assortment in the next 6–12 months?" value={form.assortmentPlan} onChange={(v) => set("assortmentPlan", v || undefined)} options={YES_NO_CONFIRM} />
+            <SelectField label="Are you seeking branded products, private-label products, or both?" value={form.retailProductType} onChange={(v) => set("retailProductType", v || undefined)} options={PRODUCT_TYPE_OPTIONS} />
+            <SelectField label="Where should suppliers deliver?" value={form.retailDelivery} onChange={(v) => set("retailDelivery", v || undefined)} options={RETAIL_DELIVERY_OPTIONS} />
           </div>
-          <ListField label="Retail formats" value={form.retailFormats ?? []} onChange={(v) => set("retailFormats", v)} placeholder="Supermarket, Convenience" />
-          <Field label="Purchasing structure">
-            <select
-              value={form.purchasingStructure ?? ""}
-              onChange={(e) => set("purchasingStructure", e.target.value || undefined)}
-              className="flex h-10 w-full rounded-xl border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none focus:border-brand-teal"
-            >
-              <option value="">Select an option</option>
-              <option value="CENTRAL">Centrally</option>
-              <option value="REGION">By region</option>
-              <option value="STORE">By store</option>
-              <option value="COMBINATION">Combination</option>
-            </select>
+          {form.retailDelivery === "Another arrangement" && (
+            <TextField label="Other delivery arrangement" value={details.retailDeliveryOther ?? ""} onChange={(v) => setDetail("retailDeliveryOther", v || undefined)} />
+          )}
+          <Field label="Geographical reach of your stores and online operation">
+            <Textarea value={form.retailGeography ?? ""} onChange={(e) => set("retailGeography", e.target.value || undefined)} />
           </Field>
-          <Field label="Retail supply">
-            <select
-              value={form.retailSupply ?? ""}
-              onChange={(e) => set("retailSupply", e.target.value || undefined)}
-              className="flex h-10 w-full rounded-xl border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none focus:border-brand-teal"
-            >
-              <option value="">Select an option</option>
-              <option value="directImport">Direct import</option>
-              <option value="localSupplier">Local supplier</option>
-              <option value="both">Both</option>
-            </select>
+          <Field label="Where is your purchasing office located?">
+            <Textarea value={form.purchasingOffice ?? ""} onChange={(e) => set("purchasingOffice", e.target.value || undefined)} />
           </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <TextField label="Direct import %" value={form.directImportPercent?.toString() ?? ""} onChange={(v) => set("directImportPercent", v ? Number(v) : undefined)} />
-            <TextField label="Local supplier %" value={form.localSupplierPercent?.toString() ?? ""} onChange={(v) => set("localSupplierPercent", v ? Number(v) : undefined)} />
-          </div>
-          <TextField label="Retail expansion products" value={form.retailExpansionProducts ?? ""} onChange={(v) => set("retailExpansionProducts", v || undefined)} />
+          {form.retailSupply === "Both" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="Imported directly (%)" value={form.directImportPercent?.toString() ?? ""} onChange={(v) => set("directImportPercent", v ? Number(v) : undefined)} />
+              <TextField label="Purchased from local suppliers (%)" value={form.localSupplierPercent?.toString() ?? ""} onChange={(v) => set("localSupplierPercent", v ? Number(v) : undefined)} />
+            </div>
+          )}
+          {form.assortmentPlan === "YES" && (
+            <Field label="Which categories or products interest you?">
+              <Textarea value={form.retailExpansionProducts ?? ""} onChange={(e) => set("retailExpansionProducts", e.target.value || undefined)} />
+            </Field>
+          )}
         </Panel>
       )}
 
       <Panel
-        n="06"
+        n={nextSection()}
         title="Sourcing focus"
         subtitle="What you're looking for right now (kept with your profile)."
       >
@@ -507,6 +717,55 @@ export default function BuyerProfileForm() {
           onChange={(v) => set("targetMarkets", v as BuyerProfileInput["targetMarkets"])}
           options={GCC_MARKET_OPTIONS}
         />
+      </Panel>
+
+      <Panel
+        n={nextSection()}
+        title="Public profile"
+        subtitle="What manufacturers see when you message them or on your profile page."
+      >
+        <div className="flex items-center gap-4">
+          <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl border border-brand-line bg-brand-bg-alt">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Company logo" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xs text-brand-muted">No logo</span>
+            )}
+          </div>
+          <div className="space-y-2">
+            <label className="inline-block cursor-pointer rounded-lg border border-brand-line px-3 py-1.5 text-xs font-medium text-brand-ink hover:bg-brand-bg-alt">
+              {logoUp.isPending ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                disabled={logoUp.isPending}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) await logoUp.mutateAsync(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {logoUrl && (
+              <button
+                type="button"
+                className="block text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
+                disabled={logoDel.isPending}
+                onClick={() => logoDel.mutate()}
+              >
+                Remove logo
+              </button>
+            )}
+          </div>
+        </div>
+        <Field label="Public description">
+          <Textarea
+            value={form.publicDescription ?? ""}
+            onChange={(e) => set("publicDescription", e.target.value || undefined)}
+            placeholder="A short blurb about your company shown to manufacturers when you reach out."
+          />
+        </Field>
       </Panel>
 
       {error && <p className="text-xs text-red-600">{error}</p>}

@@ -5,7 +5,7 @@ import path from "node:path";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma.js";
 import { storage } from "../storage/index.js";
-import { requireRole } from "../middleware/requireAuth.js";
+import { requireRole, requireAuth } from "../middleware/requireAuth.js";
 import { buyerProfileSchema, type BuyerProfileDto } from "@mea/shared";
 
 export const buyerProfilesRouter = Router();
@@ -28,6 +28,22 @@ const portfolioUpload = multer({
     ].includes(file.mimetype);
     if (ok) cb(null, true);
     else cb(new Error("Unsupported portfolio file type"));
+  },
+});
+
+// Profile logo / image upload: images only, max 5 MB.
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok =
+      file.mimetype === "image/png" ||
+      file.mimetype === "image/jpeg" ||
+      file.mimetype === "image/webp" ||
+      file.mimetype === "image/gif" ||
+      /\.(png|jpe?g|webp|gif)$/i.test(file.originalname);
+    if (ok) return cb(null, true);
+    cb(new Error("Please attach a PNG, JPG, WEBP, or GIF image."));
   },
 });
 
@@ -100,14 +116,23 @@ function toDto(p: any): BuyerProfileDto {
   };
 }
 
+/** Like `toDto`, but also resolves a short-lived signed URL for the profile logo. */
+async function toDtoWithLogo(p: any): Promise<BuyerProfileDto> {
+  const base = toDto(p);
+  const logo = (p.portfolioFiles ?? []).find((f: any) => f.id === p.logoFileId);
+  base.logoUrl = logo ? await storage.getSignedUrl(logo.storageKey, 300).catch(() => null) : null;
+  return base;
+}
+
 /** Get the signed-in buyer's own profile (404 if none yet). */
 buyerProfilesRouter.get("/", requireRole("BUYER"), async (req, res, next) => {
   try {
     const profile = await prisma.buyerProfile.findUnique({
       where: { accountId: req.account!.id },
+      include: { portfolioFiles: true },
     });
     if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
-    return res.json(toDto(profile));
+    return res.json(await toDtoWithLogo(profile));
   } catch (err) {
     next(err);
   }
@@ -122,9 +147,109 @@ buyerProfilesRouter.put("/", requireRole("BUYER"), async (req, res, next) => {
     const details = data.details as unknown as Prisma.InputJsonValue | undefined;
     const existing = await prisma.buyerProfile.findUnique({ where: { accountId } });
     const profile = existing
-      ? await prisma.buyerProfile.update({ where: { accountId }, data: { ...data, contacts, details } })
-      : await prisma.buyerProfile.create({ data: { accountId, ...data, contacts, details } });
-    return res.json(toDto(profile));
+      ? await prisma.buyerProfile.update({ where: { accountId }, data: { ...data, contacts, details }, include: { portfolioFiles: true } })
+      : await prisma.buyerProfile.create({ data: { accountId, ...data, contacts, details }, include: { portfolioFiles: true } });
+    return res.json(await toDtoWithLogo(profile));
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Upload a profile logo / image. Stored as a BuyerFile; the file id is recorded on
+ *  the profile's `logoFileId`. Replaces any prior logo. */
+buyerProfilesRouter.post(
+  "/logo",
+  requireRole("BUYER"),
+  logoUpload.single("logo"),
+  async (req, res, next) => {
+    try {
+      const accountId = req.account!.id;
+      const profile = await prisma.buyerProfile.findUnique({
+        where: { accountId },
+        include: { portfolioFiles: true },
+      });
+      if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: "No image provided" });
+      const ext = path.extname(file.originalname).toLowerCase() || ".png";
+      const key = `buyers/${accountId}/logo-${randomUUID()}${ext}`;
+      await storage.put(key, file.buffer, file.mimetype);
+      const created = await prisma.buyerFile.create({
+        data: {
+          buyerProfileId: profile.id,
+          storageKey: key,
+          originalName: file.originalname,
+          contentType: file.mimetype,
+          sizeBytes: file.size,
+        },
+      });
+      // Best-effort delete of the previously linked logo.
+      if (profile.logoFileId) {
+        const prev = profile.portfolioFiles.find((f) => f.id === profile.logoFileId);
+        if (prev) {
+          if (prev.storageKey) await storage.delete(prev.storageKey).catch(() => {});
+          await prisma.buyerFile.delete({ where: { id: prev.id } }).catch(() => {});
+        }
+      }
+      const updated = await prisma.buyerProfile.update({
+        where: { accountId },
+        data: { logoFileId: created.id },
+        include: { portfolioFiles: true },
+      });
+      return res.status(201).json(await toDtoWithLogo(updated));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+/** Remove the profile logo (clears `logoFileId`, deletes the underlying file). */
+buyerProfilesRouter.delete("/logo", requireRole("BUYER"), async (req, res, next) => {
+  try {
+    const accountId = req.account!.id;
+    const profile = await prisma.buyerProfile.findUnique({
+      where: { accountId },
+      include: { portfolioFiles: true },
+    });
+    if (profile?.logoFileId) {
+      const logo = profile.portfolioFiles.find((f) => f.id === profile.logoFileId);
+      if (logo?.storageKey) await storage.delete(logo.storageKey).catch(() => {});
+      await prisma.buyerFile.delete({ where: { id: profile.logoFileId } }).catch(() => {});
+      await prisma.buyerProfile.update({ where: { accountId }, data: { logoFileId: null } });
+    }
+    return res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Public buyer profile: visible to any signed-in account (e.g. a manufacturer
+ *  viewing who they are messaging). Returns only safe fields. */
+buyerProfilesRouter.get("/public/:accountId", requireAuth, async (req, res, next) => {
+  try {
+    const accountId = req.params.accountId;
+    const profile = await prisma.buyerProfile.findUnique({
+      where: { accountId },
+      include: { portfolioFiles: true },
+    });
+    if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
+    const logo = (profile.portfolioFiles ?? []).find((f: any) => f.id === profile.logoFileId);
+    const logoUrl = logo ? await storage.getSignedUrl(logo.storageKey, 300).catch(() => null) : null;
+    return res.json({
+      accountId: profile.accountId,
+      companyName: profile.companyName,
+      country: profile.country ?? null,
+      website: profile.website ?? null,
+      publicDescription: profile.publicDescription ?? null,
+      logoUrl,
+      buyerType: profile.buyerType ?? null,
+      roles: profile.roles ?? [],
+      categories: profile.categories ?? [],
+      operatingCountries: profile.operatingCountries ?? [],
+      targetMarkets: profile.targetMarkets ?? [],
+      channels: profile.channels ?? [],
+      sourcingNeeds: profile.sourcingNeeds ?? null,
+    });
   } catch (err) {
     next(err);
   }

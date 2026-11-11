@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { requireAdmin } from "../middleware/requireAdmin.js";
 
 export const activityRouter = Router();
 
@@ -23,6 +24,33 @@ activityRouter.get("/", requireAuth, async (req, res, next) => {
       where,
       orderBy: { createdAt: "desc" },
       take: 25,
+    });
+    return res.json(
+      events.map((e) => ({
+        id: e.id,
+        type: e.type,
+        payload: e.payload,
+        actorAccountId: e.actorAccountId ?? undefined,
+        createdAt: e.createdAt.toISOString(),
+      })),
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Admin-only mirror used by the "Received cards" review queue. Returns every
+ * card-published / card-submitted-for-review event across all manufacturers
+ * (admins authenticate via Firebase, not a self-service Account, so the
+ * account-scoped `/` route above does not apply here).
+ */
+activityRouter.get("/admin", requireAdmin, async (_req, res, next) => {
+  try {
+    const events = await prisma.activityEvent.findMany({
+      where: { type: { in: ["card_published", "card_submitted_for_review"] } },
+      orderBy: { createdAt: "desc" },
+      take: 100,
     });
     return res.json(
       events.map((e) => ({

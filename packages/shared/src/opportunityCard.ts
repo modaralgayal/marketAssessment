@@ -3,8 +3,24 @@ import { z } from "zod";
 export const opportunitySideSchema = z.enum(["BUY", "SELL"]);
 export type OpportunitySide = z.infer<typeof opportunitySideSchema>;
 
-export const opportunityStatusSchema = z.enum(["DRAFT", "POSTED", "ARCHIVED"]);
+// Lifecycle of a card:
+//  DRAFT       — authoring, not visible to anyone else
+//  IN_REVIEW   — sent to the administrator for review (NOT published to buyers)
+//  POSTED      — published, visible to buyers + the matchmaking agent
+//  PAUSED      — hidden from buyers, resumable
+//  ARCHIVED    — taken down / closed (legacy "Closed")
+export const opportunityStatusSchema = z.enum(["DRAFT", "POSTED", "ARCHIVED", "IN_REVIEW", "PAUSED"]);
 export type OpportunityStatus = z.infer<typeof opportunityStatusSchema>;
+
+/** Editor-facing status labels (the `status` field the frontend sends).
+ *  "Delete" is a destructive action, not a persisted status. */
+export const opportunityStatusLabelSchema = z.enum([
+  "Draft",
+  "Internal review",
+  "Publish",
+  "Pause",
+]);
+export type OpportunityStatusLabel = z.infer<typeof opportunityStatusLabelSchema>;
 
 const optionalText = z
   .string()
@@ -45,11 +61,10 @@ export const opportunityCardSchema = z.object({
   support: optionalText,
   sources: z.array(opportunityRefSchema).optional(),
   assets: z.array(opportunityRefSchema).optional(),
-  // Card status uses the model's labels; the server maps them to the internal
-  // DRAFT / POSTED / ARCHIVED enum (see api/src/routes/opportunityCards.ts).
-  status: z
-    .enum(["Draft", "Ready for internal review", "Open for buyer engagement", "Paused", "Closed"])
-    .optional(),
+  // Card status uses the editor's labels; the server maps them to the internal
+  // DRAFT / IN_REVIEW / POSTED / PAUSED enum (see api/src/routes/opportunityCards.ts).
+  // "Delete" is handled as a separate destructive action, not a status value.
+  status: opportunityStatusLabelSchema.optional(),
   attributes: z.record(z.unknown()).optional(),
 });
 
@@ -108,7 +123,16 @@ export interface OpportunityInteractionDto {
 /** A marketplace card enriched with the caller's own interaction state. */
 export interface MarketCardDto extends OpportunityCardDto {
   interaction?: OpportunityInteractionDto | null;
-  owner?: { companyName: string; country?: string | null } | null;
+  owner?: {
+    companyName: string;
+    country?: string | null;
+    /** Short-lived signed URL to the owner's logo/profile image (may be null). */
+    logoUrl?: string | null;
+    /** Public, buyer-visible description of the owner. */
+    publicDescription?: string | null;
+    /** Account id — used to link to the owner's public profile page. */
+    accountId?: string | null;
+  } | null;
 }
 
 export interface EngagementRowDto {

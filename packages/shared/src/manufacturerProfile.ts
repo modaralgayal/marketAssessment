@@ -1,18 +1,12 @@
 import { z } from "zod";
 import type { ContactPerson } from "./customer";
 import {
-  REVENUE_OPTIONS,
   YES_NO_UNSURE_OPTIONS,
   OTHER_CERT_OPTIONS,
   GCC_MARKET_OPTIONS,
-  SALES_CHANNEL_OPTIONS,
-  FROZEN_STORAGE_OPTIONS,
   SHELF_LIFE_OPTIONS,
-  BRAND_APPROACH_OPTIONS,
   TARGET_POTENTIAL_OPTIONS,
-  CAPACITY_OPTIONS,
   SFDA_OPTIONS,
-  ADAPTABILITY_OPTIONS,
   values,
   optionalText,
 } from "./submission";
@@ -23,7 +17,7 @@ export const manufacturerProfileSchema = z.object({
   country: z.string().trim().min(1, "Country is required").max(500),
   website: optionalText,
   industryCategory: z.string().trim().min(1, "Industry / category is required").max(500),
-  annualRevenue: z.enum(values(REVENUE_OPTIONS)).optional(),
+  annualRevenue: optionalText,
   annualRevenueCustom: optionalText,
   yearsInBusiness: optionalText,
   currentExportMarkets: optionalText,
@@ -31,13 +25,13 @@ export const manufacturerProfileSchema = z.object({
   // Section 2 - Products and Operations
   halalCert: z.enum(values(YES_NO_UNSURE_OPTIONS)).optional(),
   sfdaStatus: z.enum(values(SFDA_OPTIONS)).optional(),
-  frozenStorage: z.enum(values(FROZEN_STORAGE_OPTIONS)).optional(),
+  frozenStorage: optionalText,
   shelfLife: z.enum(values(SHELF_LIFE_OPTIONS)).optional(),
   otherCerts: z.array(z.enum(values(OTHER_CERT_OPTIONS))).default([]),
   otherCertsCustom: optionalText,
   labelLanguages: optionalText,
-  productAdaptability: z.enum(values(ADAPTABILITY_OPTIONS)).optional(),
-  brandApproach: z.enum(values(BRAND_APPROACH_OPTIONS)).optional(),
+  productAdaptability: optionalText,
+  brandApproach: optionalText,
   leadTimes: optionalText,
 
   // Section 3 - Target Market
@@ -46,13 +40,15 @@ export const manufacturerProfileSchema = z.object({
   gccSituation: optionalText,
   targetMarketPotential: z.enum(values(TARGET_POTENTIAL_OPTIONS)).optional(),
   targetMarketPotentialOther: optionalText,
-  salesChannels: z.array(z.enum(values(SALES_CHANNEL_OPTIONS))).default([]),
+  /** Primary target export market (the reference prototype's required "Target export market" field). */
+  targetExportMarket: optionalText,
+  salesChannels: z.array(z.string().trim().min(1).max(200)).default([]),
   channelStrategy: optionalText,
 
   // Section 4 - Operational Readiness
   moq: optionalText,
   exportContact: z.boolean().optional(),
-  productionCapacity: z.enum(values(CAPACITY_OPTIONS)).optional(),
+  productionCapacity: optionalText,
 
   // Section 5 - Decision-Maker Contact
   contactFullName: z.string().trim().min(1, "Full name is required").max(500),
@@ -60,6 +56,8 @@ export const manufacturerProfileSchema = z.object({
   contactEmail: z.string().trim().min(1, "Email is required").email("Enter a valid email").max(2000),
   contactPhone: optionalText,
   anythingElse: optionalText,
+  /** Export-contact details shown when the dedicated contact is a different person (reference prototype). */
+  exportContactDetails: optionalText,
 
   // Profile (self-service) fields
   contacts: z
@@ -91,6 +89,9 @@ export const manufacturerProfileSchema = z.object({
   privateLabel: optionalText, // "yes" | "no" | "considering"
   certs: z.array(z.string().trim().min(1).max(100)).default([]), // Halal | BRCGS | IFS | FSSC | ISO | HACCP | Organic | Other | None
   catalogueCoverage: z.record(z.boolean()).optional(), // { products, prices, ... }
+
+  // Public profile (visible to buyers on the marketplace + profile page)
+  publicDescription: optionalText,
 });
 
 export type ManufacturerProfileInput = z.infer<typeof manufacturerProfileSchema>;
@@ -115,6 +116,8 @@ export interface ManufacturerProfileDto extends ManufacturerProfileInput {
   catalogueFileId?: string | null;
   /** Uploaded catalogue / price-list documents (PDFs + links). */
   files?: ManufacturerFileInfo[];
+  /** Short-lived signed URL for the profile logo/image (null if none). */
+  logoUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }

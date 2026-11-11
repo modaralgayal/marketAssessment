@@ -17,6 +17,7 @@ import PublicOnlyRoute from "./features/auth/PublicOnlyRoute";
 import ResetPassword from "./features/auth/ResetPassword";
 import AccessRequests from "./features/admin/AccessRequests";
 import AccountsList from "./features/admin/AccountsList";
+import ReceivedCards from "./features/admin/ReceivedCards";
 import ManufacturerDashboard, {
   ManufacturerOverviewRoute,
   ManufacturerCardsRoute,
@@ -30,7 +31,9 @@ import ConversationsPanel from "./features/conversation/ConversationsPanel";
 import BuyerEngagementPanel from "./features/manufacturer/BuyerEngagementPanel";
 import SourcingInquiryPanel from "./features/buyer/SourcingInquiryPanel";
 import ManufacturerProfileForm from "./features/manufacturer/ManufacturerProfileForm";
+import ManufacturerPublicProfile from "./features/manufacturer/ManufacturerPublicProfile";
 import BuyerProfileForm from "./features/buyer/BuyerProfileForm";
+import BuyerPublicProfile from "./features/buyer/BuyerPublicProfile";
 import { MarketingPage } from "./features/marketing/pages";
 import { useAuth } from "./lib/auth";
 import { setUnauthorizedHandler } from "./lib/api";
@@ -211,6 +214,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/received-cards"
+          element={
+            <ProtectedRoute>
+              <ReceivedCards />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Renewed marketing site (HTML prototype port) inside the shared shell.
             Guarded: signed-in account holders are sent to their workspace. */}
@@ -230,6 +241,25 @@ export default function App() {
           <Route path="/insights" element={<MarketingPage route="insights" />} />
           <Route path="/:slug" element={<MarketingPageFromSlug />} />
         </Route>
+
+        {/* Public profile pages (visible to any signed-in account, used from
+            opportunity cards + conversations to identify who you're dealing with). */}
+        <Route
+          path="/manufacturer/:accountId/profile"
+          element={
+            <RequireRole roles={["BUYER", "MANUFACTURER", "ADMIN"]}>
+              <ManufacturerPublicProfile />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/buyer/:accountId/profile"
+          element={
+            <RequireRole roles={["BUYER", "MANUFACTURER", "ADMIN"]}>
+              <BuyerPublicProfile />
+            </RequireRole>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

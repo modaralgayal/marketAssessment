@@ -11,12 +11,16 @@ import {
 const STATUS_LABEL: Record<OpportunityStatus, string> = {
   DRAFT: "Draft",
   POSTED: "Open for buyer engagement",
+  IN_REVIEW: "Internal review",
+  PAUSED: "Paused",
   ARCHIVED: "Closed",
 };
 
 const STATUS_STYLES: Record<OpportunityStatus, string> = {
   DRAFT: "bg-brand-bg-alt text-brand-muted",
   POSTED: "bg-brand-teal/10 text-brand-teal",
+  IN_REVIEW: "bg-brand-orange/15 text-brand-ink",
+  PAUSED: "bg-brand-line text-brand-muted",
   ARCHIVED: "bg-brand-line text-brand-muted",
 };
 
