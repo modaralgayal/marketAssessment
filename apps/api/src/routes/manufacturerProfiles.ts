@@ -120,6 +120,7 @@ function toDto(p: any): ManufacturerProfileDto {
     contacts: p.contacts ?? undefined,
     productCategory: p.productCategory ?? undefined,
     companyInfo: p.companyInfo ?? undefined,
+    publicDescription: p.publicDescription ?? undefined,
     // Expanded profile (reference prototype)
     exportCount: p.exportCount ?? undefined,
     topMarkets: p.topMarkets ?? undefined,

@@ -64,6 +64,7 @@ function toDto(p: any): BuyerProfileDto {
     // Categories & portfolio
     categories: p.categories ?? [],
     portfolioInfo: p.portfolioInfo ?? undefined,
+    publicDescription: p.publicDescription ?? undefined,
     portfolioProducts: p.portfolioProducts ?? undefined,
     privateLabel: p.privateLabel ?? undefined,
     privateLabelName: p.privateLabelName ?? undefined,
