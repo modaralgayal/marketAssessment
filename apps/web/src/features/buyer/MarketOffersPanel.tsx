@@ -320,14 +320,6 @@ function OfferCard({
             >
               Decline
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => act.mutate("REFERRED")}
-              disabled={act.isPending}
-            >
-              Refer
-            </Button>
           </div>
         )}
       </CardContent>

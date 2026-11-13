@@ -11,8 +11,19 @@ import { PasswordInput } from "../../components/ui/PasswordInput";
  * (bootstrap is idempotent on the server). Users with no Account yet are told
  * they need an invite link — and can request one right here.
  */
+/** Turn the raw Account-resolution error into something the user can act on. */
+function accountResolutionError(message: string): string {
+  if (/invalid or expired token/i.test(message)) {
+    return "We couldn't verify your Google sign-in with the server. This usually means the app's Firebase project doesn't match the backend, or this page's domain isn't authorized for sign-in. Please contact support or try again.";
+  }
+  if (/missing bearer token/i.test(message)) {
+    return "Your sign-in session wasn't sent to the server. Please try again, and check that the app is online.";
+  }
+  return message || "Something went wrong while loading your workspace. Please try again.";
+}
+
 export default function Login() {
-  const { user, loading, account, accountLoading, signIn, signInWithEmail, resetPassword } = useAuth();
+  const { user, loading, account, accountLoading, accountError, signIn, signInWithEmail, resetPassword, logout } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,10 +108,26 @@ export default function Login() {
         <h1 className="mb-1 text-lg font-bold text-brand-ink">Sign in</h1>
 
         <p className="mb-6 text-sm text-brand-muted">
-          {signedInButNoAccount
-            ? "This Google account doesn't have a workspace yet. You need an invite link from Integrate Us to get started."
+          {signedInButNoAccount && !accountError
+            ? "This Google account doesn't have a workspace in this environment yet."
             : "Sign in to access your buyer or manufacturer workspace."}
         </p>
+
+        {signedInButNoAccount && !accountError && (
+          <div className="mb-5 rounded-lg border border-brand-line bg-brand-bg-alt/50 p-3 text-left">
+            <p className="text-xs leading-relaxed text-brand-muted">
+              If you already have a workspace, sign out and use the Google account that was invited.
+              Otherwise, request access or use your invite link to create one.
+            </p>
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="mt-2 text-xs font-medium text-brand-teal hover:underline"
+            >
+              Sign out and switch accounts
+            </button>
+          </div>
+        )}
 
         <button
           onClick={handleSignIn}
@@ -111,6 +138,22 @@ export default function Login() {
         </button>
 
         {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+
+        {accountError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-left">
+            <p className="text-sm font-medium text-red-700">Sign-in couldn't be completed</p>
+            <p className="mt-1 text-xs leading-relaxed text-red-600">
+              {accountResolutionError(accountError)}
+            </p>
+            <button
+              type="button"
+              onClick={() => logout()}
+              className="mt-2 text-xs font-medium text-red-700 underline"
+            >
+              Sign out and try again
+            </button>
+          </div>
+        )}
 
         <div className="my-5 flex items-center gap-3 text-xs text-brand-muted">
           <span className="h-px flex-1 bg-brand-line" />

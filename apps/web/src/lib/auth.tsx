@@ -57,6 +57,10 @@ interface AuthContextValue {
   account: AccountDto | null;
   /** True while we resolve whether the signed-in user has an Account. */
   accountLoading: boolean;
+  /** Error from resolving the signed-in user's Account (excluding the expected
+   *  "no account yet" state). Surfaced by the sign-in UI so a failed sign-in is
+   *  visible instead of silently bouncing the user back to /login. */
+  accountError: string | null;
   signIn: () => Promise<void>;
   /** Sign in with email + password (existing accounts). */
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -86,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState<AccountDto | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
@@ -103,15 +108,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     if (!user) {
       setAccount(null);
+      setAccountError(null);
       return;
     }
     setAccountLoading(true);
+    setAccountError(null);
     (async () => {
       try {
         const me = await fetchAccountMe();
         if (!cancelled) setAccount(me);
-      } catch {
-        if (!cancelled) setAccount(null);
+      } catch (e) {
+        if (!cancelled) {
+          const msg = e instanceof Error ? e.message : "Failed to load account";
+          setAccount(null);
+          // "Account not found" is the expected state for a signed-in user who
+          // has not yet completed invite-based sign-up — the Login UI handles it
+          // with an invite prompt. Any other failure (e.g. the server rejecting
+          // the token) is a real error we want to surface, not swallow.
+          setAccountError(/account not found/i.test(msg) ? null : msg);
+        }
       } finally {
         if (!cancelled) setAccountLoading(false);
       }
@@ -193,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, account, accountLoading, signIn, signInWithEmail, signUpWithEmail, bootstrap, logout, resetPassword, verifyResetCode, confirmResetPassword, reauthenticate, changePassword, changeEmail }}
+      value={{ user, loading, account, accountLoading, accountError, signIn, signInWithEmail, signUpWithEmail, bootstrap, logout, resetPassword, verifyResetCode, confirmResetPassword, reauthenticate, changePassword, changeEmail }}
     >
       {children}
     </AuthContext.Provider>

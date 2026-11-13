@@ -44,17 +44,23 @@ function MarketingPageFromSlug() {
 }
 
 export default function App() {
-  const { logout } = useAuth();
+  const { logout, account } = useAuth();
   const navigate = useNavigate();
 
-  // When any authenticated request returns 401 (expired / invalid token), sign
-  // the user out app-wide and return them to the sign-in page instead of
-  // surfacing raw "Missing bearer token" errors.
+  // When any authenticated request returns 401 (expired / invalid token) on an
+  // already-established session, sign the user out app-wide and return them to
+  // the sign-in page instead of surfacing raw "Missing bearer token" errors.
+  // We deliberately do NOT fire this while an account is still being resolved
+  // right after sign-in: a 401 there means the session couldn't be established
+  // (e.g. the server rejected the token), and auto-logging-out would bounce the
+  // user back to /login in a loop with no explanation. The sign-in UI surfaces
+  // the real error in that case.
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      if (!account) return;
       void logout().finally(() => navigate("/login", { replace: true }));
     });
-  }, [logout, navigate]);
+  }, [logout, navigate, account]);
 
   return (
       <Routes>

@@ -7,10 +7,26 @@ const TEST_UID = "test-account-uid";
 const TEST_EMAIL = "account-test@example.com";
 const TEST_TOKEN = "test-account-token";
 
+// Regression fixtures for the "stale firebaseUid" scenario (see docs/deployment.md):
+// an ACTIVE account row whose stored firebaseUid no longer matches the UID Google
+// mints now. This is the exact condition that made a real, working Google sign-in
+// start returning "no account".
+const STALE_UID = "stale-regression-uid";
+const LIVE_UID = "live-regression-uid";
+const STALE_TOKEN = "stale-regression-token";
+const LIVE_TOKEN = "live-regression-token";
+const REGRESSION_EMAIL = "stale-regression@example.com";
+
 vi.mock("../lib/firebaseAdmin.js", () => ({
   verifyIdToken: vi.fn(async (token: string) => {
     if (token === TEST_TOKEN) {
       return { uid: TEST_UID, email: TEST_EMAIL, email_verified: true };
+    }
+    if (token === STALE_TOKEN) {
+      return { uid: STALE_UID, email: REGRESSION_EMAIL, email_verified: true };
+    }
+    if (token === LIVE_TOKEN) {
+      return { uid: LIVE_UID, email: REGRESSION_EMAIL, email_verified: true };
     }
     throw new Error("invalid token");
   }),
@@ -85,5 +101,39 @@ describe("Privacy-policy version", () => {
     const res = await request(app).get("/api/privacy-policy/version");
     expect(res.status).toBe(200);
     expect(typeof res.body.version).toBe("number");
+  });
+});
+
+describe("Stale firebaseUid (regression: 'no account' on Google sign-in)", () => {
+  beforeAll(async () => {
+    await prisma.account.deleteMany({ where: { firebaseUid: { in: [STALE_UID, LIVE_UID] } } });
+    // The row is bound to a DIFFERENT firebaseUid than the one Google mints now —
+    // the exact condition that made a real, ACTIVE account unreachable after sign-in.
+    await prisma.account.create({
+      data: { firebaseUid: STALE_UID, email: REGRESSION_EMAIL, role: "BUYER", status: "ACTIVE" },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.account.deleteMany({ where: { firebaseUid: { in: [STALE_UID, LIVE_UID] } } }).catch(() => {});
+  });
+
+  it("returns 403 'Account not found' when the token uid ≠ stored firebaseUid", async () => {
+    const res = await request(app)
+      .get("/api/accounts/me")
+      .set({ Authorization: `Bearer ${LIVE_TOKEN}` });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/account not found/i);
+  });
+
+  it("resolves the account once firebaseUid is rebound to the live token uid", async () => {
+    await prisma.account.update({ where: { firebaseUid: STALE_UID }, data: { firebaseUid: LIVE_UID } });
+    const res = await request(app)
+      .get("/api/accounts/me")
+      .set({ Authorization: `Bearer ${LIVE_TOKEN}` });
+    expect(res.status).toBe(200);
+    expect(res.body.email).toBe(REGRESSION_EMAIL);
+    // The Firebase UID is never leaked to the client.
+    expect(res.body.firebaseUid).toBeUndefined();
   });
 });
