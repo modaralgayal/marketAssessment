@@ -1,10 +1,16 @@
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchManufacturerPublicProfile, type OpportunityCardDto } from "../../lib/api";
 
-function Fact({ label, value }: { label: string; value?: string | string[] | null }) {
-  if (value == null || (Array.isArray(value) && value.length === 0)) return null;
+type FactValue = string | string[] | boolean | null | undefined;
+
+function Fact({ label, value }: { label: string; value?: FactValue }) {
+  if (value == null) return null;
+  if (typeof value === "boolean") value = value ? "Yes" : "No";
+  if (Array.isArray(value) && value.length === 0) return null;
   const text = Array.isArray(value) ? value.join(", ") : value;
+  if (text === "") return null;
   return (
     <div>
       <dt className="text-[11px] font-medium uppercase tracking-wide text-brand-muted">{label}</dt>
@@ -13,8 +19,34 @@ function Fact({ label, value }: { label: string; value?: string | string[] | nul
   );
 }
 
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-brand-line bg-white p-5">
+      <h2 className="mb-3 text-sm font-semibold text-brand-ink">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function FactGrid({ facts }: { facts: Array<[string, FactValue]> }) {
+  const shown = facts.filter(([, v]) => {
+    if (v == null) return false;
+    if (typeof v === "boolean") return true;
+    if (Array.isArray(v)) return v.length > 0;
+    return v !== "";
+  });
+  if (shown.length === 0) return null;
+  return (
+    <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+      {shown.map(([label, value]) => (
+        <Fact key={label} label={label} value={value} />
+      ))}
+    </dl>
+  );
+}
+
 function OpportunityCardRow({ c }: { c: OpportunityCardDto }) {
-  const facts: Array<[string, string | string[] | null | undefined]> = [
+  const facts: Array<[string, FactValue]> = [
     ["Territory", c.territory],
     ["Channels", c.channels?.length ? c.channels : undefined],
     ["Partner", c.partner],
@@ -23,7 +55,7 @@ function OpportunityCardRow({ c }: { c: OpportunityCardDto }) {
     ["Timing", c.timing],
     ["Valid until", c.validUntil],
   ];
-  const shown = facts.filter(([, v]) => v != null && !(Array.isArray(v) && v.length === 0));
+  const shown = facts.filter(([, v]) => v != null && !(Array.isArray(v) && v.length === 0) && v !== "");
   return (
     <li className="rounded-2xl border border-brand-line bg-white p-5">
       <div className="flex items-start justify-between gap-3">
@@ -106,30 +138,129 @@ export default function ManufacturerPublicProfile() {
         </div>
       </div>
 
+      {/* Company */}
+      <Section title="Company">
+        <FactGrid
+          facts={[
+            ["Industry / category", data.industryCategory],
+            ["Product category", data.productCategory],
+            ["Country", data.country],
+            ["Website", data.website],
+            ["Annual revenue", data.annualRevenue],
+            ["Annual revenue (other)", data.annualRevenueCustom],
+            ["Years in business", data.yearsInBusiness],
+            ["Current export markets", data.currentExportMarkets],
+            ["Company info", data.companyInfo],
+          ]}
+        />
+      </Section>
+
+      {/* Products & operations */}
+      <Section title="Products & operations">
+        <FactGrid
+          facts={[
+            ["Halal certified", data.halalCert],
+            ["SFDA status", data.sfdaStatus],
+            ["Shelf life", data.shelfLife],
+            ["Frozen storage", data.frozenStorage],
+            ["Other certifications", data.otherCerts?.length ? data.otherCerts : undefined],
+            ["Other certifications (other)", data.otherCertsCustom],
+            ["Label languages", data.labelLanguages],
+            ["Product adaptability", data.productAdaptability],
+            ["Brand approach", data.brandApproach],
+            ["Lead times", data.leadTimes],
+            ["Logistics", data.logistics],
+            ["Pictures", data.pictures],
+            ["Branding", data.branding],
+            ["Private label", data.privateLabel],
+            ["Certifications", data.certs?.length ? data.certs : undefined],
+          ]}
+        />
+      </Section>
+
+      {/* Target market */}
+      <Section title="Target market">
+        <FactGrid
+          facts={[
+            ["Active in GCC", data.gccCurrentlyActive],
+            ["Current GCC markets", data.currentGccMarkets?.length ? data.currentGccMarkets : undefined],
+            ["GCC situation", data.gccSituation],
+            ["Target market potential", data.targetMarketPotential],
+            ["Target market potential (other)", data.targetMarketPotentialOther],
+            ["Target export market", data.targetExportMarket],
+            ["Sales channels", data.salesChannels?.length ? data.salesChannels : undefined],
+            ["Channel strategy", data.channelStrategy],
+            ["Top markets", data.topMarkets],
+            ["Export count", data.exportCount != null ? String(data.exportCount) : undefined],
+          ]}
+        />
+      </Section>
+
+      {/* Operational readiness */}
+      <Section title="Operational readiness">
+        <FactGrid
+          facts={[
+            ["MOQ", data.moq],
+            ["Production capacity", data.productionCapacity],
+            ["Export contact", data.exportContact],
+            ["Export contact details", data.exportContactDetails],
+            ["Anything else", data.anythingElse],
+          ]}
+        />
+      </Section>
+
       {/* Known for / USP */}
       {(data.knownFor || data.usp) && (
         <div className="grid gap-4 sm:grid-cols-2">
           {data.knownFor && (
-            <div className="rounded-2xl border border-brand-line bg-white p-5">
-              <h2 className="mb-1 text-sm font-semibold text-brand-ink">Known for</h2>
+            <Section title="Known for">
               <p className="text-sm leading-relaxed text-brand-muted">{data.knownFor}</p>
-            </div>
+            </Section>
           )}
           {data.usp && (
-            <div className="rounded-2xl border border-brand-line bg-white p-5">
-              <h2 className="mb-1 text-sm font-semibold text-brand-ink">What sets them apart</h2>
+            <Section title="What sets them apart">
               <p className="text-sm leading-relaxed text-brand-muted">{data.usp}</p>
-            </div>
+            </Section>
           )}
         </div>
       )}
 
       {/* About */}
       {data.publicDescription && (
-        <div className="rounded-2xl border border-brand-line bg-white p-5">
-          <h2 className="mb-1 text-sm font-semibold text-brand-ink">About</h2>
+        <Section title="About">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">{data.publicDescription}</p>
-        </div>
+        </Section>
+      )}
+
+      {/* Contacts */}
+      {(data.contactFullName ||
+        data.contactEmail ||
+        data.contacts?.length) && (
+        <Section title="Contacts">
+          <FactGrid
+            facts={[
+              ["Primary contact", data.contactFullName],
+              ["Title", data.contactTitle],
+              ["Email", data.contactEmail],
+              ["Phone", data.contactPhone],
+            ]}
+          />
+          {data.contacts?.length ? (
+            <ul className="mt-4 space-y-2">
+              {data.contacts.map((c, i) => (
+                <li key={i} className="rounded-xl border border-brand-line bg-brand-bg-alt/50 p-3 text-sm">
+                  <p className="font-medium text-brand-ink">{c.name}</p>
+                  {c.position && <p className="text-brand-muted">{c.position}</p>}
+                  {(c.email || c.phone) && (
+                    <p className="mt-0.5 text-xs text-brand-muted">
+                      {[c.email, c.phone].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Section>
       )}
 
       {/* Posted opportunities */}

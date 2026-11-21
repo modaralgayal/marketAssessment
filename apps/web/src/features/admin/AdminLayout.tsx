@@ -27,8 +27,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <nav className="flex items-center gap-6 text-xs">
           <Link to="/admin/access-requests" className={tabClass("/admin/access-requests")}>Access requests</Link>
           <Link to="/admin/accounts" className={tabClass("/admin/accounts")}>Accounts</Link>
+          <Link to="/admin/invites" className={tabClass("/admin/invites")}>Invites</Link>
           <Link to="/admin/received-cards" className={tabClass("/admin/received-cards")}>Received cards</Link>
-          <Link to="/admin/customers" className={tabClass("/admin/customers")}>Customers</Link>
           <Link to="/admin/distributors" className={tabClass("/admin/distributors")}>Distributors</Link>
         </nav>
         <div className="flex items-center gap-4 text-xs text-white/70">

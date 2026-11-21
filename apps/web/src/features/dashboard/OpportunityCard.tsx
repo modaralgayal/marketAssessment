@@ -24,12 +24,6 @@ const STATUS_STYLES: Record<OpportunityStatus, string> = {
   ARCHIVED: "bg-brand-line text-brand-muted",
 };
 
-export interface CardEngagement {
-  recipients: number;
-  engaged: number;
-  pending: number;
-}
-
 function Stat({ label, value }: { label: string; value?: ReactNode }) {
   if (value === undefined || value === null || value === "") return null;
   return (
@@ -47,17 +41,17 @@ function Fallback({ value }: { value?: string | null }) {
 export default function OpportunityCard({
   card,
   onEdit,
+  onView,
   onViewEngagement,
   onPublish,
   onUnpublish,
-  engagement,
 }: {
   card: OpportunityCardDto;
   onEdit: () => void;
+  onView?: () => void;
   onViewEngagement?: () => void;
   onPublish?: () => void;
   onUnpublish?: () => void;
-  engagement?: CardEngagement;
 }) {
   const [shared, setShared] = useState(false);
   const meta = [card.territory, card.partner].filter(Boolean).join(" · ");
@@ -111,23 +105,6 @@ export default function OpportunityCard({
         <Stat label="Timing" value={<Fallback value={card.timing} />} />
       </dl>
 
-      {engagement && (
-        <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl border border-brand-line bg-brand-bg-alt/50 p-3 text-center">
-          <div>
-            <b className="block text-base text-brand-ink">{engagement.recipients}</b>
-            <span className="text-[10px] uppercase tracking-wide text-brand-muted">Recipients</span>
-          </div>
-          <div>
-            <b className="block text-base text-brand-ink">{engagement.engaged}</b>
-            <span className="text-[10px] uppercase tracking-wide text-brand-muted">Engaged</span>
-          </div>
-          <div>
-            <b className="block text-base text-brand-ink">{engagement.pending}</b>
-            <span className="text-[10px] uppercase tracking-wide text-brand-muted">Awaiting reply</span>
-          </div>
-        </div>
-      )}
-
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-brand-line pt-3">
         <div className="flex flex-wrap items-center gap-3">
           {onViewEngagement ? (
@@ -158,6 +135,11 @@ export default function OpportunityCard({
         <button className="text-xs font-medium text-brand-ink hover:underline" onClick={onEdit}>
           Edit card
         </button>
+        {onView ? (
+          <button className="text-xs font-medium text-brand-ink hover:underline" onClick={onView}>
+            View details
+          </button>
+        ) : null}
       </div>
 
       {(sourceCount > 0 || assetCount > 0) && (

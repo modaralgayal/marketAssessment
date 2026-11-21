@@ -1,16 +1,55 @@
+import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchBuyerPublicProfile } from "../../lib/api";
 
-function Fact({ label, value }: { label: string; value?: string | string[] | null }) {
-  if (value == null || (Array.isArray(value) && value.length === 0)) return null;
+type FactValue = string | string[] | number | boolean | Record<string, unknown> | null | undefined;
+
+function Fact({ label, value }: { label: string; value?: FactValue }) {
+  if (value == null) return null;
+  if (typeof value === "boolean") value = value ? "Yes" : "No";
+  if (typeof value === "number") value = String(value);
+  if (typeof value === "object" && !Array.isArray(value)) value = JSON.stringify(value);
+  if (Array.isArray(value) && value.length === 0) return null;
   const text = Array.isArray(value) ? value.join(", ") : value;
+  if (text === "") return null;
   return (
     <div>
       <dt className="text-[11px] font-medium uppercase tracking-wide text-brand-muted">{label}</dt>
       <dd className="mt-0.5 text-sm text-brand-ink">{text}</dd>
     </div>
   );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-brand-line bg-white p-5">
+      <h2 className="mb-3 text-sm font-semibold text-brand-ink">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function FactGrid({ facts }: { facts: Array<[string, FactValue]> }) {
+  const shown = facts.filter(([, v]) => {
+    if (v == null) return false;
+    if (typeof v === "boolean") return true;
+    if (typeof v === "number") return true;
+    if (typeof v === "object") return Object.keys(v).length > 0;
+    return v !== "";
+  });
+  if (shown.length === 0) return null;
+  return (
+    <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+      {shown.map(([label, value]) => (
+        <Fact key={label} label={label} value={value} />
+      ))}
+    </dl>
+  );
+}
+
+function pretty(v?: string | null) {
+  return v ? v.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : null;
 }
 
 export default function BuyerPublicProfile() {
@@ -27,7 +66,7 @@ export default function BuyerPublicProfile() {
     return <p className="p-6 text-sm text-red-600">{(error as Error)?.message ?? "Profile not found."}</p>;
 
   const highlights = [
-    data.buyerType ? data.buyerType.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : null,
+    pretty(data.buyerType),
     ...(data.categories ?? []),
     ...(data.channels ?? []),
     ...(data.targetMarkets ?? []),
@@ -74,34 +113,127 @@ export default function BuyerPublicProfile() {
         </div>
       </div>
 
+      {/* Company */}
+      <Section title="Company">
+        <FactGrid
+          facts={[
+            ["Buyer type", pretty(data.buyerType)],
+            ["Trading name", data.tradingName],
+            ["HQ country", data.hqCountry],
+            ["HQ city", data.hqCity],
+            ["Operating countries", data.operatingCountries?.length ? data.operatingCountries : undefined],
+            ["Roles", data.roles?.length ? data.roles : undefined],
+          ]}
+        />
+      </Section>
+
+      {/* Categories & portfolio */}
+      <Section title="Categories & portfolio">
+        <FactGrid
+          facts={[
+            ["Categories", data.categories?.length ? data.categories : undefined],
+            ["Portfolio info", data.portfolioInfo],
+            ["Portfolio products", data.portfolioProducts],
+            ["Private label", data.privateLabel],
+            ["Private label name", data.privateLabelName],
+            ["Private label categories", data.privateLabelCategories],
+          ]}
+        />
+      </Section>
+
       {/* Sourcing needs */}
-      {data.sourcingNeeds && (
-        <div className="rounded-2xl border border-brand-line bg-white p-5">
-          <h2 className="mb-1 text-sm font-semibold text-brand-ink">Sourcing needs</h2>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">{data.sourcingNeeds}</p>
-        </div>
+      <Section title="Sourcing needs">
+        <FactGrid
+          facts={[
+            ["Sourcing needs", data.sourcingNeeds],
+            ["Target markets", data.targetMarkets?.length ? data.targetMarkets : undefined],
+          ]}
+        />
+      </Section>
+
+      {/* Importer & distributor profile */}
+      <Section title="Importer & distributor profile">
+        <FactGrid
+          facts={[
+            ["Distribution role", data.distributionRole],
+            ["Warehouse", data.warehouse],
+            ["Warehouse arrangement", data.warehouseArrangement],
+            ["Storage", data.storage?.length ? data.storage : undefined],
+            ["Vehicles", data.vehicles],
+            ["Vehicle arrangement", data.vehicleArrangement],
+            ["Channels", data.channels?.length ? data.channels : undefined],
+            ["Channel percentages", data.channelPercentages],
+            ["Channel basis", data.channelBasis],
+            ["Sales points", data.salesPoints],
+            ["Sales reach mode", data.salesReachMode],
+            ["Distribution geography", data.distributionGeography],
+            ["Expand portfolio", data.expandPortfolio],
+            ["Expansion products", data.expansionProducts],
+            ["Distribution product type", data.distributionProductType],
+          ]}
+        />
+      </Section>
+
+      {/* Retailer profile */}
+      <Section title="Retailer profile">
+        <FactGrid
+          facts={[
+            ["Retail formats", data.retailFormats?.length ? data.retailFormats : undefined],
+            ["Store count", data.storeCount],
+            ["Retail geography", data.retailGeography],
+            ["Purchasing structure", data.purchasingStructure],
+            ["Purchasing office", data.purchasingOffice],
+            ["Purchasing outsourced", data.purchasingOutsourced],
+            ["Purchasing subsidiary", data.purchasingSubsidiary],
+            ["Purchasing subsidiary name", data.purchasingSubsidiaryName],
+            ["Retail supply", data.retailSupply],
+            ["Direct import %", data.directImportPercent],
+            ["Local supplier %", data.localSupplierPercent],
+            ["Retail mix basis", data.retailMixBasis],
+            ["Assortment plan", data.assortmentPlan],
+            ["Retail expansion products", data.retailExpansionProducts],
+            ["Retail product type", data.retailProductType],
+            ["Retail delivery", data.retailDelivery],
+            ["Details", data.details],
+          ]}
+        />
+      </Section>
+
+      {/* Contact */}
+      {(data.contactFullName || data.contactEmail || data.contacts?.length) && (
+        <Section title="Contact">
+          <FactGrid
+            facts={[
+              ["Primary contact", data.contactFullName],
+              ["Title", data.contactTitle],
+              ["Email", data.contactEmail],
+              ["Phone", data.contactPhone],
+            ]}
+          />
+          {data.contacts?.length ? (
+            <ul className="mt-4 space-y-2">
+              {data.contacts.map((c, i) => (
+                <li key={i} className="rounded-xl border border-brand-line bg-brand-bg-alt/50 p-3 text-sm">
+                  <p className="font-medium text-brand-ink">{c.name}</p>
+                  {c.position && <p className="text-brand-muted">{c.position}</p>}
+                  {(c.email || c.phone) && (
+                    <p className="mt-0.5 text-xs text-brand-muted">
+                      {[c.email, c.phone].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Section>
       )}
 
       {/* About */}
       {data.publicDescription && (
-        <div className="rounded-2xl border border-brand-line bg-white p-5">
-          <h2 className="mb-1 text-sm font-semibold text-brand-ink">About</h2>
+        <Section title="About">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-muted">{data.publicDescription}</p>
-        </div>
+        </Section>
       )}
-
-      {/* Highlights */}
-      <div className="rounded-2xl border border-brand-line bg-white p-5">
-        <h2 className="mb-3 text-sm font-semibold text-brand-ink">Highlights</h2>
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-          <Fact label="Type" value={data.buyerType?.replace(/_/g, " ")} />
-          <Fact label="Roles" value={data.roles} />
-          <Fact label="Categories" value={data.categories} />
-          <Fact label="Operating in" value={data.operatingCountries} />
-          <Fact label="Target markets" value={data.targetMarkets} />
-          <Fact label="Sales channels" value={data.channels} />
-        </dl>
-      </div>
     </div>
   );
 }

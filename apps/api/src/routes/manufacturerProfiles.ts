@@ -258,20 +258,12 @@ manufacturerProfilesRouter.get("/public/:accountId", requireAuth, async (req, re
       where: { ownerAccountId: accountId, status: "POSTED", side: "SELL" },
       orderBy: { publishedAt: "desc" },
     });
+    // Return the full company profile (every field the manufacturer can enter),
+    // so anyone viewing a profile sees the complete picture — not just the logo
+    // and public description.
     return res.json({
-      accountId: profile.accountId,
-      companyName: profile.companyName,
-      country: profile.country ?? null,
-      website: profile.website ?? null,
-      publicDescription: profile.publicDescription ?? null,
+      ...toDto(profile),
       logoUrl,
-      industryCategory: profile.industryCategory ?? null,
-      productCategory: profile.productCategory ?? null,
-      targetExportMarket: profile.targetExportMarket ?? null,
-      salesChannels: profile.salesChannels ?? [],
-      certs: profile.certs ?? [],
-      knownFor: profile.knownFor ?? null,
-      usp: profile.usp ?? null,
       postedCards: cards.map(toOpportunityCardDto),
     });
   } catch (err) {

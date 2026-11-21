@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -8,7 +7,6 @@ import {
   fetchEngagement,
   fetchActivity,
   publishOpportunityCard,
-  type EngagementRowDto,
 } from "../../lib/api";
 import ActivityList from "../dashboard/ActivityList";
 
@@ -42,16 +40,6 @@ export default function ManufacturerOverview({ onGoTo }: { onGoTo: (key: string)
   });
 
   const published = cards.filter((c) => c.status === "POSTED").length;
-
-  const byCard = useMemo(() => {
-    const map = new Map<string, EngagementRowDto[]>();
-    for (const row of engagement) {
-      const arr = map.get(row.cardId) ?? [];
-      arr.push(row);
-      map.set(row.cardId, arr);
-    }
-    return map;
-  }, [engagement]);
 
   const engaged = engagement.length;
   const interested = engagement.filter(
@@ -89,17 +77,11 @@ export default function ManufacturerOverview({ onGoTo }: { onGoTo: (key: string)
                   <tr className="border-b border-brand-line text-left text-xs uppercase tracking-wide text-brand-muted">
                     <th className="py-2 pr-4 font-medium">Opportunity</th>
                     <th className="py-2 pr-4 font-medium">Status</th>
-                    <th className="py-2 pr-4 font-medium">Engaged</th>
-                    <th className="py-2 pr-4 font-medium">Buyer interest</th>
                     <th className="py-2 font-medium">Next action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cards.map((c) => {
-                    const rows = byCard.get(c.id) ?? [];
-                    const interest = rows.filter(
-                      (r) => r.status === "INTERESTED" || r.status === "REFERRED",
-                    ).length;
                     return (
                       <tr key={c.id} className="border-b border-brand-line last:border-0">
                         <td className="py-3 pr-4">
@@ -116,23 +98,15 @@ export default function ManufacturerOverview({ onGoTo }: { onGoTo: (key: string)
                             {c.status}
                           </Badge>
                         </td>
-                        <td className="py-3 pr-4 text-brand-muted">{rows.length}</td>
-                        <td className="py-3 pr-4 text-brand-muted">{interest}</td>
                         <td className="py-3">
-                          {c.status === "POSTED" ? (
-                            <Button size="sm" variant="outline" onClick={() => onGoTo("engagement")}>
-                              Engage
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={publishCard.isPending}
-                              onClick={() => publishCard.mutate(c.id)}
-                            >
-                              {publishCard.isPending ? "Publishing…" : "Publish"}
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={publishCard.isPending}
+                            onClick={() => publishCard.mutate(c.id)}
+                          >
+                            {publishCard.isPending ? "Publishing…" : "Publish"}
+                          </Button>
                         </td>
                       </tr>
                     );

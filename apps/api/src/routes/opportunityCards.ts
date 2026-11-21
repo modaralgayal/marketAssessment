@@ -9,6 +9,7 @@ import { storage } from "../storage/index.js";
 import { env } from "../env.js";
 import { sendMail } from "../lib/mailer.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { requireAdmin } from "../middleware/requireAdmin.js";
 import { requireAgent } from "../middleware/requireAgent.js";
 import {
   opportunityCardSchema,
@@ -161,6 +162,21 @@ async function notifyAdminsOfCard(card: { id: string; ownerAccountId: string; ti
     }
   }
 }
+
+/** Admin review: full detail of a single card for the "Received cards" queue.
+ *  Admin accounts are Firebase-gated (no Account rows exist), so this uses
+ *  requireAdmin rather than requireAuth. */
+opportunityCardsRouter.get("/admin/:cardId", requireAdmin, async (req, res, next) => {
+  try {
+    const card = await prisma.opportunityCard.findUnique({
+      where: { id: req.params.cardId },
+    });
+    if (!card) return res.status(404).json({ error: "Card not found" });
+    return res.json(toDto(card));
+  } catch (err) {
+    next(err);
+  }
+});
 
 /** Marketplace browse: posted cards on the OPPOSITE side from the viewer's
  *  role. A buyer (BUY) sees posted SELL cards; a manufacturer (SELL) sees

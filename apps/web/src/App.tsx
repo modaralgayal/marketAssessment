@@ -17,6 +17,7 @@ import PublicOnlyRoute from "./features/auth/PublicOnlyRoute";
 import ResetPassword from "./features/auth/ResetPassword";
 import AccessRequests from "./features/admin/AccessRequests";
 import AccountsList from "./features/admin/AccountsList";
+import Invites from "./features/admin/Invites";
 import ReceivedCards from "./features/admin/ReceivedCards";
 import ManufacturerDashboard, {
   ManufacturerOverviewRoute,
@@ -217,6 +218,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AccountsList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/invites"
+          element={
+            <ProtectedRoute>
+              <Invites />
             </ProtectedRoute>
           }
         />

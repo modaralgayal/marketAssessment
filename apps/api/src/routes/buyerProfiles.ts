@@ -236,20 +236,11 @@ buyerProfilesRouter.get("/public/:accountId", requireAuth, async (req, res, next
     if (!profile) return res.status(404).json({ error: "NO_PROFILE" });
     const logo = (profile.portfolioFiles ?? []).find((f: any) => f.id === profile.logoFileId);
     const logoUrl = logo ? await storage.getSignedUrl(logo.storageKey, 300).catch(() => null) : null;
+    // Return the full buyer profile (every field the buyer can enter), so anyone
+    // viewing a profile sees the complete picture — not just the logo and description.
     return res.json({
-      accountId: profile.accountId,
-      companyName: profile.companyName,
-      country: profile.country ?? null,
-      website: profile.website ?? null,
-      publicDescription: profile.publicDescription ?? null,
+      ...toDto(profile),
       logoUrl,
-      buyerType: profile.buyerType ?? null,
-      roles: profile.roles ?? [],
-      categories: profile.categories ?? [],
-      operatingCountries: profile.operatingCountries ?? [],
-      targetMarkets: profile.targetMarkets ?? [],
-      channels: profile.channels ?? [],
-      sourcingNeeds: profile.sourcingNeeds ?? null,
     });
   } catch (err) {
     next(err);

@@ -1,58 +1,38 @@
-import { useMemo } from "react";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import {
-  fetchEngagement,
   fetchMyOpportunityCards,
   publishOpportunityCard,
   unpublishOpportunityCard,
-  type EngagementRowDto,
   type OpportunityCardDto,
 } from "../../lib/api";
 import OpportunityCardEditor from "./OpportunityCardEditor";
-import OpportunityCard, { type CardEngagement } from "./OpportunityCard";
+import OpportunityCard from "./OpportunityCard";
+import OpportunityCardDetail from "./OpportunityCardDetail";
 
 export default function OpportunityCardsPanel({
   noun,
   emptyHint,
-  onViewEngagement,
   onGoToCatalogue,
 }: {
   noun: string;
   emptyHint: string;
-  onViewEngagement?: (cardId: string) => void;
   onGoToCatalogue?: () => void;
 }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<OpportunityCardDto | null>(null);
   const [creating, setCreating] = useState(false);
+  const [viewing, setViewing] = useState<OpportunityCardDto | null>(null);
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["my-opportunity-cards"],
     queryFn: () => fetchMyOpportunityCards(),
   });
-  const { data: engagement = [] } = useQuery({
-    queryKey: ["engagement"],
-    queryFn: fetchEngagement,
-  });
-
-  const engagementByCard = useMemo(() => {
-    const map = new Map<string, CardEngagement>();
-    for (const row of engagement as EngagementRowDto[]) {
-      const e = map.get(row.cardId) ?? { recipients: 0, engaged: 0, pending: 0 };
-      e.recipients += 1;
-      if (row.status === "INTERESTED" || row.status === "REFERRED") e.engaged += 1;
-      else if (row.status === "VIEWED" || row.status === "SAVED") e.pending += 1;
-      map.set(row.cardId, e);
-    }
-    return map;
-  }, [engagement]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["my-opportunity-cards"] });
-    qc.invalidateQueries({ queryKey: ["engagement"] });
   };
 
   const publishCard = useMutation({ mutationFn: (id: string) => publishOpportunityCard(id), onSuccess: invalidate });
@@ -88,6 +68,26 @@ export default function OpportunityCardsPanel({
     );
   }
 
+  if (viewing) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setViewing(null)}
+          className="text-xs font-medium text-brand-teal hover:underline"
+        >
+          ← Back to {noun}s
+        </button>
+        <OpportunityCardDetail
+          card={viewing}
+          onEdit={() => {
+            setEditing(viewing);
+            setViewing(null);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between">
@@ -107,11 +107,8 @@ export default function OpportunityCardsPanel({
               <OpportunityCard
                 key={card.id}
                 card={card}
-                engagement={engagementByCard.get(card.id)}
                 onEdit={() => setEditing(card)}
-                onViewEngagement={
-                  onViewEngagement ? () => onViewEngagement(card.id) : undefined
-                }
+                onView={() => setViewing(card)}
                 onPublish={() => publishCard.mutate(card.id)}
                 onUnpublish={() => unpublishCard.mutate(card.id)}
               />

@@ -156,20 +156,31 @@ export async function requestReport(payload: {
   return res.json();
 }
 
+/** A single invite as returned by the admin list endpoint. */
+export interface InviteDto {
+  id: string;
+  token: string;
+  email: string | null;
+  status: string;
+  purpose: string;
+  role?: string | null;
+  createdAt: string;
+  usedAt: string | null;
+  link: string;
+}
+
+/** The result of creating an invite (subset of {@link InviteDto}). */
+export interface CreateInviteResult {
+  id: string;
+  token: string;
+  status: string;
+  purpose: string;
+  role?: string | null;
+  link: string;
+}
+
 /** Admin: list invites (with their public links). */
-export async function fetchInvites(): Promise<{
-  items: Array<{
-    id: string;
-    token: string;
-    email: string | null;
-    status: string;
-    purpose: string;
-    role?: string | null;
-    createdAt: string;
-    usedAt: string | null;
-    link: string;
-  }>;
-}> {
+export async function fetchInvites(): Promise<{ items: InviteDto[] }> {
   const res = await authedFetch(`${BASE}/api/invites`);
   if (!res.ok) throw new Error("Failed to load invites");
   return res.json();
@@ -180,14 +191,7 @@ export async function createInvite(
   email?: string,
   purpose?: "OPPORTUNITY" | "ONBOARDING" | "ACCOUNT",
   role?: "BUYER" | "MANUFACTURER",
-): Promise<{
-  id: string;
-  token: string;
-  status: string;
-  purpose: string;
-  role?: string | null;
-  link: string;
-}> {
+): Promise<CreateInviteResult> {
   const res = await authedFetch(`${BASE}/api/invites`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -815,25 +819,18 @@ export async function deleteManufacturerLogo(): Promise<void> {
   if (!res.ok) throw new Error("Failed to remove logo");
 }
 
-/** Fetch a manufacturer's public profile (buyer-visible) by account id. */
+/** Fetch a manufacturer's public profile (buyer-visible) by account id.
+ *  Returns the full company profile (every field the manufacturer can enter)
+ *  plus the account id, logo URL and posted cards. */
 export async function fetchManufacturerPublicProfile(
   accountId: string,
-): Promise<{
-  accountId: string;
-  companyName: string;
-  country: string | null;
-  website: string | null;
-  publicDescription: string | null;
-  logoUrl: string | null;
-  industryCategory: string | null;
-  productCategory: string | null;
-  targetExportMarket: string | null;
-  salesChannels: string[];
-  certs: string[];
-  knownFor: string | null;
-  usp: string | null;
-  postedCards: OpportunityCardDto[];
-}> {
+): Promise<
+  ManufacturerProfileDto & {
+    accountId: string;
+    logoUrl: string | null;
+    postedCards: OpportunityCardDto[];
+  }
+> {
   const res = await authedFetch(`${BASE}/api/manufacturer-profile/public/${encodeURIComponent(accountId)}`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -958,24 +955,12 @@ export async function deleteBuyerLogo(): Promise<void> {
   if (!res.ok) throw new Error("Failed to remove logo");
 }
 
-/** Fetch a buyer's public profile (manufacturer-visible) by account id. */
+/** Fetch a buyer's public profile (manufacturer-visible) by account id.
+ *  Returns the full buyer profile (every field the buyer can enter) plus the
+ *  account id and logo URL. */
 export async function fetchBuyerPublicProfile(
   accountId: string,
-): Promise<{
-  accountId: string;
-  companyName: string;
-  country: string | null;
-  website: string | null;
-  publicDescription: string | null;
-  logoUrl: string | null;
-  buyerType: string | null;
-  roles: string[];
-  categories: string[];
-  operatingCountries: string[];
-  targetMarkets: string[];
-  channels: string[];
-  sourcingNeeds: string | null;
-}> {
+): Promise<BuyerProfileDto & { accountId: string; logoUrl: string | null }> {
   const res = await authedFetch(`${BASE}/api/buyer-profile/public/${encodeURIComponent(accountId)}`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -985,6 +970,19 @@ export async function fetchBuyerPublicProfile(
 }
 
 // ── Opportunity cards ────────────────────────────────────────────────────
+
+/** Admin: fetch the full detail of a single opportunity card (by id) for the
+ *  "Received cards" review queue. */
+export async function fetchAdminOpportunityCard(cardId: string): Promise<OpportunityCardDto> {
+  const res = await authedFetch(
+    `${BASE}/api/opportunity-cards/admin/${encodeURIComponent(cardId)}`,
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? "Failed to load card");
+  }
+  return res.json();
+}
 
 export async function fetchMyOpportunityCards(status?: "DRAFT" | "POSTED" | "ARCHIVED"): Promise<OpportunityCardDto[]> {
   const qs = status ? `?status=${status}` : "";

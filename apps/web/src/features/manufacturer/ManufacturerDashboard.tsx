@@ -42,7 +42,6 @@ export function ManufacturerCardsRoute() {
     <OpportunityCardsPanel
       noun="opportunity"
       emptyHint="No opportunity cards yet. Create one to start getting matched with buyers."
-      onViewEngagement={() => nav("/manufacturer/engagement")}
       onGoToCatalogue={() =>
         nav("/manufacturer/profile", { state: { scrollTo: "operations" } })
       }
@@ -71,11 +70,11 @@ export default function ManufacturerDashboard() {
 
   const completion = profile ? computeCompletion(profile) : 0;
   const navItems: NavItem[] = [
+    { key: "profile", label: "Company profile" },
     { key: "overview", label: "Overview" },
     { key: "cards", label: "Opportunity cards", count: cardsLoading ? undefined : cards.length },
-    { key: "engagement", label: "Buyer engagement" },
-    { key: "conversations", label: "Conversations" },
-    { key: "profile", label: "Company profile" },
+    // "Buyer engagement" and "Conversations" are kept (routes/components intact)
+    // but hidden from the sidebar for now.
   ];
 
   return (

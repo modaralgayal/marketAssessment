@@ -10,9 +10,12 @@ import { URL } from "node:url";
  *    become the test DB.
  *  - The test DB is taken ONLY from `TEST_DATABASE_URL`, falling back to a
  *    localhost default.
- *  - `prisma db push --force-reset` (destructive) is REFUSED against any
- *    non-localhost URL. Pointing TEST_DATABASE_URL at Supabase/prod would only
- *    produce a warning — no schema reset, no data loss.
+ *  - The schema is provisioned with a NON-DESTRUCTIVE `prisma db push` (no
+ *    `--force-reset`), and only against a localhost URL. The localhost check is
+ *    the safety boundary: pointing TEST_DATABASE_URL at Supabase/prod produces a
+ *    warning and no schema work. We deliberately never run the destructive reset
+ *    during tests, so the Prisma AI guard (which blocks `db push --force-reset`
+ *    when invoked by an agent) never needs to be satisfied.
  *
  * See docs/deployment.md.
  */
@@ -48,16 +51,22 @@ export async function setup() {
         `localhost Postgres — e.g. ${LOCAL_DEFAULT} — set via TEST_DATABASE_URL.`,
     );
     // Surface the URL so connection errors are obvious, but do NOT run the
-    // destructive `db push --force-reset` anywhere but localhost.
+    // schema push anywhere but localhost.
     process.env.DATABASE_URL = dbUrl;
     return;
   }
 
   process.env.DATABASE_URL = dbUrl;
   try {
-    // `--force-reset --accept-data-loss` wipes and rebuilds the test schema. Safe
-    // ONLY because we have already refused any non-localhost URL above.
-    execSync("npx prisma db push --force-reset --accept-data-loss", {
+    // Non-destructive schema sync (NO `--force-reset`): builds/updates the test
+    // schema without wiping data. Deliberately avoids the destructive reset so
+    // the test run never executes a data-destroying command — the Prisma AI
+    // guardrail (which blocks `db push --force-reset` when run by an agent)
+    // therefore never needs to be satisfied. The localhost refusal above is the
+    // real safety boundary: this push can only ever target a local throwaway DB.
+    // Tests clean up their own rows (deleteMany in beforeAll), so a full reset
+    // is unnecessary.
+    execSync("npx prisma db push", {
       stdio: "inherit",
       env: process.env,
     });

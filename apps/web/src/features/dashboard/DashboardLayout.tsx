@@ -67,7 +67,7 @@ export default function DashboardLayout({ role, navItems, active, onSelect, comp
             <p className="truncate text-sm font-semibold text-brand-ink">workspace</p>
           </div>
 
-          {completion > 0 && (
+          {completion != null && (
             <div className="mt-4 px-1">
               <div className="flex items-center justify-between text-xs text-brand-muted">
                 <span>Profile completion</span>
