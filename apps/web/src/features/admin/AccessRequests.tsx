@@ -151,11 +151,19 @@ export default function AccessRequests() {
                                   [req.id]: e.target.value as "BUYER" | "MANUFACTURER",
                                 }))
                               }
-                              className="h-9 rounded-full border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none"
+                              className={
+                                "h-9 rounded-full border bg-white px-3 text-sm text-brand-ink outline-none " +
+                                (roleFor[req.id] && roleFor[req.id] !== req.intendedRole
+                                  ? "border-amber-400 ring-1 ring-amber-300"
+                                  : "border-brand-line")
+                              }
                             >
                               <option value="BUYER">Buyer</option>
                               <option value="MANUFACTURER">Manufacturer</option>
                             </select>
+                            <span className="text-[11px] text-brand-muted">
+                              Requested: {roleLabel(req.intendedRole)}
+                            </span>
                             <button
                               onClick={() => approve(req)}
                               disabled={busyId === req.id}
