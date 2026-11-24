@@ -18,6 +18,12 @@ function roleLabel(role: string): string {
   return role === "BUYER" ? "Buyer" : role === "MANUFACTURER" ? "Manufacturer" : role;
 }
 
+function authMethodLabel(method?: AccountListDto["authMethod"]): string {
+  if (method === "google") return "Google";
+  if (method === "password") return "Email & Password";
+  return "Unknown";
+}
+
 function StatusBadge({ status }: { status: AccountListDto["status"] }) {
   const styles =
     status === "ACTIVE"
@@ -133,6 +139,7 @@ export default function AccountsList() {
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Sign-in</th>
                 <th className="px-4 py-3">Signed up</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
@@ -146,6 +153,7 @@ export default function AccountsList() {
                   <td className="px-4 py-3">
                     <StatusBadge status={a.status} />
                   </td>
+                  <td className="px-4 py-3 text-brand-muted">{authMethodLabel(a.authMethod)}</td>
                   <td className="px-4 py-3 text-brand-muted">
                     {new Date(a.createdAt).toLocaleDateString()}
                   </td>
@@ -198,7 +206,7 @@ export default function AccountsList() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-brand-muted">
+                  <td colSpan={7} className="px-4 py-8 text-center text-brand-muted">
                     No signed-up accounts yet.
                   </td>
                 </tr>

@@ -33,6 +33,10 @@ export interface AccountListDto {
   role: AccountRole;
   status: AccountStatus;
   companyName?: string | null;
+  /** How the account was created / signs in, derived from the Firebase user's
+   *  providerData: "password" = email + password, "google" = Google-only,
+   *  "unknown" = Firebase user missing or no recognized provider. */
+  authMethod?: "google" | "password" | "unknown";
   createdAt: string;
 }
 

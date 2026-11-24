@@ -6,6 +6,7 @@ import {
   getFirebaseUser,
   generatePasswordResetLink,
   generateEmailVerificationLink,
+  adminAuth,
 } from "../lib/firebaseAdmin.js";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/requireAuth.js";
@@ -234,12 +235,41 @@ accountsRouter.get("/", requireAdmin, async (_req, res, next) => {
       orderBy: { createdAt: "desc" },
       include: { manufacturerProfile: true, buyerProfile: true },
     });
+
+    // Derive each account's sign-in method from its Firebase providers. We batch
+    // the lookups via getUsers (max 100 uids per call) instead of N individual
+    // getUser calls. A missing Firebase user or a failing batch falls back to
+    // "unknown" so the list never errors out.
+    const methodByUid = new Map<string, "google" | "password" | "unknown">();
+    const uids = accounts
+      .map((a) => a.firebaseUid)
+      .filter((u): u is string => Boolean(u));
+    const CHUNK = 100;
+    for (let i = 0; i < uids.length; i += CHUNK) {
+      const chunk = uids.slice(i, i + CHUNK);
+      try {
+        const result = await adminAuth().getUsers(chunk.map((uid) => ({ uid })));
+        for (const u of result.users) {
+          const providers = u.providerData.map((p) => p.providerId);
+          const method = providers.includes("password")
+            ? "password"
+            : providers.includes("google.com")
+              ? "google"
+              : "unknown";
+          methodByUid.set(u.uid, method);
+        }
+      } catch (e) {
+        console.error("[accounts] batch getUser failed:", e);
+      }
+    }
+
     const items: AccountListDto[] = accounts.map((a) => ({
       id: a.id,
       email: a.email,
       role: a.role as AccountListDto["role"],
       status: a.status as AccountListDto["status"],
       companyName: a.manufacturerProfile?.companyName ?? a.buyerProfile?.companyName ?? null,
+      authMethod: (a.firebaseUid ? methodByUid.get(a.firebaseUid) : undefined) ?? "unknown",
       createdAt: a.createdAt.toISOString(),
     }));
     return res.json({ items });
