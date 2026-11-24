@@ -141,11 +141,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    // Firebase does NOT trim passwords, so stray leading/trailing whitespace
+    // (mobile keyboards, copy-paste, password managers) gets baked into the
+    // stored credential and makes an otherwise-correct login fail with
+    // auth/invalid-credential. Trim email + password on both create and sign-in
+    // so the stored and entered values are byte-identical regardless of entry.
+    await signInWithEmailAndPassword(auth, email.trim(), password.trim());
   };
 
   const signUpWithEmail = async (email: string, password: string) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const cred = await createUserWithEmailAndPassword(auth, email.trim(), password.trim());
     // Fire-and-forget: nudge verification. The account can still be created
     // immediately; the backend no longer blocks on email_verified.
     if (cred.user) {

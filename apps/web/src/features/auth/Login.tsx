@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { fetchSignInMethodsForEmail } from "firebase/auth";
 import { useAuth, authErrorMessage } from "../../lib/auth";
 import { requestAccess } from "../../lib/api";
 import { PasswordInput } from "../../components/ui/PasswordInput";
+import { auth } from "../../lib/firebase";
 
 /**
  * Self-service sign-in for buyers/manufacturers who already completed
@@ -40,6 +42,11 @@ export default function Login() {
   const [forgotMsg, setForgotMsg] = useState<string | null>(null);
   const [forgotErr, setForgotErr] = useState<string | null>(null);
 
+  // Resolved Firebase sign-in methods for the typed email. Used to hint which
+  // sign-in method an account actually supports, so a user who created their
+  // account with Google isn't locked out trying email+password (and vice-versa).
+  const [methods, setMethods] = useState<string[] | null>(null);
+
   useEffect(() => {
     if (account) {
       navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer");
@@ -60,6 +67,25 @@ export default function Login() {
     }
   };
 
+  /** Look up which sign-in methods an email supports, without signing in. Returns
+   *  the method list (or null on an invalid/unsupported email). Surfaces a hint
+   *  so users pick the method their account was actually created with. */
+  const checkMethods = async (value: string): Promise<string[] | null> => {
+    const trimmed = value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setMethods(null);
+      return null;
+    }
+    try {
+      const result = await fetchSignInMethodsForEmail(auth, trimmed);
+      setMethods(result);
+      return result;
+    } catch {
+      setMethods(null);
+      return null;
+    }
+  };
+
   const handleEmailSignIn = async (e: FormEvent) => {
     e.preventDefault();
     setEmailError(null);
@@ -68,6 +94,24 @@ export default function Login() {
       await signInWithEmail(email, password);
       // The account effect above resolves the Account and navigates.
     } catch (err) {
+      const code = (err as { code?: string })?.code;
+      const looksInvalid =
+        code === "auth/invalid-credential" ||
+        code === "auth/wrong-password" ||
+        code === "auth/user-not-found";
+      // If the email+password attempt failed and this account was created with
+      // Google (no password credential), steer the user to the Google button
+      // instead of a confusing "Incorrect email or password".
+      if (looksInvalid) {
+        const m = await checkMethods(email);
+        if (m && m.includes("google.com") && !m.includes("password")) {
+          setEmailError(
+            "This account uses Google sign-in. Please use “Continue with Google” instead.",
+          );
+          setEmailBusy(false);
+          return;
+        }
+      }
       setEmailError(authErrorMessage(err));
       setEmailBusy(false);
     }
@@ -83,6 +127,24 @@ export default function Login() {
   if (account) return null; // navigating
 
   const signedInButNoAccount = Boolean(user) && !accountLoading && !account;
+
+  // Hint about which sign-in method this email actually supports, so users don't
+  // try the wrong one (a Google-created account has no password, and vice-versa).
+  const methodHint = (() => {
+    if (!methods) return null;
+    const hasGoogle = methods.includes("google.com");
+    const hasPassword = methods.includes("password");
+    if (methods.length === 0) {
+      return "No account found for this email yet — request access or use your invite link to create one.";
+    }
+    if (hasGoogle && !hasPassword) {
+      return "This account was created with Google — use “Continue with Google” below.";
+    }
+    if (!hasGoogle && hasPassword) {
+      return "This account uses email & password — enter them below.";
+    }
+    return "You can sign in with Google or email & password.";
+  })();
 
   const handleForgot = async (e: FormEvent) => {
     e.preventDefault();
@@ -112,6 +174,12 @@ export default function Login() {
             ? "This Google account doesn't have a workspace in this environment yet."
             : "Sign in to access your buyer or manufacturer workspace."}
         </p>
+
+        {methodHint && (
+          <p className="mb-5 rounded-lg border border-brand-line bg-brand-bg-alt/50 px-3 py-2 text-xs leading-relaxed text-brand-muted">
+            {methodHint}
+          </p>
+        )}
 
         {signedInButNoAccount && !accountError && (
           <div className="mb-5 rounded-lg border border-brand-line bg-brand-bg-alt/50 p-3 text-left">
@@ -167,7 +235,11 @@ export default function Login() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setMethods(null);
+                }}
+                onBlur={() => checkMethods(email)}
                 placeholder="Work email"
                 required
                 autoComplete="email"
