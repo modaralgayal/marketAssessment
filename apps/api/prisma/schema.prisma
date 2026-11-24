@@ -228,7 +228,10 @@ model Invite {
   status    InviteStatus @default(PENDING)
   purpose   String        @default("OPPORTUNITY") // OPPORTUNITY (→ Submission) | ONBOARDING (→ Customer) | ACCOUNT (→ self-service Account)
   role      String?      // for ACCOUNT invites: BUYER | MANUFACTURER
-  account   Account?     @relation(fields: [accountId], references: [id])
+  // onDelete: SetNull so an Account can be hard-deleted without leaving the
+  // Invite row dangling and blocking the delete (Prisma's default is NoAction,
+  // which raises a FK violation and would abort the whole deletion).
+  account   Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
   accountId String?      @unique
   createdAt DateTime     @default(now())
   usedAt    DateTime?

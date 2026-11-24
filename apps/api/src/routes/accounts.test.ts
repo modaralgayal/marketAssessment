@@ -39,6 +39,7 @@ vi.mock("../lib/firebaseAdmin.js", () => ({
 
 import { app } from "../index.js";
 import { prisma } from "../prisma.js";
+import * as firebaseAdmin from "../lib/firebaseAdmin.js";
 
 const auth = { Authorization: `Bearer ${TEST_TOKEN}` };
 
@@ -88,11 +89,33 @@ describe("Self-service accounts", () => {
   });
 
   it("deletes the account at DELETE /me (GDPR erasure)", async () => {
+    // Link an ACCOUNT invite to this account so we can verify it detaches rather
+    // than blocking the delete (the regression this guards against).
+    const acc = await prisma.account.findUnique({ where: { firebaseUid: TEST_UID } });
+    const invite = await prisma.invite.create({
+      data: {
+        token: "self-delete-invite",
+        purpose: "ACCOUNT",
+        role: "MANUFACTURER",
+        status: "USED",
+        usedAt: new Date(),
+        accountId: acc!.id,
+      },
+    });
+
     const res = await request(app).delete("/api/accounts/me").set(auth);
     expect(res.status).toBe(200);
+    // The Firebase auth user is deleted too — no orphaned uid left behind.
+    expect(vi.mocked(firebaseAdmin.deleteFirebaseUser)).toHaveBeenCalledWith(TEST_UID);
+
     // The account is gone: a follow-up request can no longer resolve it.
     const after = await request(app).get("/api/accounts/me").set(auth);
     expect(after.status).toBe(403);
+
+    // The invite must be detached (onDelete: SetNull), not left dangling or deleted.
+    const detached = await prisma.invite.findUnique({ where: { id: invite.id } });
+    expect(detached?.accountId).toBeNull();
+    expect(detached?.status).toBe("USED");
   });
 });
 

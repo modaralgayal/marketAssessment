@@ -141,13 +141,18 @@ accountsRouter.delete("/me", requireAuth, auditLog, async (req, res, next) => {
     const account = await prisma.account.findUnique({ where: { id: req.account!.id } });
     if (!account) return res.status(404).json({ error: "Account not found" });
     const firebaseUid = account.firebaseUid;
+    // Remove the Prisma record FIRST. This guarantees the stored firebaseUid is
+    // gone no matter what happens to the Firebase auth user, and cascades to the
+    // profile, opportunity cards, interactions, conversations and related rows
+    // (the ACCOUNT invite detaches via onDelete: SetNull). Only then do we delete
+    // the Firebase auth user — tolerate "already gone" so a prior partial delete
+    // can't leave a dangling auth user while we report success.
+    await prisma.account.delete({ where: { id: account.id } });
     try {
       await deleteFirebaseUser(firebaseUid);
     } catch (e) {
-      // user-not-found is fine (already gone); anything else we still prune Prisma.
       console.error("[accounts] Firebase delete failed for", firebaseUid, e);
     }
-    await prisma.account.delete({ where: { id: account.id } });
     return res.status(200).json({ ok: true });
   } catch (err) {
     next(err);
@@ -255,13 +260,16 @@ accountsRouter.delete("/:id", requireAdmin, auditLog, async (req, res, next) => 
   try {
     const account = await prisma.account.findUnique({ where: { id: req.params.id } });
     if (!account) return res.status(404).json({ error: "Account not found" });
+    // Remove the Prisma record FIRST so the stored firebaseUid is gone regardless of
+    // the Firebase outcome, cascading to profile/cards/interactions/conversations
+    // and detaching the ACCOUNT invite (onDelete: SetNull). Then delete the auth
+    // user, tolerating "already gone" from a prior partial delete.
+    await prisma.account.delete({ where: { id: account.id } });
     try {
       await deleteFirebaseUser(account.firebaseUid);
     } catch (e) {
-      // user-not-found is fine (already gone); anything else we still prune Prisma.
       console.error("[accounts] Firebase delete failed for", account.firebaseUid, e);
     }
-    await prisma.account.delete({ where: { id: account.id } });
     return res.status(200).json({ ok: true });
   } catch (err) {
     next(err);

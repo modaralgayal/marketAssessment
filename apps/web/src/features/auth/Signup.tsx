@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../lib/auth";
+import { useAuth, authErrorMessage } from "../../lib/auth";
 import { validateInvite } from "../../lib/api";
 import { PasswordInput } from "../../components/ui/PasswordInput";
 
@@ -89,11 +89,16 @@ export default function Signup() {
       const account = await bootstrap(invite ?? undefined, acceptPrivacy);
       navigate(account.role === "BUYER" ? "/buyer" : "/manufacturer");
     } catch (err) {
-      setEmailError(
-        err instanceof Error && err.message
+      // Firebase auth errors (e.g. email-already-in-use, weak-password) get a
+      // friendly message via authErrorMessage; server/bootstrap errors keep their
+      // own message.
+      const code = (err as { code?: string })?.code;
+      const msg = code
+        ? authErrorMessage(err)
+        : err instanceof Error && err.message
           ? err.message
-          : "Account creation failed. Please try again.",
-      );
+          : "Account creation failed. Please try again.";
+      setEmailError(msg);
       setEmailBusy(false);
     }
   };
