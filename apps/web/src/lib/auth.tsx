@@ -37,6 +37,10 @@ export function authErrorMessage(err: unknown): string {
         return "This account has been disabled.";
       case "auth/email-already-in-use":
         return "An account with this email already exists.";
+      case "auth/account-exists-with-different-credential":
+        // A password-account user clicked "Continue with Google": Firebase blocks
+        // it and throws this. Tell them to use the method they registered with.
+        return "This account was created with email & password. Please sign in with your email and password.";
       case "auth/weak-password":
         return "Password is too weak (use at least 6 characters).";
       case "auth/expired-action-code":
