@@ -1,9 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
+import { Field, TextField, SelectField, CheckboxGroup, Panel } from "../../components/ui/form-fields";
 import {
   fetchBuyerProfile,
   upsertBuyerProfile,
@@ -19,96 +19,7 @@ import {
 } from "../../lib/api";
 import { GCC_MARKET_OPTIONS } from "@mea/shared";
 
-function Field({
-  label,
-  children,
-  error,
-  id,
-}: {
-  label: string;
-  children: ReactNode;
-  error?: string;
-  id?: string;
-}) {
-  return (
-    <div className="space-y-1.5" id={id} data-field-error={error ? "" : undefined}>
-      <Label>
-        {label}
-        {label.endsWith("*") ? "" : null}
-      </Label>
-      {children}
-      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
-    </div>
-  );
-}
 
-function TextField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  required,
-  error,
-  id,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  error?: string;
-  id?: string;
-}) {
-  return (
-    <Field label={label + (required ? " *" : "")} error={error} id={id}>
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={error ? "border-red-500 focus:border-red-500" : undefined}
-      />
-    </Field>
-  );
-}
-
-function CheckboxGroup({
-  label,
-  value,
-  onChange,
-  options,
-  error,
-  id,
-}: {
-  label: string;
-  value: string[];
-  onChange: (v: string[]) => void;
-  options: ReadonlyArray<{ value: string; label: string }>;
-  error?: string;
-  id?: string;
-}) {
-  const toggle = (v: string) =>
-    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
-  return (
-    <Field label={label} error={error} id={id}>
-      <div className="flex flex-wrap gap-2">
-        {options.map((o) => (
-          <label
-            key={o.value}
-            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-brand-line px-2.5 py-1.5 text-xs text-brand-ink"
-          >
-            <input
-              type="checkbox"
-              checked={value.includes(o.value)}
-              onChange={() => toggle(o.value)}
-              className="accent-brand-teal"
-            />
-            {o.label}
-          </label>
-        ))}
-      </div>
-    </Field>
-  );
-}
 
 function ListField({
   label,
@@ -137,32 +48,6 @@ function ListField({
   );
 }
 
-function Panel({
-  n,
-  title,
-  subtitle,
-  children,
-}: {
-  n: string;
-  title: string;
-  subtitle?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="space-y-4 rounded-2xl border border-brand-line bg-white p-5 sm:p-6">
-      <div className="flex items-start gap-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-brand-bg-alt text-xs font-bold text-brand-teal">
-          {n}
-        </span>
-        <div>
-          <h2 className="text-base font-semibold text-brand-ink">{title}</h2>
-          {subtitle && <p className="text-xs text-brand-muted">{subtitle}</p>}
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
 
 function PortfolioDocs({ enabled }: { enabled: boolean }) {
   const qc = useQueryClient();
@@ -341,43 +226,6 @@ const RETAIL_DELIVERY_OPTIONS = [
   { value: "Combination", label: "Combination" },
   { value: "Another arrangement", label: "Another arrangement" },
 ];
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder = "Select an option",
-  required,
-  error,
-  id,
-}: {
-  label: string;
-  value: string | undefined;
-  onChange: (v: string) => void;
-  options: ReadonlyArray<{ value: string; label: string }>;
-  placeholder?: string;
-  required?: boolean;
-  error?: string;
-  id?: string;
-}) {
-  return (
-    <Field label={label + (required ? " *" : "")} error={error} id={id}>
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="flex h-10 w-full rounded-xl border border-brand-line bg-white px-3 text-sm text-brand-ink outline-none focus:border-brand-teal"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </Field>
-  );
-}
 
 export default function BuyerProfileForm() {
   const qc = useQueryClient();
