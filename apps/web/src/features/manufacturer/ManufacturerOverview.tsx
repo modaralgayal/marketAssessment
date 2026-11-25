@@ -7,6 +7,7 @@ import {
   fetchEngagement,
   fetchActivity,
   publishOpportunityCard,
+  unpublishOpportunityCard,
 } from "../../lib/api";
 import ActivityList from "../dashboard/ActivityList";
 
@@ -33,6 +34,13 @@ export default function ManufacturerOverview({ onGoTo }: { onGoTo: (key: string)
   const qc = useQueryClient();
   const publishCard = useMutation({
     mutationFn: (id: string) => publishOpportunityCard(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-opportunity-cards"] });
+      qc.invalidateQueries({ queryKey: ["engagement"] });
+    },
+  });
+  const unpublishCard = useMutation({
+    mutationFn: (id: string) => unpublishOpportunityCard(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-opportunity-cards"] });
       qc.invalidateQueries({ queryKey: ["engagement"] });
@@ -99,14 +107,26 @@ export default function ManufacturerOverview({ onGoTo }: { onGoTo: (key: string)
                           </Badge>
                         </td>
                         <td className="py-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={publishCard.isPending}
-                            onClick={() => publishCard.mutate(c.id)}
-                          >
-                            {publishCard.isPending ? "Publishing…" : "Publish"}
-                          </Button>
+                          {c.status === "POSTED" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-brand-muted"
+                              disabled={unpublishCard.isPending}
+                              onClick={() => unpublishCard.mutate(c.id)}
+                            >
+                              {unpublishCard.isPending ? "Unpublishing…" : "Unpublish"}
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={publishCard.isPending}
+                              onClick={() => publishCard.mutate(c.id)}
+                            >
+                              {publishCard.isPending ? "Publishing…" : "Publish"}
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );

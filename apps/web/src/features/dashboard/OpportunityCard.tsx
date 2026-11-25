@@ -45,6 +45,7 @@ export default function OpportunityCard({
   onViewEngagement,
   onPublish,
   onUnpublish,
+  onDelete,
 }: {
   card: OpportunityCardDto;
   onEdit: () => void;
@@ -52,6 +53,7 @@ export default function OpportunityCard({
   onViewEngagement?: () => void;
   onPublish?: () => void;
   onUnpublish?: () => void;
+  onDelete?: () => void;
 }) {
   const [shared, setShared] = useState(false);
   const meta = [card.territory, card.partner].filter(Boolean).join(" · ");
@@ -129,6 +131,14 @@ export default function OpportunityCard({
               onClick={onUnpublish}
             >
               Unpublish
+            </button>
+          ) : null}
+          {onDelete && card.status !== "POSTED" ? (
+            <button
+              className="text-xs font-medium text-red-600 hover:underline"
+              onClick={onDelete}
+            >
+              Delete
             </button>
           ) : null}
         </div>

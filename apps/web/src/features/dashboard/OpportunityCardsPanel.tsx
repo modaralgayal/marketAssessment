@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import {
   fetchMyOpportunityCards,
   publishOpportunityCard,
   unpublishOpportunityCard,
+  deleteOpportunityCard,
   type OpportunityCardDto,
 } from "../../lib/api";
 import OpportunityCardEditor from "./OpportunityCardEditor";
@@ -25,6 +27,7 @@ export default function OpportunityCardsPanel({
   const [editing, setEditing] = useState<OpportunityCardDto | null>(null);
   const [creating, setCreating] = useState(false);
   const [viewing, setViewing] = useState<OpportunityCardDto | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<OpportunityCardDto | null>(null);
 
   const { data: cards = [], isLoading } = useQuery({
     queryKey: ["my-opportunity-cards"],
@@ -37,6 +40,14 @@ export default function OpportunityCardsPanel({
 
   const publishCard = useMutation({ mutationFn: (id: string) => publishOpportunityCard(id), onSuccess: invalidate });
   const unpublishCard = useMutation({ mutationFn: (id: string) => unpublishOpportunityCard(id), onSuccess: invalidate });
+  const deleteCard = useMutation({
+    mutationFn: (id: string) => deleteOpportunityCard(id),
+    onSuccess: () => {
+      invalidate();
+      setPendingDelete(null);
+    },
+    onError: () => setPendingDelete(null),
+  });
 
   useEffect(() => {
     if (editing || creating) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -89,6 +100,7 @@ export default function OpportunityCardsPanel({
   }
 
   return (
+    <>
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Your {noun}s</CardTitle>
@@ -111,11 +123,29 @@ export default function OpportunityCardsPanel({
                 onView={() => setViewing(card)}
                 onPublish={() => publishCard.mutate(card.id)}
                 onUnpublish={() => unpublishCard.mutate(card.id)}
+                onDelete={() => setPendingDelete(card)}
               />
             ))}
           </div>
         )}
       </CardContent>
     </Card>
+
+    <ConfirmDialog
+      open={pendingDelete !== null}
+      title={`Delete ${noun}`}
+      description={
+        <>
+          Permanently delete <span className="font-semibold text-brand-ink">{pendingDelete?.title}</span>?
+          This cannot be undone. (Unpublish first if the {noun} is still published.)
+        </>
+      }
+      confirmLabel="Delete"
+      destructive
+      pending={deleteCard.isPending}
+      onConfirm={() => pendingDelete && deleteCard.mutate(pendingDelete.id)}
+      onClose={() => !deleteCard.isPending && setPendingDelete(null)}
+    />
+    </>
   );
 }
